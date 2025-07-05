@@ -620,66 +620,131 @@ class PhysicsGameScene: SKScene {
         for (levelName, levelTiles) in tileGroups {
             print("📍 Checking \(levelName) with \(levelTiles.count) tiles")
             
-            // Try to form complete words using only tiles from this level
+            // CRITICAL: Only use tiles from THIS level to form words
             var levelFoundWords: [String] = []
             var usedTiles = Set<LetterTile>()
             
-            // For each target word, see if we can form it completely on this level
+            // For each target word, see if we can form it COMPLETELY using ONLY tiles from this level
             for targetWord in targetWords {
                 let targetLetters = Array(targetWord.uppercased())
                 
+                // Check if we have ALL required letters available on this level first
+                let requiredLetters = targetLetters
+                let availableTilesForThisWord = levelTiles.filter { !usedTiles.contains($0) }
+                
+                // Count required vs available letters
+                var requiredCounts: [Character: Int] = [:]
+                for letter in requiredLetters {
+                    requiredCounts[letter, default: 0] += 1
+                }
+                
+                var availableCounts: [Character: Int] = [:]
+                for tile in availableTilesForThisWord {
+                    let letter = Character(tile.letter.uppercased())
+                    availableCounts[letter, default: 0] += 1
+                }
+                
+                // Check if we have enough of each required letter
+                var canFormCompleteWord = true
+                for (letter, requiredCount) in requiredCounts {
+                    let availableCount = availableCounts[letter, default: 0]
+                    if availableCount < requiredCount {
+                        print("❌ CANNOT FORM '\(targetWord)' on \(levelName) - need \(requiredCount) '\(letter)', have \(availableCount)")
+                        canFormCompleteWord = false
+                        break
+                    }
+                }
+                
+                if !canFormCompleteWord {
+                    continue
+                }
+                
+                // Now try to form the word using only tiles from this level
                 if let bestCombination = findBestTileCombination(for: targetLetters, from: levelTiles, excluding: usedTiles) {
-                    // Verify the combination spells the complete word when arranged left-to-right
+                    
+                    // CRITICAL: Verify the combination has exactly the right number of letters
+                    if bestCombination.count != targetLetters.count {
+                        print("❌ REJECTED '\(targetWord)' - wrong number of tiles: got \(bestCombination.count), need \(targetLetters.count)")
+                        continue
+                    }
+                    
+                    // Double-check: verify ALL tiles in the combination are from this level
+                    let allTilesFromThisLevel = bestCombination.allSatisfy { tile in
+                        levelTiles.contains(tile)
+                    }
+                    
+                    if !allTilesFromThisLevel {
+                        print("❌ REJECTED '\(targetWord)' - contains tiles from other levels")
+                        continue
+                    }
+                    
+                    // Verify the combination spells the EXACT complete word when arranged left-to-right
                     let sortedTiles = bestCombination.sorted { $0.position.x < $1.position.x }
                     let formedWord = sortedTiles.map { $0.letter }.joined().uppercased()
+                    let targetWordUpper = targetWord.uppercased()
                     
-                    if formedWord == targetWord.uppercased() {
+                    // CRITICAL: Check that the formed word is EXACTLY the target word
+                    // This prevents "ON" from being accepted as "ONE" or "EJO" from being accepted as "JOB"
+                    let isExactMatch = formedWord == targetWordUpper && 
+                                     formedWord.count == targetWordUpper.count &&
+                                     bestCombination.count == targetLetters.count
+                    
+                    if isExactMatch {
                         levelFoundWords.append(targetWord)
                         // Mark these tiles as used on this level
                         for tile in bestCombination {
                             usedTiles.insert(tile)
                         }
-                        print("✅ FORMED complete word '\(targetWord)' on \(levelName)")
+                        
+                        // Additional debug: show exact tiles used
+                        let tileDetails = sortedTiles.map { "\($0.letter)@(\(Int($0.position.x)),\(Int($0.position.y)))" }.joined(separator: ",")
+                        print("✅ FORMED complete word '\(targetWord)' on \(levelName) using: \(tileDetails)")
+                        print("✅ Formed word: '\(formedWord)' matches target: '\(targetWordUpper)' exactly")
+                    } else {
+                        let tileDetails = sortedTiles.map { "\($0.letter)@(\(Int($0.position.x)),\(Int($0.position.y)))" }.joined(separator: ",")
+                        print("❌ REJECTED '\(targetWord)' on \(levelName)")
+                        print("   Tiles: \(tileDetails)")
+                        print("   Formed: '\(formedWord)' (len=\(formedWord.count))")
+                        print("   Target: '\(targetWordUpper)' (len=\(targetWordUpper.count))")
+                        print("   Tile count: got \(bestCombination.count), need \(targetLetters.count)")
                     }
+                } else {
+                    print("❌ ALGORITHM FAILED to form '\(targetWord)' on \(levelName) despite having sufficient tiles")
                 }
             }
             
-            // Sort words by their left-to-right position on this level
-            let sortedLevelWords = levelFoundWords.sorted { word1, word2 in
-                let word1Tiles = levelTiles.filter { tile in
-                    targetWords.contains { targetWord in
-                        targetWord.uppercased().contains(tile.letter.uppercased()) && 
-                        word1.uppercased() == targetWord.uppercased()
-                    }
-                }
-                let word2Tiles = levelTiles.filter { tile in
-                    targetWords.contains { targetWord in
-                        targetWord.uppercased().contains(tile.letter.uppercased()) && 
-                        word2.uppercased() == targetWord.uppercased()
-                    }
-                }
-                
-                let word1CenterX = word1Tiles.map { $0.position.x }.reduce(0, +) / CGFloat(max(word1Tiles.count, 1))
-                let word2CenterX = word2Tiles.map { $0.position.x }.reduce(0, +) / CGFloat(max(word2Tiles.count, 1))
-                
-                return word1CenterX < word2CenterX
-            }
-            
-            allFoundWords.append(contentsOf: sortedLevelWords)
-            print("📍 \(levelName) formed words: \(sortedLevelWords.joined(separator: ", "))")
+            allFoundWords.append(contentsOf: levelFoundWords)
+            print("📍 \(levelName) final words: \(levelFoundWords.joined(separator: ", "))")
         }
         
+        // CRITICAL DEBUG: Show exactly what was found
+        print("🔍 FINAL ANALYSIS:")
+        print("   Target words: \(targetWords)")
+        print("   Found words: \(allFoundWords)")
+        print("   Found count: \(allFoundWords.count), Target count: \(targetWords.count)")
+        
         // Check for victory: all target words must be found as complete words
-        let isComplete = allFoundWords.count == targetWords.count && 
-                        Set(allFoundWords.map { $0.uppercased() }) == Set(targetWords.map { $0.uppercased() })
+        let foundWordsSet = Set(allFoundWords.map { $0.uppercased() })
+        let targetWordsSet = Set(targetWords.map { $0.uppercased() })
+        let hasAllWords = allFoundWords.count == targetWords.count
+        let hasCorrectWords = foundWordsSet == targetWordsSet
+        
+        print("   Has all words: \(hasAllWords)")
+        print("   Has correct words: \(hasCorrectWords)")
+        print("   Found set: \(foundWordsSet)")
+        print("   Target set: \(targetWordsSet)")
+        
+        let isComplete = hasAllWords && hasCorrectWords
         
         if isComplete {
+            print("🎉 VICTORY TRIGGERED!")
             if !debugText.contains("🎉") { // Only celebrate once
                 triggerCelebration()
                 gameModel.completeGame() // Mark game as completed
             }
             debugText = "🎉 VICTORY! All words complete: \(allFoundWords.joined(separator: " + "))"
         } else {
+            print("❌ NO VICTORY - Requirements not met")
             let expectedWords = targetWords.joined(separator: ", ")
             let currentWords = allFoundWords.isEmpty ? "None" : allFoundWords.joined(separator: ", ")
             debugText = "Words: \(allFoundWords.count)/\(targetWords.count) complete\nExpected: \(expectedWords)\nFound: \(currentWords)"
@@ -689,36 +754,48 @@ class PhysicsGameScene: SKScene {
     }
     
     private func groupTilesByLevel(tiles: [LetterTile]) -> [(String, [LetterTile])] {
-        let floorY = size.height * 0.25
-        let shelfThreshold: CGFloat = 100
+        let yTolerance: CGFloat = 30  // Max Y difference to be considered same horizontal level
         
-        var levels: [String: [LetterTile]] = [:]
+        // Group tiles by their actual Y position (horizontal rows)
+        var yGroups: [Int: [LetterTile]] = [:]
         
         for tile in tiles {
-            let tileY = tile.position.y
-            
-            if tileY < floorY + shelfThreshold {
-                // On floor
-                levels["Floor", default: []].append(tile)
+            let roundedY = Int(round(tile.position.y / yTolerance)) * Int(yTolerance)
+            yGroups[roundedY, default: []].append(tile)
+        }
+        
+        // Only keep groups that have multiple tiles (companions)
+        var validLevels: [(String, [LetterTile])] = []
+        
+        for (yLevel, tilesAtLevel) in yGroups {
+            if tilesAtLevel.count >= 2 {
+                // Multiple tiles at this Y level - they can form words together
+                let levelName = "Level_Y\(yLevel)"
+                validLevels.append((levelName, tilesAtLevel))
+                
+                let tileDetails = tilesAtLevel.map { "\($0.letter)@(\(Int($0.position.x)),\(Int($0.position.y)))" }.joined(separator: ",")
+                print("✅ Valid level \(levelName): \(tileDetails)")
             } else {
-                // On shelf - group by approximate shelf level
-                let shelfLevel = Int((tileY - floorY) / 60) // 60 points per shelf
-                let levelName = "Shelf \(shelfLevel)"
-                levels[levelName, default: []].append(tile)
+                // Single tile at this Y level - exclude it (no companions)
+                let lonelyTile = tilesAtLevel[0]
+                print("❌ EXCLUDED lonely tile '\(lonelyTile.letter)' at Y=\(Int(lonelyTile.position.y)) - no companions at same level")
             }
         }
         
         // Sort levels by Y position (top to bottom)
-        return levels.sorted { level1, level2 in
-            let level1AvgY = level1.value.map { $0.position.y }.reduce(0, +) / CGFloat(level1.value.count)
-            let level2AvgY = level2.value.map { $0.position.y }.reduce(0, +) / CGFloat(level2.value.count)
-            return level1AvgY > level2AvgY // Higher Y first (shelves before floor)
+        return validLevels.sorted { level1, level2 in
+            let level1AvgY = level1.1.map { $0.position.y }.reduce(0, +) / CGFloat(level1.1.count)
+            let level2AvgY = level2.1.map { $0.position.y }.reduce(0, +) / CGFloat(level2.1.count)
+            return level1AvgY > level2AvgY // Higher Y first
         }
     }
     
     private func findBestTileCombination(for targetLetters: [Character], from allTiles: [LetterTile], excluding usedTiles: Set<LetterTile>) -> [LetterTile]? {
         // Filter out already used tiles
         let availableTiles = allTiles.filter { !usedTiles.contains($0) }
+        let targetWord = String(targetLetters).uppercased()
+        
+        print("🔍 ATTEMPTING to form '\(targetWord)' from \(availableTiles.count) available tiles")
         
         // Count how many of each letter we need
         var letterCounts: [Character: Int] = [:]
@@ -743,26 +820,35 @@ class PhysicsGameScene: SKScene {
             }
         }
         
-        // Try all possible combinations of tiles and find one that spells the word correctly when sorted by position
-        let targetWord = String(targetLetters).uppercased()
+        // CRITICAL FIX: Try all possible combinations and ONLY accept ones that spell the word correctly
         let allCombinations = generateTileCombinations(for: targetLetters, from: tilesByLetter)
+        print("🔍 Generated \(allCombinations.count) possible combinations for '\(targetWord)'")
         
-        // Find the combination that spells the word correctly when arranged left-to-right
-        for combination in allCombinations {
+        // Test each combination to see if it spells the target word when arranged left-to-right
+        for (index, combination) in allCombinations.enumerated() {
             let sortedTiles = combination.sorted { $0.position.x < $1.position.x }
             let formedWord = sortedTiles.map { $0.letter }.joined().uppercased()
             
-            // Debug: Show tile positions for this combination
-            let tilePositions = sortedTiles.map { "\($0.letter)@\(Int($0.position.x))" }.joined(separator: ",")
-            print("🔍 Testing combination for '\(targetWord)': tiles [\(tilePositions)] spell '\(formedWord)'")
+            // Show detailed testing for each combination
+            let tilePositions = sortedTiles.map { "\($0.letter)@X\(Int($0.position.x))" }.joined(separator: ",")
+            print("🔍 Combination \(index + 1): [\(tilePositions)] → '\(formedWord)'")
             
-            if formedWord == targetWord {
-                print("✅ Successfully formed '\(targetWord)' with tiles: \(sortedTiles.map { $0.letter }.joined())")
+            // STRICT VALIDATION: Must spell exactly the target word
+            if formedWord == targetWord && combination.count == targetLetters.count {
+                print("✅ PERFECT MATCH! '\(formedWord)' == '\(targetWord)'")
                 return sortedTiles
+            } else {
+                let reason = formedWord != targetWord ? "wrong spelling" : "wrong count"
+                print("❌ REJECTED: '\(formedWord)' ≠ '\(targetWord)' (\(reason))")
             }
         }
         
-        print("❌ No valid combination found for '\(String(targetLetters))'")
+        print("❌ NO VALID COMBINATION found for '\(targetWord)' from \(allCombinations.count) attempts")
+        
+        // Additional debug: show what tiles we actually have
+        let availableLetters = availableTiles.map { "\($0.letter)@X\(Int($0.position.x))" }.sorted()
+        print("❌ Available tiles were: \(availableLetters.joined(separator: ","))")
+        
         return nil
     }
     
