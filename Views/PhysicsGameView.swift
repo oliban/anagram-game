@@ -44,9 +44,22 @@ struct PhysicsGameView: View {
                                 .font(.caption)
                                 .foregroundColor(.red)
                                 .fontWeight(.bold)
+                                .onTapGesture {
+                                    print("🌍 Debug: Version number tapped - triggering quake!")
+                                    print("🌍 Debug: gameScene available: \(gameScene != nil)")
+                                    print("🌍 Debug: sharedScene available: \(PhysicsGameView.sharedScene != nil)")
+                                    
+                                    // Try gameScene first, then sharedScene as fallback
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        print("🌍 Debug: Calling triggerQuake() on scene")
+                                        scene.triggerQuake()
+                                    } else {
+                                        print("❌ Debug: No scene available!")
+                                    }
+                                }
                             
-                            // Show static tilt text to avoid state update errors
-                            Text("Tilt mode active")
+                            // Show quake debug info
+                            Text("Tap for quake debug")
                                 .font(.caption)
                                 .foregroundColor(.white)
                                 .background(Color.blue.opacity(0.9))
@@ -103,46 +116,40 @@ struct PhysicsGameView: View {
     private func getOrCreateScene(size: CGSize) -> PhysicsGameScene {
         if let existingScene = PhysicsGameView.sharedScene {
             print("♻️ Reusing shared scene")
-            // Update callback in case view was recreated
-            existingScene.onCelebration = { message in
-                DispatchQueue.main.async {
-                    celebrationMessage = message
-                    // Clear after delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                        celebrationMessage = ""
-                    }
-                }
-            }
             return existingScene
         }
         
         print("🚀 Creating SINGLE scene with size: \(size)")
         let newScene = PhysicsGameScene(gameModel: gameModel, size: size)
         
-        // Set up celebration callback
-        newScene.onCelebration = { message in
-            DispatchQueue.main.async {
-                celebrationMessage = message
-                // Clear after delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                    celebrationMessage = ""
-                }
-            }
-        }
-        
         PhysicsGameView.sharedScene = newScene
-        gameScene = newScene
-        print("✅ Scene stored in both places")
+        print("✅ Scene stored")
         return newScene
     }
     
     private func setupGame() {
         print("🎮 Setting up game...")
-        print("🎮 gameScene is: \(gameScene != nil ? "available" : "nil")")
         
-        // Simple check without timers to avoid state update issues
-        if PhysicsGameView.sharedScene != nil {
-            print("✅ Scene connection verified")
+        // Set up gameScene reference and callbacks
+        if let sharedScene = PhysicsGameView.sharedScene {
+            print("✅ Found shared scene, setting up callbacks")
+            
+            // Set gameScene reference
+            gameScene = sharedScene
+            
+            // Set up celebration callback
+            sharedScene.onCelebration = { message in
+                DispatchQueue.main.async {
+                    self.celebrationMessage = message
+                    // Clear after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                        self.celebrationMessage = ""
+                    }
+                }
+            }
+            
+            sharedScene.motionManager = motionManager
+            sharedScene.resetGame()
         } else {
             print("❌ No shared scene available")
         }
@@ -185,6 +192,8 @@ class PhysicsGameScene: SKScene {
     private var tiles: [LetterTile] = []
     var debugText: String = ""
     var celebrationText: String = ""
+    private var isQuakeActive: Bool = false
+    private var quakeEndAction: SKAction?
     
     init(gameModel: GameModel, size: CGSize) {
         self.gameModel = gameModel
@@ -500,21 +509,28 @@ class PhysicsGameScene: SKScene {
     }
     
     func updateGravity(from gravity: CMAcceleration) {        
-        // Check if we should trigger tile falling (when tilting forward) - lowered threshold
-        let shouldFall = gravity.y < -0.90
+        // Check if we should trigger quake mode (when tilting forward) - lowered threshold
+        let shouldQuake = gravity.y < -0.90
         
-        if shouldFall {
-            // ONLY when falling: apply moderate forces so tiles don't vanish
-            physicsWorld.gravity = CGVector(dx: 0, dy: -500.0)  // Moderate downward gravity
-        } else {
-            // Normal mode: standard downward gravity, NO tilt effects
-            physicsWorld.gravity = CGVector(dx: 0, dy: -9.8)  // Normal gravity only
+        if shouldQuake && !isQuakeActive {
+            // Start natural quake mode
+            print("🌍 Natural QUAKE started from device tilt!")
+            isQuakeActive = true
+            startShelfShaking()
+        } else if !shouldQuake && isQuakeActive {
+            // End natural quake mode
+            print("🌍 Natural QUAKE ended - device returned to normal position")
+            isQuakeActive = false
+            stopShelfShaking()
         }
+        
+        // Always maintain normal gravity
+        physicsWorld.gravity = CGVector(dx: 0, dy: -9.8)
         
         // Applied gravity (no logging to reduce spam)
         
         // Update debug text within the scene (no SwiftUI state changes)
-        let status = shouldFall ? " FALLING!" : ""
+        let status = shouldQuake ? " QUAKE!" : ""
         debugText = "Tilt: x=\(String(format: "%.2f", gravity.x)), y=\(String(format: "%.2f", gravity.y))\(status)"
         
         // ALWAYS show tile positions for debugging (not just when falling)
@@ -525,7 +541,7 @@ class PhysicsGameScene: SKScene {
             tile.childNode(withName: "status_marker")?.removeFromParent()
         }
         
-        if shouldFall {
+        if shouldQuake {
             // Apply forces to tiles on shelves only
             
             for (index, tile) in tiles.enumerated() {
@@ -566,6 +582,94 @@ class PhysicsGameScene: SKScene {
                 }
             }
         }
+    }
+    
+    func triggerQuake() {
+        // Manually trigger quake effect for debugging
+        print("🌍 QUAKE triggered manually!")
+        
+        // Cancel any existing quake end action
+        if quakeEndAction != nil {
+            removeAction(forKey: "quakeEnd")
+            removeAction(forKey: "shelfShaking")
+            removeAction(forKey: "shelfWiggling")
+        }
+        
+        if !isQuakeActive {
+            // Start new quake
+            isQuakeActive = true
+            startShelfShaking()
+            print("🌍 QUAKE started - shelves shaking!")
+        } else {
+            // Extend existing quake
+            print("🌍 QUAKE extended!")
+        }
+        
+        // Reset to normal after 5 seconds total (resets timer each tap)
+        let resetAction = SKAction.run {
+            self.stopShelfShaking()
+            self.isQuakeActive = false
+            self.quakeEndAction = nil
+            print("🌍 QUAKE ended - shaking stopped")
+        }
+        let waitAction = SKAction.wait(forDuration: 5.0)
+        let sequence = SKAction.sequence([waitAction, resetAction])
+        quakeEndAction = sequence
+        run(sequence, withKey: "quakeEnd")
+    }
+    
+    
+    private func startShelfShaking() {
+        print("📳 Starting violent shelf shaking and wiggling animation")
+        
+        // Create violent shaking motion for the bookshelf
+        let shakeIntensity: CGFloat = 12.0  // Even stronger shaking
+        let shakeDuration: TimeInterval = 0.04  // Very fast shaking
+        
+        let shakeLeft = SKAction.moveBy(x: -shakeIntensity, y: 0, duration: shakeDuration)
+        let shakeRight = SKAction.moveBy(x: shakeIntensity * 2, y: 0, duration: shakeDuration)
+        let shakeUp = SKAction.moveBy(x: 0, y: shakeIntensity, duration: shakeDuration)
+        let shakeDown = SKAction.moveBy(x: 0, y: -shakeIntensity * 2, duration: shakeDuration)
+        let shakeDiagonal1 = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
+        let shakeDiagonal2 = SKAction.moveBy(x: -shakeIntensity * 2, y: -shakeIntensity * 2, duration: shakeDuration)
+        let returnToCenter = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
+        
+        let shakeSequence = SKAction.sequence([shakeLeft, shakeRight, shakeUp, shakeDown, shakeDiagonal1, shakeDiagonal2, returnToCenter])
+        let repeatShaking = SKAction.repeatForever(shakeSequence)
+        
+        // Create wiggling rotation motion
+        let wiggleIntensity: CGFloat = 0.15  // Rotation in radians (about 8.6 degrees)
+        let wiggleDuration: TimeInterval = 0.06
+        
+        let wiggleLeft = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
+        let wiggleRight = SKAction.rotate(byAngle: wiggleIntensity * 2, duration: wiggleDuration)
+        let wiggleCenter = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
+        
+        let wiggleSequence = SKAction.sequence([wiggleLeft, wiggleRight, wiggleCenter])
+        let repeatWiggling = SKAction.repeatForever(wiggleSequence)
+        
+        // Run both shaking and wiggling simultaneously
+        bookshelf.run(repeatShaking, withKey: "shelfShaking")
+        bookshelf.run(repeatWiggling, withKey: "shelfWiggling")
+    }
+    
+    private func stopShelfShaking() {
+        print("📳 Stopping shelf shaking and wiggling animation")
+        
+        bookshelf.removeAction(forKey: "shelfShaking")
+        bookshelf.removeAction(forKey: "shelfWiggling")
+        
+        // Smoothly return bookshelf to original position and rotation
+        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
+        let returnToOriginalPosition = SKAction.move(to: originalPosition, duration: 0.3)
+        let returnToOriginalRotation = SKAction.rotate(toAngle: 0, duration: 0.3)
+        
+        returnToOriginalPosition.timingMode = .easeOut
+        returnToOriginalRotation.timingMode = .easeOut
+        
+        // Run both animations simultaneously
+        let returnGroup = SKAction.group([returnToOriginalPosition, returnToOriginalRotation])
+        bookshelf.run(returnGroup)
     }
     
     override func update(_ currentTime: TimeInterval) {
