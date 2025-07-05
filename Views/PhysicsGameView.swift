@@ -45,25 +45,29 @@ struct PhysicsGameView: View {
                                 .foregroundColor(.red)
                                 .fontWeight(.bold)
                                 .onTapGesture {
-                                    print("🌍 Debug: Version number tapped - triggering quake!")
-                                    print("🌍 Debug: gameScene available: \(gameScene != nil)")
-                                    print("🌍 Debug: sharedScene available: \(PhysicsGameView.sharedScene != nil)")
-                                    
-                                    // Try gameScene first, then sharedScene as fallback
+                                    print("🌍 Debug: Version number tapped - triggering 3s quake!")
                                     if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        print("🌍 Debug: Calling triggerQuake() on scene")
                                         scene.triggerQuake()
-                                    } else {
-                                        print("❌ Debug: No scene available!")
                                     }
                                 }
                             
-                            // Show quake debug info
-                            Text("Tap for quake debug")
+                            Text("3s Quake")
                                 .font(.caption)
                                 .foregroundColor(.white)
                                 .background(Color.blue.opacity(0.9))
                                 .cornerRadius(4)
+                            
+                            Text("Quick Test")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .background(Color.orange.opacity(0.9))
+                                .cornerRadius(4)
+                                .onTapGesture {
+                                    print("🌍 Debug: Quick test tapped - triggering 0.5s quake!")
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.triggerQuickQuake()
+                                    }
+                                }
                         }
                         .padding()
                     }
@@ -206,14 +210,7 @@ class PhysicsGameScene: SKScene {
         setupPhysicsWorld()
         setupEnvironment()
         
-        // Delay tile creation to ensure everything is loaded
-        let delayAction = SKAction.sequence([
-            SKAction.wait(forDuration: 0.5),
-            SKAction.run { [weak self] in
-                self?.createTiles()
-            }
-        ])
-        run(delayAction)
+        // Don't create tiles automatically - wait for setupGame() to call resetGame()
         
         // Enable simple automatic scoring
         let checkAction = SKAction.sequence([
@@ -585,8 +582,16 @@ class PhysicsGameScene: SKScene {
     }
     
     func triggerQuake() {
+        triggerQuakeWithDuration(3.0)
+    }
+    
+    func triggerQuickQuake() {
+        triggerQuakeWithDuration(0.5)
+    }
+    
+    private func triggerQuakeWithDuration(_ duration: TimeInterval) {
         // Manually trigger quake effect for debugging
-        print("🌍 QUAKE triggered manually!")
+        print("🌍 QUAKE triggered manually for \(duration) seconds!")
         
         // Cancel any existing quake end action
         if quakeEndAction != nil {
@@ -605,14 +610,14 @@ class PhysicsGameScene: SKScene {
             print("🌍 QUAKE extended!")
         }
         
-        // Reset to normal after 5 seconds total (resets timer each tap)
+        // Reset to normal after specified duration
         let resetAction = SKAction.run {
             self.stopShelfShaking()
             self.isQuakeActive = false
             self.quakeEndAction = nil
             print("🌍 QUAKE ended - shaking stopped")
         }
-        let waitAction = SKAction.wait(forDuration: 5.0)
+        let waitAction = SKAction.wait(forDuration: duration)
         let sequence = SKAction.sequence([waitAction, resetAction])
         quakeEndAction = sequence
         run(sequence, withKey: "quakeEnd")
@@ -648,9 +653,40 @@ class PhysicsGameScene: SKScene {
         let wiggleSequence = SKAction.sequence([wiggleLeft, wiggleRight, wiggleCenter])
         let repeatWiggling = SKAction.repeatForever(wiggleSequence)
         
-        // Run both shaking and wiggling simultaneously
+        // Apply shaking to bookshelf for visual effect
         bookshelf.run(repeatShaking, withKey: "shelfShaking")
         bookshelf.run(repeatWiggling, withKey: "shelfWiggling")
+        
+        // Apply random forces to tiles to simulate earthquake effect
+        let applyQuakeForces = SKAction.run {
+            for tile in self.tiles {
+                guard let physicsBody = tile.physicsBody else { continue }
+                
+                // Apply random forces in all directions (50% reduced violence)
+                let forceX = CGFloat.random(in: -25...25)
+                let forceY = CGFloat.random(in: -15...40) // Bias upward for dramatic effect
+                let force = CGVector(dx: forceX, dy: forceY)
+                
+                // Apply random impulse to make tiles shake moderately
+                let impulseX = CGFloat.random(in: -1...1)
+                let impulseY = CGFloat.random(in: -0.5...1.5)
+                let impulse = CGVector(dx: impulseX, dy: impulseY)
+                
+                physicsBody.applyForce(force)
+                physicsBody.applyImpulse(impulse)
+                
+                // Add some random angular velocity for spinning (50% reduced)
+                let angularImpulse = CGFloat.random(in: -0.25...0.25)
+                physicsBody.applyAngularImpulse(angularImpulse)
+            }
+        }
+        
+        // Repeat force application every 0.1 seconds during quake
+        let forceInterval = SKAction.wait(forDuration: 0.1)
+        let forceSequence = SKAction.sequence([applyQuakeForces, forceInterval])
+        let repeatForces = SKAction.repeatForever(forceSequence)
+        
+        run(repeatForces, withKey: "quakeForces")
     }
     
     private func stopShelfShaking() {
@@ -658,6 +694,9 @@ class PhysicsGameScene: SKScene {
         
         bookshelf.removeAction(forKey: "shelfShaking")
         bookshelf.removeAction(forKey: "shelfWiggling")
+        
+        // Stop applying forces to tiles
+        removeAction(forKey: "quakeForces")
         
         // Smoothly return bookshelf to original position and rotation
         let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
@@ -692,6 +731,9 @@ class PhysicsGameScene: SKScene {
                 
                 print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
             }
+            
+            // Adjust visual appearance based on rotation to look like proper resting
+            tile.updateVisualForRotation()
         }
     }
     
@@ -1295,8 +1337,9 @@ class LetterTile: SKSpriteNode {
         // Create 3D embossed letter on the front face
         createEmbossedLetter(on: frontFace, letter: self.letter, tileSize: size)
         
-        // Physics body attached directly to this sprite node
-        physicsBody = SKPhysicsBody(rectangleOf: size)
+        // Physics body accounting for 3D depth so tiles can rest on their sides
+        let physicsSize = CGSize(width: size.width + depth, height: size.height + depth)
+        physicsBody = SKPhysicsBody(rectangleOf: physicsSize)
         physicsBody?.isDynamic = true
         physicsBody?.friction = 1.0  // Maximum friction
         physicsBody?.restitution = 0.0  // No bouncing at all
@@ -1316,6 +1359,27 @@ class LetterTile: SKSpriteNode {
         
         // Set z-position based on Y coordinate for proper stacking (will be updated dynamically)
         zPosition = 50
+    }
+    
+    func updateVisualForRotation() {
+        // Adjust the visual offset of 3D faces based on rotation to appear properly resting
+        let rotation = zRotation
+        let depth: CGFloat = 6
+        
+        // Calculate offset to make the tile appear to rest on its actual contact point
+        let offsetX = sin(rotation) * depth * 0.5
+        let offsetY = -abs(cos(rotation)) * depth * 0.3  // Always slightly down to appear resting
+        
+        // Apply offset to all child nodes (the 3D faces)
+        for child in children {
+            if let shapeNode = child as? SKShapeNode {
+                // Reset to original position then apply rotation-based offset
+                child.position = CGPoint(x: offsetX, y: offsetY)
+            } else if let labelNode = child as? SKLabelNode {
+                // Keep letter centered but also apply offset
+                child.position = CGPoint(x: offsetX, y: offsetY)
+            }
+        }
     }
     
     private func createEmbossedLetter(on surface: SKShapeNode, letter: String, tileSize: CGSize) {
