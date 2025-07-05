@@ -483,7 +483,7 @@ class PhysicsGameScene: SKScene {
                 
                 tile.position = position
                 
-                // Add random rotation for natural look
+                // Add random rotation for visual variety
                 tile.zRotation = CGFloat.random(in: -0.3...0.3)
                 
                 self.tiles.append(tile)
@@ -582,14 +582,15 @@ class PhysicsGameScene: SKScene {
                 // Reset physics properties
                 tile.physicsBody?.velocity = CGVector.zero
                 tile.physicsBody?.angularVelocity = 0
-                tile.zRotation = CGFloat.random(in: -0.3...0.3)
+                tile.zRotation = 0
                 
                 print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
             }
-            
-            // Update z-position based on Y coordinate for proper stacking
-            // Higher Y positions get higher z-positions so upper tiles render above lower tiles
-            tile.zPosition = 50 + (tile.position.y * 0.01)
+        }
+        
+        // Simple z-positioning: roofs are now in background, no complex calculations needed
+        for tile in tiles {
+            tile.zPosition = 50  // Simple constant z-position for all tiles
         }
     }
     
@@ -1157,7 +1158,7 @@ class LetterTile: SKSpriteNode {
         topFace.fillColor = UIColor(red: 1.0, green: 1.0, blue: 0.8, alpha: 1.0)  // Very bright almost white yellow
         topFace.strokeColor = .black
         topFace.lineWidth = 2
-        topFace.zPosition = 2
+        topFace.zPosition = -0.1  // Put tile roofs in background
         addChild(topFace)
         
         // Create the front face (main visible surface)
@@ -1172,7 +1173,7 @@ class LetterTile: SKSpriteNode {
         frontFace.fillColor = .systemYellow
         frontFace.strokeColor = .black
         frontFace.lineWidth = 2
-        frontFace.zPosition = 1
+        frontFace.zPosition = 0.1
         addChild(frontFace)
         
         // Create the right face (shadow side - darker)
@@ -1187,7 +1188,7 @@ class LetterTile: SKSpriteNode {
         rightFace.fillColor = UIColor(red: 0.2, green: 0.1, blue: 0.0, alpha: 1.0)  // Very dark shadow side
         rightFace.strokeColor = UIColor(red: 0.1, green: 0.05, blue: 0.0, alpha: 1.0)
         rightFace.lineWidth = 2
-        rightFace.zPosition = 0
+        rightFace.zPosition = 0.0
         addChild(rightFace)
         
         // Create 3D embossed letter on the front face
@@ -1225,7 +1226,7 @@ class LetterTile: SKSpriteNode {
         letterLabel.verticalAlignmentMode = .center
         letterLabel.horizontalAlignmentMode = .center
         letterLabel.position = CGPoint(x: 0, y: 0)
-        letterLabel.zPosition = 100 // Very high z-position to ensure visibility
+        letterLabel.zPosition = 0.3 // Above all tile faces but within reasonable range
         
         surface.addChild(letterLabel)
     }
