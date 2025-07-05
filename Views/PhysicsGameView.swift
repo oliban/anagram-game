@@ -566,7 +566,9 @@ class PhysicsGameScene: SKScene {
                 }
             }
         }
-        
+    }
+    
+    override func update(_ currentTime: TimeInterval) {
         // Check for tiles that have left the screen and respawn them
         for tile in tiles {
             let margin: CGFloat = 100  // Buffer zone outside screen
@@ -582,15 +584,10 @@ class PhysicsGameScene: SKScene {
                 // Reset physics properties
                 tile.physicsBody?.velocity = CGVector.zero
                 tile.physicsBody?.angularVelocity = 0
-                tile.zRotation = 0
+                tile.zRotation = CGFloat.random(in: -0.3...0.3)
                 
                 print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
             }
-        }
-        
-        // Simple z-positioning: roofs are now in background, no complex calculations needed
-        for tile in tiles {
-            tile.zPosition = 50  // Simple constant z-position for all tiles
         }
     }
     
@@ -723,16 +720,16 @@ class PhysicsGameScene: SKScene {
         print("   Found words: \(allFoundWords)")
         print("   Found count: \(allFoundWords.count), Target count: \(targetWords.count)")
         
-        // Check for victory: all target words must be found as complete words
-        let foundWordsSet = Set(allFoundWords.map { $0.uppercased() })
-        let targetWordsSet = Set(targetWords.map { $0.uppercased() })
+        // Check for victory: all target words must be found in correct order
+        let foundWordsUpper = allFoundWords.map { $0.uppercased() }
+        let targetWordsUpper = targetWords.map { $0.uppercased() }
         let hasAllWords = allFoundWords.count == targetWords.count
-        let hasCorrectWords = foundWordsSet == targetWordsSet
+        let hasCorrectWords = foundWordsUpper == targetWordsUpper  // Order matters!
         
         print("   Has all words: \(hasAllWords)")
         print("   Has correct words: \(hasCorrectWords)")
-        print("   Found set: \(foundWordsSet)")
-        print("   Target set: \(targetWordsSet)")
+        print("   Found order: \(foundWordsUpper)")
+        print("   Target order: \(targetWordsUpper)")
         
         let isComplete = hasAllWords && hasCorrectWords
         
