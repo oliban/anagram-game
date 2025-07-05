@@ -287,7 +287,7 @@ class PhysicsGameScene: SKScene {
         bookshelf.position = CGPoint(x: size.width / 2, y: size.height * 0.7)
         addChild(bookshelf)
         
-        let shelfWidth: CGFloat = size.width * 0.85
+        let shelfWidth: CGFloat = size.width * 0.75  // Reduced from 0.85 to 0.75 (10% less wide)
         let shelfHeight: CGFloat = 240
         let shelfDepth: CGFloat = 50
         
@@ -297,7 +297,7 @@ class PhysicsGameScene: SKScene {
         // Create multiple shelves with proper wood grain appearance
         for i in 0..<4 {
             let shelfY = CGFloat(-90 + (i * 60))
-            let shelf = createRealisticShelf(width: shelfWidth - 30, y: shelfY, depth: shelfDepth)
+            let shelf = createRealisticShelf(width: shelfWidth - 20, y: shelfY, depth: shelfDepth)  // Reduced inset from 30 to 20
             bookshelf.addChild(shelf)
         }
         
@@ -334,118 +334,141 @@ class PhysicsGameScene: SKScene {
     }
     
     private func createBookshelfFrame(width: CGFloat, height: CGFloat, depth: CGFloat) {
-        // No back panel needed - remove cluttered back wall
+        let wallThickness: CGFloat = 12
+        let depthOffset: CGFloat = 15  // 3D depth effect
         
-        // Left side panel - properly aligned
+        // Left side panel - properly aligned with consistent thickness
         let leftPanel = SKShapeNode()
         let leftPath = CGMutablePath()
-        leftPath.move(to: CGPoint(x: -width / 2, y: -height / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2, y: height / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2 + 15, y: height / 2 + 8))
-        leftPath.addLine(to: CGPoint(x: -width / 2 + 15, y: -height / 2 + 8))
+        // Front face
+        leftPath.move(to: CGPoint(x: -width / 2 - wallThickness/2, y: -height / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2, y: height / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2, y: height / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2, y: -height / 2))
         leftPath.closeSubpath()
         
         leftPanel.path = leftPath
-        leftPanel.fillColor = UIColor(red: 0.5, green: 0.35, blue: 0.18, alpha: 1.0)
-        leftPanel.strokeColor = UIColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+        leftPanel.fillColor = UIColor(red: 0.65, green: 0.45, blue: 0.25, alpha: 1.0)  // Medium wood color
+        leftPanel.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
         leftPanel.lineWidth = 1.5
-        leftPanel.zPosition = 1
+        leftPanel.zPosition = 2
         bookshelf.addChild(leftPanel)
         
-        // Right side panel - properly aligned
+        // Left panel 3D depth side
+        let leftDepth = SKShapeNode()
+        let leftDepthPath = CGMutablePath()
+        leftDepthPath.move(to: CGPoint(x: -width / 2 + wallThickness/2, y: height / 2))
+        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2, y: -height / 2))
+        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 + depthOffset, y: -height / 2 + depthOffset))
+        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 + depthOffset, y: height / 2 + depthOffset))
+        leftDepthPath.closeSubpath()
+        
+        leftDepth.path = leftDepthPath
+        leftDepth.fillColor = UIColor(red: 0.55, green: 0.38, blue: 0.22, alpha: 1.0)  // Darker shadow side
+        leftDepth.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
+        leftDepth.lineWidth = 1
+        leftDepth.zPosition = 1
+        bookshelf.addChild(leftDepth)
+        
+        // Right side panel - properly aligned and connected to shelves
         let rightPanel = SKShapeNode()
         let rightPath = CGMutablePath()
-        rightPath.move(to: CGPoint(x: width / 2, y: -height / 2))
-        rightPath.addLine(to: CGPoint(x: width / 2, y: height / 2))
-        rightPath.addLine(to: CGPoint(x: width / 2 + 15, y: height / 2 + 8))
-        rightPath.addLine(to: CGPoint(x: width / 2 + 15, y: -height / 2 + 8))
+        // Front face
+        rightPath.move(to: CGPoint(x: width / 2 - wallThickness/2, y: -height / 2))
+        rightPath.addLine(to: CGPoint(x: width / 2 - wallThickness/2, y: height / 2))
+        rightPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2, y: height / 2))
+        rightPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2, y: -height / 2))
         rightPath.closeSubpath()
         
         rightPanel.path = rightPath
-        rightPanel.fillColor = UIColor(red: 0.5, green: 0.35, blue: 0.18, alpha: 1.0)
-        rightPanel.strokeColor = UIColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+        rightPanel.fillColor = UIColor(red: 0.65, green: 0.45, blue: 0.25, alpha: 1.0)  // Same medium wood color
+        rightPanel.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
         rightPanel.lineWidth = 1.5
-        rightPanel.zPosition = 1
+        rightPanel.zPosition = 6  // Higher than shelves to render over them
         bookshelf.addChild(rightPanel)
+        
+        // Right panel 3D depth side
+        let rightDepth = SKShapeNode()
+        let rightDepthPath = CGMutablePath()
+        rightDepthPath.move(to: CGPoint(x: width / 2 + wallThickness/2, y: height / 2))
+        rightDepthPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2, y: -height / 2))
+        rightDepthPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + depthOffset, y: -height / 2 + depthOffset))
+        rightDepthPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + depthOffset, y: height / 2 + depthOffset))
+        rightDepthPath.closeSubpath()
+        
+        rightDepth.path = rightDepthPath
+        rightDepth.fillColor = UIColor(red: 0.55, green: 0.38, blue: 0.22, alpha: 1.0)  // Darker shadow side
+        rightDepth.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
+        rightDepth.lineWidth = 1
+        rightDepth.zPosition = 5  // Higher than shelves
+        bookshelf.addChild(rightDepth)
     }
     
     private func createRealisticShelf(width: CGFloat, y: CGFloat, depth: CGFloat) -> SKNode {
         let shelf = SKNode()
         shelf.position = CGPoint(x: 0, y: y)
         
-        // Calculate proper wall connection points
-        let wallInset: CGFloat = 15  // How deep the shelf goes into the wall
-        let shelfThickness: CGFloat = 12
+        // Calculate proper wall connection points to match new wall structure
+        let wallThickness: CGFloat = 12  // Match frame wall thickness
+        let shelfThickness: CGFloat = 8   // Slightly thinner shelves
+        let depthOffset: CGFloat = 15     // Match frame depth effect
         
-        // Shelf top surface - properly connect to both walls
+        // Shelf extends INTO the walls for seamless connection
+        let wallOverlap: CGFloat = 8  // How much shelf extends into wall thickness
+        
+        // Shelf top surface - extends into walls for seamless connection
         let shelfTop = SKShapeNode()
         let topPath = CGMutablePath()
-        topPath.move(to: CGPoint(x: -width / 2 - wallInset, y: shelfThickness / 2))
-        topPath.addLine(to: CGPoint(x: width / 2 + wallInset, y: shelfThickness / 2))
-        topPath.addLine(to: CGPoint(x: width / 2 + wallInset + 10, y: shelfThickness / 2 + 6))
-        topPath.addLine(to: CGPoint(x: -width / 2 - wallInset + 10, y: shelfThickness / 2 + 6))
+        topPath.move(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap, y: shelfThickness / 2))
+        topPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap, y: shelfThickness / 2))
+        topPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
+        topPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
         topPath.closeSubpath()
         
         shelfTop.path = topPath
-        shelfTop.fillColor = UIColor(red: 0.85, green: 0.65, blue: 0.45, alpha: 1.0)  // Much lighter wood for top
-        shelfTop.strokeColor = UIColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0)
-        shelfTop.lineWidth = 1
-        shelfTop.zPosition = 3
+        shelfTop.fillColor = UIColor(red: 0.85, green: 0.65, blue: 0.45, alpha: 1.0)  // Light wood for top
+        shelfTop.strokeColor = .clear  // No stroke for seamless blending
+        shelfTop.lineWidth = 0
+        shelfTop.zPosition = 4  // Above walls to cover connection
         shelf.addChild(shelfTop)
         
-        // Shelf front face - main surface that connects wall to wall
+        // Shelf front face - extends into walls
         let shelfFront = SKShapeNode()
         let frontPath = CGMutablePath()
-        frontPath.move(to: CGPoint(x: -width / 2 - wallInset, y: -shelfThickness / 2))
-        frontPath.addLine(to: CGPoint(x: width / 2 + wallInset, y: -shelfThickness / 2))
-        frontPath.addLine(to: CGPoint(x: width / 2 + wallInset, y: shelfThickness / 2))
-        frontPath.addLine(to: CGPoint(x: -width / 2 - wallInset, y: shelfThickness / 2))
+        frontPath.move(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap, y: -shelfThickness / 2))
+        frontPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap, y: -shelfThickness / 2))
+        frontPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap, y: shelfThickness / 2))
+        frontPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap, y: shelfThickness / 2))
         frontPath.closeSubpath()
         
         shelfFront.path = frontPath
-        shelfFront.fillColor = UIColor(red: 0.65, green: 0.45, blue: 0.25, alpha: 1.0)
-        shelfFront.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
-        shelfFront.lineWidth = 1.5
-        shelfFront.zPosition = 2
+        shelfFront.fillColor = UIColor(red: 0.65, green: 0.45, blue: 0.25, alpha: 1.0)  // Match wall color
+        shelfFront.strokeColor = .clear  // No stroke for seamless blending
+        shelfFront.lineWidth = 0
+        shelfFront.zPosition = 3  // Above wall depth, below top
         shelf.addChild(shelfFront)
         
-        // Shelf right edge - extends to connect with right wall
+        // Shelf right edge - seamlessly blends with right wall
         let shelfRight = SKShapeNode()
         let rightPath = CGMutablePath()
-        rightPath.move(to: CGPoint(x: width / 2 + wallInset, y: shelfThickness / 2))
-        rightPath.addLine(to: CGPoint(x: width / 2 + wallInset, y: -shelfThickness / 2))
-        rightPath.addLine(to: CGPoint(x: width / 2 + wallInset + 10, y: -shelfThickness / 2 + 6))
-        rightPath.addLine(to: CGPoint(x: width / 2 + wallInset + 10, y: shelfThickness / 2 + 6))
+        rightPath.move(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap, y: shelfThickness / 2))
+        rightPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap, y: -shelfThickness / 2))
+        rightPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap + depthOffset, y: -shelfThickness / 2 + depthOffset))
+        rightPath.addLine(to: CGPoint(x: width / 2 + wallThickness/2 + wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
         rightPath.closeSubpath()
         
         shelfRight.path = rightPath
-        shelfRight.fillColor = UIColor(red: 0.55, green: 0.38, blue: 0.22, alpha: 1.0)  // Darker shadow side
-        shelfRight.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
-        shelfRight.lineWidth = 1
-        shelfRight.zPosition = 1
+        shelfRight.fillColor = UIColor(red: 0.55, green: 0.38, blue: 0.22, alpha: 1.0)  // Shadow side
+        shelfRight.strokeColor = .clear  // No stroke for seamless blending
+        shelfRight.lineWidth = 0
+        shelfRight.zPosition = 2  // Below front face
         shelf.addChild(shelfRight)
         
-        // Left edge - connects with left wall seamlessly
-        let shelfLeft = SKShapeNode()
-        let leftPath = CGMutablePath()
-        leftPath.move(to: CGPoint(x: -width / 2 - wallInset, y: -shelfThickness / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2 - wallInset, y: shelfThickness / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2 - wallInset + 10, y: shelfThickness / 2 + 6))
-        leftPath.addLine(to: CGPoint(x: -width / 2 - wallInset + 10, y: -shelfThickness / 2 + 6))
-        leftPath.closeSubpath()
-        
-        shelfLeft.path = leftPath
-        shelfLeft.fillColor = UIColor(red: 0.6, green: 0.42, blue: 0.24, alpha: 1.0)  // Medium shadow
-        shelfLeft.strokeColor = UIColor(red: 0.4, green: 0.25, blue: 0.15, alpha: 1.0)
-        shelfLeft.lineWidth = 1
-        shelfLeft.zPosition = 1
-        shelf.addChild(shelfLeft)
-        
-        // Physics body for shelf - wider to match the extended shelf
-        let shelfPhysics = SKSpriteNode(color: .clear, size: CGSize(width: width + (wallInset * 2), height: shelfThickness))
+        // Physics body for shelf - properly sized to match visual shelf
+        let shelfPhysics = SKSpriteNode(color: .clear, size: CGSize(width: width + wallThickness, height: shelfThickness))
         shelfPhysics.physicsBody = SKPhysicsBody(rectangleOf: shelfPhysics.size)
         shelfPhysics.physicsBody?.isDynamic = false
-        shelfPhysics.physicsBody?.friction = 0.05  // Extremely low friction so tiles slide off easily when tilted
+        shelfPhysics.physicsBody?.friction = 0.05  // Low friction for tilt mechanics
         shelfPhysics.physicsBody?.restitution = 0.2  // Low bounce
         shelfPhysics.physicsBody?.categoryBitMask = PhysicsCategories.shelf
         shelfPhysics.physicsBody?.contactTestBitMask = PhysicsCategories.tile
@@ -764,7 +787,10 @@ class PhysicsGameScene: SKScene {
             yGroups[roundedY, default: []].append(tile)
         }
         
-        // Only keep groups that have multiple tiles (companions)
+        // Get target words to check if single tiles can form complete words
+        let targetWords = gameModel.currentSentence.split(separator: " ").map { String($0) }
+        
+        // Keep groups that have multiple tiles (companions) OR single tiles that form complete words
         var validLevels: [(String, [LetterTile])] = []
         
         for (yLevel, tilesAtLevel) in yGroups {
@@ -776,9 +802,22 @@ class PhysicsGameScene: SKScene {
                 let tileDetails = tilesAtLevel.map { "\($0.letter)@(\(Int($0.position.x)),\(Int($0.position.y)))" }.joined(separator: ",")
                 print("✅ Valid level \(levelName): \(tileDetails)")
             } else {
-                // Single tile at this Y level - exclude it (no companions)
+                // Single tile at this Y level - check if it can form a complete word by itself
                 let lonelyTile = tilesAtLevel[0]
-                print("❌ EXCLUDED lonely tile '\(lonelyTile.letter)' at Y=\(Int(lonelyTile.position.y)) - no companions at same level")
+                let singleLetter = lonelyTile.letter.uppercased()
+                
+                // Check if this single letter matches any target word
+                let canFormCompleteWord = targetWords.contains { word in
+                    word.uppercased() == singleLetter
+                }
+                
+                if canFormCompleteWord {
+                    let levelName = "Level_Y\(yLevel)"
+                    validLevels.append((levelName, tilesAtLevel))
+                    print("✅ Valid single tile '\(singleLetter)' at Y=\(Int(lonelyTile.position.y)) - forms complete word")
+                } else {
+                    print("❌ EXCLUDED lonely tile '\(lonelyTile.letter)' at Y=\(Int(lonelyTile.position.y)) - no companions and doesn't form complete word")
+                }
             }
         }
         
