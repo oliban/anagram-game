@@ -1,0 +1,645 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */; };
+		9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */; };
+		9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08512E192E3A00DB73E7 /* ContentView.swift */; };
+		9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08532E192E3A00DB73E7 /* Item.swift */; };
+		9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9EAA08552E192E3B00DB73E7 /* Assets.xcassets */; };
+		9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9EAA08582E192E3B00DB73E7 /* Preview Assets.xcassets */; };
+		9EAA08652E192E3B00DB73E7 /* Anagram_GameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08642E192E3B00DB73E7 /* Anagram_GameTests.swift */; };
+		9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA086E2E192E3B00DB73E7 /* Anagram_GameUITests.swift */; };
+		9EAA08712E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08702E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift */; };
+		9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A62E192E3A00DB73E7 /* GameModel.swift */; };
+		9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */; };
+		9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9EAA08612E192E3B00DB73E7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9EAA08442E192E3A00DB73E7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9EAA084B2E192E3A00DB73E7;
+			remoteInfo = "Anagram Game";
+		};
+		9EAA086B2E192E3B00DB73E7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9EAA08442E192E3A00DB73E7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9EAA084B2E192E3A00DB73E7;
+			remoteInfo = "Anagram Game";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsGameView.swift; sourceTree = "<group>"; };
+		9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Anagram Game.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameApp.swift; sourceTree = "<group>"; };
+		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		9EAA08532E192E3A00DB73E7 /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
+		9EAA08552E192E3B00DB73E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9EAA08582E192E3B00DB73E7 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		9EAA085A2E192E3B00DB73E7 /* Anagram_Game.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Anagram_Game.entitlements; sourceTree = "<group>"; };
+		9EAA085B2E192E3B00DB73E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9EAA08602E192E3B00DB73E7 /* Anagram GameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Anagram GameTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EAA08642E192E3B00DB73E7 /* Anagram_GameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameTests.swift; sourceTree = "<group>"; };
+		9EAA086A2E192E3B00DB73E7 /* Anagram GameUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Anagram GameUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EAA086E2E192E3B00DB73E7 /* Anagram_GameUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameUITests.swift; sourceTree = "<group>"; };
+		9EAA08702E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		9EAA08A62E192E3A00DB73E7 /* GameModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModel.swift; sourceTree = "<group>"; };
+		9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModelTests.swift; sourceTree = "<group>"; };
+		9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = anagrams.txt; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9EAA08492E192E3A00DB73E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EAA085D2E192E3B00DB73E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EAA08672E192E3B00DB73E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9EAA08432E192E3A00DB73E7 = {
+			isa = PBXGroup;
+			children = (
+				9EAA084E2E192E3A00DB73E7 /*  */,
+				9EAA08632E192E3B00DB73E7 /* Anagram GameTests */,
+				9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */,
+				9EAA084D2E192E3A00DB73E7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9EAA084D2E192E3A00DB73E7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */,
+				9EAA08602E192E3B00DB73E7 /* Anagram GameTests.xctest */,
+				9EAA086A2E192E3B00DB73E7 /* Anagram GameUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9EAA084E2E192E3A00DB73E7 /*  */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */,
+				9EAA08A02E192E3A00DB73E7 /* Models */,
+				9EAA08A12E192E3A00DB73E7 /* Views */,
+				9EAA08A22E192E3A00DB73E7 /* Resources */,
+				9EAA085A2E192E3B00DB73E7 /* Anagram_Game.entitlements */,
+				9EAA085B2E192E3B00DB73E7 /* Info.plist */,
+			);
+			name = "";
+			sourceTree = "<group>";
+		};
+		9EAA08572E192E3B00DB73E7 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA08582E192E3B00DB73E7 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		9EAA08632E192E3B00DB73E7 /* Anagram GameTests */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA08642E192E3B00DB73E7 /* Anagram_GameTests.swift */,
+				9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */,
+			);
+			path = "Anagram GameTests";
+			sourceTree = "<group>";
+		};
+		9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA086E2E192E3B00DB73E7 /* Anagram_GameUITests.swift */,
+				9EAA08702E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift */,
+			);
+			path = "Anagram GameUITests";
+			sourceTree = "<group>";
+		};
+		9EAA08A02E192E3A00DB73E7 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA08532E192E3A00DB73E7 /* Item.swift */,
+				9EAA08A62E192E3A00DB73E7 /* GameModel.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		9EAA08A12E192E3A00DB73E7 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA08512E192E3A00DB73E7 /* ContentView.swift */,
+				23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		9EAA08A22E192E3A00DB73E7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9EAA08552E192E3B00DB73E7 /* Assets.xcassets */,
+				9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */,
+				9EAA08572E192E3B00DB73E7 /* Preview Content */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9EAA084B2E192E3A00DB73E7 /* Anagram Game */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9EAA08742E192E3B00DB73E7 /* Build configuration list for PBXNativeTarget "Anagram Game" */;
+			buildPhases = (
+				9EAA08482E192E3A00DB73E7 /* Sources */,
+				9EAA08492E192E3A00DB73E7 /* Frameworks */,
+				9EAA084A2E192E3A00DB73E7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Anagram Game";
+			productName = "Anagram Game";
+			productReference = 9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9EAA085F2E192E3B00DB73E7 /* Anagram GameTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9EAA08772E192E3B00DB73E7 /* Build configuration list for PBXNativeTarget "Anagram GameTests" */;
+			buildPhases = (
+				9EAA085C2E192E3B00DB73E7 /* Sources */,
+				9EAA085D2E192E3B00DB73E7 /* Frameworks */,
+				9EAA085E2E192E3B00DB73E7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9EAA08622E192E3B00DB73E7 /* PBXTargetDependency */,
+			);
+			name = "Anagram GameTests";
+			productName = "Anagram GameTests";
+			productReference = 9EAA08602E192E3B00DB73E7 /* Anagram GameTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9EAA08692E192E3B00DB73E7 /* Anagram GameUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9EAA087A2E192E3B00DB73E7 /* Build configuration list for PBXNativeTarget "Anagram GameUITests" */;
+			buildPhases = (
+				9EAA08662E192E3B00DB73E7 /* Sources */,
+				9EAA08672E192E3B00DB73E7 /* Frameworks */,
+				9EAA08682E192E3B00DB73E7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9EAA086C2E192E3B00DB73E7 /* PBXTargetDependency */,
+			);
+			name = "Anagram GameUITests";
+			productName = "Anagram GameUITests";
+			productReference = 9EAA086A2E192E3B00DB73E7 /* Anagram GameUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9EAA08442E192E3A00DB73E7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1520;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					9EAA084B2E192E3A00DB73E7 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+					9EAA085F2E192E3B00DB73E7 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = 9EAA084B2E192E3A00DB73E7;
+					};
+					9EAA08692E192E3B00DB73E7 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = 9EAA084B2E192E3A00DB73E7;
+					};
+				};
+			};
+			buildConfigurationList = 9EAA08472E192E3A00DB73E7 /* Build configuration list for PBXProject "Anagram Game" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9EAA08432E192E3A00DB73E7;
+			productRefGroup = 9EAA084D2E192E3A00DB73E7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9EAA084B2E192E3A00DB73E7 /* Anagram Game */,
+				9EAA085F2E192E3B00DB73E7 /* Anagram GameTests */,
+				9EAA08692E192E3B00DB73E7 /* Anagram GameUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9EAA084A2E192E3A00DB73E7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */,
+				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
+				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EAA085E2E192E3B00DB73E7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EAA08682E192E3B00DB73E7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9EAA08482E192E3A00DB73E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */,
+				3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */,
+				9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */,
+				9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */,
+				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EAA085C2E192E3B00DB73E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EAA08652E192E3B00DB73E7 /* Anagram_GameTests.swift in Sources */,
+				9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EAA08662E192E3B00DB73E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EAA08712E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift in Sources */,
+				9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9EAA08622E192E3B00DB73E7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9EAA084B2E192E3A00DB73E7 /* Anagram Game */;
+			targetProxy = 9EAA08612E192E3B00DB73E7 /* PBXContainerItemProxy */;
+		};
+		9EAA086C2E192E3B00DB73E7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9EAA084B2E192E3A00DB73E7 /* Anagram Game */;
+			targetProxy = 9EAA086B2E192E3B00DB73E7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		9EAA08722E192E3B00DB73E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		9EAA08732E192E3B00DB73E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9EAA08752E192E3B00DB73E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Anagram_Game.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Resources/Preview Content\"";
+				DEVELOPMENT_TEAM = 5XR7USWXMZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fredrik.anagramgame;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9EAA08762E192E3B00DB73E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Anagram_Game.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Resources/Preview Content\"";
+				DEVELOPMENT_TEAM = 5XR7USWXMZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fredrik.anagramgame;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9EAA08782E192E3B00DB73E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5XR7USWXMZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Shiny-Hat-Games.Anagram-GameTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Anagram Game.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Anagram Game";
+			};
+			name = Debug;
+		};
+		9EAA08792E192E3B00DB73E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5XR7USWXMZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Shiny-Hat-Games.Anagram-GameTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Anagram Game.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Anagram Game";
+			};
+			name = Release;
+		};
+		9EAA087B2E192E3B00DB73E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5XR7USWXMZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Shiny-Hat-Games.Anagram-GameUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Anagram Game";
+			};
+			name = Debug;
+		};
+		9EAA087C2E192E3B00DB73E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5XR7USWXMZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Shiny-Hat-Games.Anagram-GameUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Anagram Game";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9EAA08472E192E3A00DB73E7 /* Build configuration list for PBXProject "Anagram Game" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9EAA08722E192E3B00DB73E7 /* Debug */,
+				9EAA08732E192E3B00DB73E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9EAA08742E192E3B00DB73E7 /* Build configuration list for PBXNativeTarget "Anagram Game" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9EAA08752E192E3B00DB73E7 /* Debug */,
+				9EAA08762E192E3B00DB73E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9EAA08772E192E3B00DB73E7 /* Build configuration list for PBXNativeTarget "Anagram GameTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9EAA08782E192E3B00DB73E7 /* Debug */,
+				9EAA08792E192E3B00DB73E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9EAA087A2E192E3B00DB73E7 /* Build configuration list for PBXNativeTarget "Anagram GameUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9EAA087B2E192E3B00DB73E7 /* Debug */,
+				9EAA087C2E192E3B00DB73E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9EAA08442E192E3A00DB73E7 /* Project object */;
+}
