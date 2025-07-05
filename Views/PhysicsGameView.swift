@@ -37,10 +37,6 @@ struct PhysicsGameView: View {
                 // SwiftUI overlay for UI elements
                 VStack {
                     HStack {
-                        Text("Words: \(gameModel.wordsCompleted)")
-                            .font(.headline)
-                            .padding()
-                        
                         Spacer()
                         
                         VStack {
@@ -59,13 +55,6 @@ struct PhysicsGameView: View {
                         .padding()
                     }
                     
-                    // Show current sentence for testing
-                    if !gameModel.currentSentence.isEmpty {
-                        Text("Target: \(gameModel.currentSentence)")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                            .padding(.horizontal)
-                    }
                     
                     Spacer()
                     
@@ -81,6 +70,7 @@ struct PhysicsGameView: View {
                             .scaleEffect(2.0)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .background(Color.white.opacity(0.1))
+                            .offset(y: -250)
                             .zIndex(3000)
                     }
                     
@@ -191,7 +181,6 @@ class PhysicsGameScene: SKScene {
     var onCelebration: ((String) -> Void)?
     
     private var bookshelf: SKNode!
-    private var tileRack: SKNode!
     private var floor: SKNode!
     private var tiles: [LetterTile] = []
     var debugText: String = ""
@@ -284,11 +273,11 @@ class PhysicsGameScene: SKScene {
         
         // Create realistic bookshelf
         bookshelf = SKNode()
-        bookshelf.position = CGPoint(x: size.width / 2, y: size.height * 0.7)
+        bookshelf.position = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
         addChild(bookshelf)
         
         let shelfWidth: CGFloat = size.width * 0.75  // Reduced from 0.85 to 0.75 (10% less wide)
-        let shelfHeight: CGFloat = 240
+        let shelfHeight: CGFloat = 374  // Increased by 56% total (240 * 1.3 * 1.2)
         let shelfDepth: CGFloat = 50
         
         // Create bookshelf frame structure
@@ -296,41 +285,11 @@ class PhysicsGameScene: SKScene {
         
         // Create multiple shelves with proper wood grain appearance
         for i in 0..<4 {
-            let shelfY = CGFloat(-90 + (i * 60))
+            let shelfY = CGFloat(-140 + (i * 94))  // Increased spacing by 56% total (-90*1.56, 60*1.56)
             let shelf = createRealisticShelf(width: shelfWidth - 20, y: shelfY, depth: shelfDepth)  // Reduced inset from 30 to 20
             bookshelf.addChild(shelf)
         }
         
-        // Create tile rack with isometric perspective
-        tileRack = SKNode()
-        tileRack.position = CGPoint(x: size.width / 2, y: size.height * 0.45)
-        addChild(tileRack)
-        
-        let rackShape = SKShapeNode()
-        let rackPath = CGMutablePath()
-        let rackWidth: CGFloat = size.width * 0.7
-        let rackDepth: CGFloat = 60
-        
-        // Create isometric rack platform
-        rackPath.move(to: CGPoint(x: -rackWidth / 2, y: 0))
-        rackPath.addLine(to: CGPoint(x: rackWidth / 2, y: 0))
-        rackPath.addLine(to: CGPoint(x: rackWidth / 2 + 20, y: rackDepth / 2))
-        rackPath.addLine(to: CGPoint(x: -rackWidth / 2 + 20, y: rackDepth / 2))
-        rackPath.closeSubpath()
-        
-        rackShape.path = rackPath
-        rackShape.fillColor = .systemBrown
-        rackShape.strokeColor = .black
-        rackShape.lineWidth = 2
-        tileRack.addChild(rackShape)
-        
-        // Physics body for rack
-        let rackPhysics = SKSpriteNode(color: .clear, size: CGSize(width: rackWidth, height: 20))
-        rackPhysics.physicsBody = SKPhysicsBody(rectangleOf: rackPhysics.size)
-        rackPhysics.physicsBody?.isDynamic = false
-        rackPhysics.physicsBody?.friction = 0.05  // Very low friction so tiles slide off when tilted
-        rackPhysics.physicsBody?.restitution = 0.2  // Low bounce
-        tileRack.addChild(rackPhysics)
     }
     
     private func createBookshelfFrame(width: CGFloat, height: CGFloat, depth: CGFloat) {
@@ -340,11 +299,11 @@ class PhysicsGameScene: SKScene {
         // Left side panel - properly aligned with consistent thickness
         let leftPanel = SKShapeNode()
         let leftPath = CGMutablePath()
-        // Front face
-        leftPath.move(to: CGPoint(x: -width / 2 - wallThickness/2, y: -height / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2, y: height / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2, y: height / 2))
-        leftPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2, y: -height / 2))
+        // Front face - moved 10px to the left
+        leftPath.move(to: CGPoint(x: -width / 2 - wallThickness/2 - 10, y: -height / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2 - 10, y: height / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 - 10, y: height / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 - 10, y: -height / 2))
         leftPath.closeSubpath()
         
         leftPanel.path = leftPath
@@ -357,10 +316,10 @@ class PhysicsGameScene: SKScene {
         // Left panel 3D depth side
         let leftDepth = SKShapeNode()
         let leftDepthPath = CGMutablePath()
-        leftDepthPath.move(to: CGPoint(x: -width / 2 + wallThickness/2, y: height / 2))
-        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2, y: -height / 2))
-        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 + depthOffset, y: -height / 2 + depthOffset))
-        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 + depthOffset, y: height / 2 + depthOffset))
+        leftDepthPath.move(to: CGPoint(x: -width / 2 + wallThickness/2 - 10, y: height / 2))
+        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 - 10, y: -height / 2))
+        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 + depthOffset - 10, y: -height / 2 + depthOffset))
+        leftDepthPath.addLine(to: CGPoint(x: -width / 2 + wallThickness/2 + depthOffset - 10, y: height / 2 + depthOffset))
         leftDepthPath.closeSubpath()
         
         leftDepth.path = leftDepthPath
@@ -464,6 +423,22 @@ class PhysicsGameScene: SKScene {
         shelfRight.zPosition = 2  // Below front face
         shelf.addChild(shelfRight)
         
+        // Shelf left edge - seamlessly blends with left wall
+        let shelfLeft = SKShapeNode()
+        let leftPath = CGMutablePath()
+        leftPath.move(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap, y: -shelfThickness / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap, y: shelfThickness / 2))
+        leftPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
+        leftPath.addLine(to: CGPoint(x: -width / 2 - wallThickness/2 - wallOverlap + depthOffset, y: -shelfThickness / 2 + depthOffset))
+        leftPath.closeSubpath()
+        
+        shelfLeft.path = leftPath
+        shelfLeft.fillColor = UIColor(red: 0.60, green: 0.42, blue: 0.24, alpha: 1.0)  // Medium shadow side
+        shelfLeft.strokeColor = .clear  // No stroke for seamless blending
+        shelfLeft.lineWidth = 0
+        shelfLeft.zPosition = 2  // Below front face, same as right edge
+        shelf.addChild(shelfLeft)
+        
         // Physics body for shelf - properly sized to match visual shelf
         let shelfPhysics = SKSpriteNode(color: .clear, size: CGSize(width: width + wallThickness, height: shelfThickness))
         shelfPhysics.physicsBody = SKPhysicsBody(rectangleOf: shelfPhysics.size)
@@ -487,64 +462,40 @@ class PhysicsGameScene: SKScene {
         let letters = gameModel.scrambledLetters
         let tileSize = CGSize(width: 40, height: 40)
         
-        // Calculate spawn area on the FLOOR so players can drag tiles to shelves
-        let floorY = size.height * 0.25  // Floor area
-        let spawnWidth = size.width * 0.8  // Wide floor area
+        // Calculate spawn area at top center for rain effect
+        let spawnY = size.height * 0.9  // Near top of screen
+        let spawnWidth = size.width * 0.4  // Narrower area for center clustering
         
-        var usedPositions: [CGPoint] = []
-        let minDistance: CGFloat = 50  // Minimum distance between tiles
-        
-        for (_, letter) in letters.enumerated() {
-            let tile = LetterTile(letter: letter, size: tileSize)
+        // Create tiles with staggered delays for rain effect
+        for (index, letter) in letters.enumerated() {
+            let delay = Double(index) * 0.3  // 300ms delay between each tile
             
-            // Find a position on the floor that doesn't overlap with existing tiles
-            var position: CGPoint
-            var attempts = 0
-            
-            repeat {
+            let spawnAction = SKAction.run { [weak self] in
+                guard let self = self else { return }
+                
+                let tile = LetterTile(letter: letter, size: tileSize)
+                
+                // Random position near top center
                 let randomX = CGFloat.random(in: -spawnWidth/2...spawnWidth/2)
-                let baseX = size.width / 2 + randomX
-                let randomYOffset = CGFloat.random(in: -30...30)
-                position = CGPoint(x: baseX, y: floorY + randomYOffset)
-                attempts += 1
-            } while attempts < 20 && usedPositions.contains { pos in
-                let distance = sqrt(pow(pos.x - position.x, 2) + pow(pos.y - position.y, 2))
-                return distance < minDistance
+                let baseX = self.size.width / 2 + randomX
+                let randomYOffset = CGFloat.random(in: -20...20)
+                let position = CGPoint(x: baseX, y: spawnY + randomYOffset)
+                
+                tile.position = position
+                
+                // Add random rotation for natural look
+                tile.zRotation = CGFloat.random(in: -0.3...0.3)
+                
+                self.tiles.append(tile)
+                self.addChild(tile)
+                
+                print("Spawned tile '\(letter)' at \(position) with delay \(delay)s")
             }
             
-            usedPositions.append(position)
-            tile.position = position
+            let delayAction = SKAction.wait(forDuration: delay)
+            let sequence = SKAction.sequence([delayAction, spawnAction])
             
-            // Add random rotation for natural look
-            tile.zRotation = CGFloat.random(in: -0.5...0.5)
-            
-            tiles.append(tile)
-            addChild(tile)
-        }
-        
-        // Add initial velocity after a brief delay to ensure physics bodies are ready
-        let velocityAction = SKAction.sequence([
-            SKAction.wait(forDuration: 0.1),
-            SKAction.run { [weak self] in
-                self?.applyInitialVelocities()
-            }
-        ])
-        run(velocityAction)
-    }
-    
-    private func applyInitialVelocities() {
-        for tile in tiles {
-            // Ensure physics body is dynamic and ready
-            tile.physicsBody?.isDynamic = true
-            
-            // Apply very light initial velocity so tiles settle on shelves
-            tile.physicsBody?.velocity = CGVector(
-                dx: CGFloat.random(in: -20...20),
-                dy: CGFloat.random(in: -10...10)
-            )
-            
-            // Add very slight angular velocity for natural movement
-            tile.physicsBody?.angularVelocity = CGFloat.random(in: -0.5...0.5)
+            run(sequence)
         }
     }
     
@@ -614,6 +565,31 @@ class PhysicsGameScene: SKScene {
                     physicsBody.friction = 0.05
                 }
             }
+        }
+        
+        // Check for tiles that have left the screen and respawn them
+        for tile in tiles {
+            let margin: CGFloat = 100  // Buffer zone outside screen
+            if tile.position.x < -margin || 
+               tile.position.x > size.width + margin || 
+               tile.position.y < -margin || 
+               tile.position.y > size.height + margin {
+                // Respawn tile in center area with some randomness
+                let randomX = CGFloat.random(in: size.width * 0.3...size.width * 0.7)
+                let randomY = CGFloat.random(in: size.height * 0.4...size.height * 0.6)
+                tile.position = CGPoint(x: randomX, y: randomY)
+                
+                // Reset physics properties
+                tile.physicsBody?.velocity = CGVector.zero
+                tile.physicsBody?.angularVelocity = 0
+                tile.zRotation = CGFloat.random(in: -0.3...0.3)
+                
+                print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
+            }
+            
+            // Update z-position based on Y coordinate for proper stacking
+            // Higher Y positions get higher z-positions so upper tiles render above lower tiles
+            tile.zPosition = 50 + (tile.position.y * 0.01)
         }
     }
     
@@ -1168,20 +1144,6 @@ class LetterTile: SKSpriteNode {
         let tileHeight = size.height
         let depth: CGFloat = 6
         
-        // Create drop shadow (positioned offset to bottom-left from light source at top-right)
-        let shadowOffset: CGFloat = 8  // Much larger shadow offset for dramatic effect
-        let shadow = SKShapeNode()
-        let shadowPath = CGMutablePath()
-        shadowPath.move(to: CGPoint(x: -tileWidth / 2 - shadowOffset, y: -tileHeight / 2 - shadowOffset))
-        shadowPath.addLine(to: CGPoint(x: tileWidth / 2 - shadowOffset, y: -tileHeight / 2 - shadowOffset))
-        shadowPath.addLine(to: CGPoint(x: tileWidth / 2 - shadowOffset, y: tileHeight / 2 - shadowOffset))
-        shadowPath.addLine(to: CGPoint(x: -tileWidth / 2 - shadowOffset, y: tileHeight / 2 - shadowOffset))
-        shadowPath.closeSubpath()
-        shadow.path = shadowPath
-        shadow.fillColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.8)  // Very dark shadow
-        shadow.strokeColor = .clear
-        shadow.zPosition = -1  // Behind everything
-        addChild(shadow)
         
         // Create the main tile body (top surface) - lighter yellow for top lighting
         let topFace = SKShapeNode()
@@ -1250,21 +1212,11 @@ class LetterTile: SKSpriteNode {
         physicsBody?.allowsRotation = true
         physicsBody?.density = 1.0
         
-        // Set high z-position for entire tile to appear above shelves
+        // Set z-position based on Y coordinate for proper stacking (will be updated dynamically)
         zPosition = 50
     }
     
     private func createEmbossedLetter(on surface: SKShapeNode, letter: String, tileSize: CGSize) {
-        // Create letter shadow first (offset toward bottom-left, opposite to light source)
-        let shadowLabel = SKLabelNode(text: letter)
-        shadowLabel.fontSize = 24
-        shadowLabel.fontName = "Arial-Bold"
-        shadowLabel.fontColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.6)  // Dark shadow
-        shadowLabel.verticalAlignmentMode = .center
-        shadowLabel.horizontalAlignmentMode = .center
-        shadowLabel.position = CGPoint(x: -1.5, y: -1.5)  // Shadow offset toward bottom-left
-        shadowLabel.zPosition = 99
-        
         // Create main letter with good contrast
         let letterLabel = SKLabelNode(text: letter)
         letterLabel.fontSize = 24
@@ -1275,7 +1227,6 @@ class LetterTile: SKSpriteNode {
         letterLabel.position = CGPoint(x: 0, y: 0)
         letterLabel.zPosition = 100 // Very high z-position to ensure visibility
         
-        surface.addChild(shadowLabel)
         surface.addChild(letterLabel)
     }
     
