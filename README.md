@@ -10,30 +10,9 @@ An immersive iOS anagram puzzle game built with SwiftUI and SpriteKit physics. P
 - **Device Tilt Mechanics**: Tilt your iPhone forward to make tiles fall from shelves
 - **Spatial Word Formation**: Arrange tiles physically to spell words left-to-right
 
-### Smart Word Detection
-- **Level-Based Validation**: Words must be formed by tiles on the same horizontal level
-- **Companion Tile System**: Lonely tiles without companions at their Y-level are excluded
-- **Precise Spatial Ordering**: Only accepts tiles that spell words correctly when read left-to-right
-- **Anti-Stacking Logic**: Prevents false victories from stacked or misaligned tiles
-
-### Game Experience  
-- **Celebration Animations**: Fireworks and congratulatory messages for victories
-- **Play Again System**: Seamlessly restart with new random phrases
-- **Portrait Mode Only**: Optimized for iPhone portrait orientation
-- **Comprehensive Testing**: Unit tests for core game logic and edge cases
-
 ## 📱 Supported Platforms
 
 - **iOS**: iPhone (iOS 17.2+)
-- **Apple Watch**: Simplified version (planned)
-
-## 🎯 Sample Phrases
-
-- "I love you"
-- "one job" 
-- "two parties"
-
-*More phrases can be added to `Resources/anagrams.txt`*
 
 ## 🏗️ Architecture
 
@@ -60,22 +39,6 @@ Resources/
 - **`GameModel`**: SwiftUI-observable game state management
 - **Word Detection Algorithm**: Spatial arrangement validation system
 
-## 🧪 Testing
-
-Comprehensive unit test suite covering:
-
-```bash
-# Run tests in Xcode
-⌘+U
-
-# Test categories:
-- Tile selection algorithm (duplicate letter handling)
-- Spatial word formation validation  
-- Level-based grouping logic
-- Game state management
-- Performance with many tiles
-```
-
 ## 🔧 Development Setup
 
 ### Prerequisites
@@ -95,46 +58,7 @@ open "Anagram Game.xcodeproj"
 # Build and run
 ⌘+R
 ```
-
-### Development Commands
-- **Build**: `⌘+B`
-- **Run**: `⌘+R` 
-- **Test**: `⌘+U`
-- **Clean**: `⌘+Shift+K`
-
 ## 🎯 Game Rules
-
-### Word Formation
-1. **Drag tiles** to arrange them on shelves or floor
-2. **Tiles must have companions** - lonely tiles at isolated Y-levels are excluded
-3. **Read left-to-right** - spatial arrangement determines spelling
-4. **Same level only** - all letters of a word must be on the same horizontal level
-
-### Physics Mechanics
-- **Normal Mode**: Standard gravity, tiles settle naturally
-- **Falling Mode**: Tilt device forward (Y < -0.90) to make shelf tiles fall
-- **No Sliding**: Tiles stop immediately when released (high damping)
-
-### Victory Conditions
-- **All target words** must be formed completely
-- **Exact spelling** required (no partial words like "PARTIE" for "PARTIES")
-- **Correct spatial order** enforced
-
-## 🐛 Known Issues & Solutions
-
-### Common Problems
-- **False victories**: Fixed by companion tile validation and spatial ordering
-- **Stacked tile interference**: Resolved by Y-level grouping algorithm  
-- **Performance on startup**: Optimized with delayed tile creation
-
-## 🚀 Future Enhancements
-
-- [ ] Apple Watch companion app
-- [ ] More phrase categories (animals, food, movies)
-- [ ] Difficulty levels (word length, time limits)
-- [ ] Sound effects and haptic feedback
-- [ ] Multiplayer support
-- [ ] Achievement system
 
 ## 🤝 Contributing
 
@@ -144,12 +68,6 @@ open "Anagram Game.xcodeproj"
 4. Commit changes (`git commit -m 'Add amazing feature'`)
 5. Push to branch (`git push origin feature/amazing-feature`)
 6. Open a Pull Request
-
-### Code Style
-- Follow Swift naming conventions
-- Add unit tests for new algorithms
-- Update `DEVELOPMENT_PROGRESS.md` for major features
-- Use descriptive commit messages
 
 ## 📄 License
 
