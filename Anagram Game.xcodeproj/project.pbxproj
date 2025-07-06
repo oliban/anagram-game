@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */; };
+		4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */; };
+		5D8E2B9E3G293F4B00DC84F8 /* PlayerRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D8E2B9D3G293F4B00DC84F8 /* PlayerRegistrationView.swift */; };
+		6E9F3C8F4H394G5C00ED95G9 /* OnlinePlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9F3C8E4H394G5C00ED95G9 /* OnlinePlayersView.swift */; };
 		9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */; };
 		9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08512E192E3A00DB73E7 /* ContentView.swift */; };
 		9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08532E192E3A00DB73E7 /* Item.swift */; };
@@ -19,6 +22,7 @@
 		9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A62E192E3A00DB73E7 /* GameModel.swift */; };
 		9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */; };
 		9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */; };
+		9EE850522E1AA6970012700E /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 9EE850512E1AA6970012700E /* SocketIO */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +44,9 @@
 
 /* Begin PBXFileReference section */
 		23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsGameView.swift; sourceTree = "<group>"; };
+		4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
+		5D8E2B9D3G293F4B00DC84F8 /* PlayerRegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRegistrationView.swift; sourceTree = "<group>"; };
+		6E9F3C8E4H394G5C00ED95G9 /* OnlinePlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlinePlayersView.swift; sourceTree = "<group>"; };
 		9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Anagram Game.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameApp.swift; sourceTree = "<group>"; };
 		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -63,6 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EE850522E1AA6970012700E /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,7 +94,7 @@
 		9EAA08432E192E3A00DB73E7 = {
 			isa = PBXGroup;
 			children = (
-				9EAA084E2E192E3A00DB73E7 /*  */,
+				9EAA084E2E192E3A00DB73E7,
 				9EAA08632E192E3B00DB73E7 /* Anagram GameTests */,
 				9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */,
 				9EAA084D2E192E3A00DB73E7 /* Products */,
@@ -103,7 +111,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		9EAA084E2E192E3A00DB73E7 /*  */ = {
+		9EAA084E2E192E3A00DB73E7 = {
 			isa = PBXGroup;
 			children = (
 				9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */,
@@ -113,7 +121,6 @@
 				9EAA085A2E192E3B00DB73E7 /* Anagram_Game.entitlements */,
 				9EAA085B2E192E3B00DB73E7 /* Info.plist */,
 			);
-			name = "";
 			sourceTree = "<group>";
 		};
 		9EAA08572E192E3B00DB73E7 /* Preview Content */ = {
@@ -147,6 +154,7 @@
 			children = (
 				9EAA08532E192E3A00DB73E7 /* Item.swift */,
 				9EAA08A62E192E3A00DB73E7 /* GameModel.swift */,
+				4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -156,6 +164,8 @@
 			children = (
 				9EAA08512E192E3A00DB73E7 /* ContentView.swift */,
 				23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */,
+				5D8E2B9D3G293F4B00DC84F8 /* PlayerRegistrationView.swift */,
+				6E9F3C8E4H394G5C00ED95G9 /* OnlinePlayersView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -186,6 +196,9 @@
 			dependencies = (
 			);
 			name = "Anagram Game";
+			packageProductDependencies = (
+				9EE850512E1AA6970012700E /* SocketIO */,
+			);
 			productName = "Anagram Game";
 			productReference = 9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */;
 			productType = "com.apple.product-type.application";
@@ -258,6 +271,9 @@
 				Base,
 			);
 			mainGroup = 9EAA08432E192E3A00DB73E7;
+			packageReferences = (
+				9EE850502E1AA6970012700E /* XCRemoteSwiftPackageReference "socket" */,
+			);
 			productRefGroup = 9EAA084D2E192E3A00DB73E7 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -305,6 +321,9 @@
 				3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */,
 				9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */,
 				9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */,
+				4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */,
+				5D8E2B9E3G293F4B00DC84F8 /* PlayerRegistrationView.swift in Sources */,
+				6E9F3C8F4H394G5C00ED95G9 /* OnlinePlayersView.swift in Sources */,
 				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -640,6 +659,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9EE850502E1AA6970012700E /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9EE850512E1AA6970012700E /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9EE850502E1AA6970012700E /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9EAA08442E192E3A00DB73E7 /* Project object */;
 }

@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Claude Interactions
-- You don't build the app! I do.
+- **Testing Workflow**: After implementing features/fixes, you build and deploy to two test simulators (iPhone 15 and iPhone 15 Pro) using the build scripts, then await my feedback from testing before proceeding.
 
 ## Project Overview
 iOS "Anagram Game" for iPhone and Apple Watch built with SwiftUI. Players drag letter tiles to form words from scrambled sentences.
@@ -12,6 +12,8 @@ iOS "Anagram Game" for iPhone and Apple Watch built with SwiftUI. Players drag l
 - **Progress Tracking**: Update `DEVELOPMENT_PROGRESS.md` checkboxes as steps complete
 - **Current Focus**: Following 8-step implementation plan from project setup through Apple Watch version
 - **Time Estimates**: Each step has rough time estimates (30-120 minutes) for session planning
+- **Server Log Monitoring**: YOU are responsible for monitoring server logs automatically during testing. Do NOT wait for me to paste logs. Use proper log capture techniques (background processes, log files, tail commands) to monitor real-time server output and connection behavior.
+- **Testing Process**: After implementing features/fixes, run `./build_multi_sim.sh` to build and deploy to both iPhone 15 and iPhone 15 Pro simulators, then automatically monitor server logs and iOS device logs for debugging
 
 ## Current Implementation Status
 Track progress in `DEVELOPMENT_PROGRESS.md` - update checkboxes as each step completes.
@@ -192,3 +194,17 @@ Would you like me to [specific improvement]?"
 - **REMINDER**: If this file hasn't been referenced in 30+ minutes, RE-READ IT!
 
 Avoid complex abstractions or "clever" code. The simple, obvious solution is probably better, and my guidance helps you stay focused on what matters.
+
+## Code Review and Testing
+- Always have me test the code changes before committing anything to git
+- **Multi-Simulator Testing**: Use the provided build scripts to test multiplayer functionality:
+  - `./build_multi_sim.sh` - Full build and deploy to both iPhone 15 and iPhone 15 Pro simulators
+  - `./quick_test.sh` - Quick relaunch if app already installed
+  - `./setup_sims.sh` - Boot simulators only
+- After deployment, automatically monitor server logs and iOS device logs to analyze connection patterns and debug issues before proceeding with next tasks
+
+## Post-Deployment Workflow
+- **Always do this after deploying a fix**:
+  - Verify full functionality across both test simulators
+  - Run comprehensive tests to ensure no regressions
+  - Await detailed user feedback before marking task complete

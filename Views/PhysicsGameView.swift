@@ -104,16 +104,6 @@ struct PhysicsGameView: View {
                             .zIndex(3000)
                     }
                     
-                    // Debug text at bottom
-                    if let scene = gameScene, !scene.debugText.isEmpty {
-                        Text(scene.debugText)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .padding()
-                            .background(Color.black.opacity(0.8))
-                            .cornerRadius(8)
-                            .padding(.bottom)
-                    }
                 }
             }
         }

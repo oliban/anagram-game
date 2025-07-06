@@ -1,0 +1,38 @@
+🚀 Anagram Game Server running on port 3000
+📡 Status endpoint: http://localhost:3000/api/status
+🔌 WebSocket server ready for connections
+2025-07-06T12:19:06.314Z - GET /api/status
+🔌 SERVER: Client connected: 4ZQhghcvZFaLjvucAAAB (Total: 1) at 2025-07-06T12:19:06.337Z
+🔌 SERVER: Client remote address: 192.168.1.133
+🔌 SERVER: Client user agent: Anagram Game/1
+2025-07-06T12:19:07.403Z - POST /api/players/register
+👤 Player registered: asdsasds (player_1751804347403_f7859bwri)
+2025-07-06T12:19:07.428Z - GET /api/players/online
+📨 SERVER: Received event 'player-connect' from 4ZQhghcvZFaLjvucAAAB: [ { playerId: 'player_1751804347403_f7859bwri' } ]
+👤 SERVER: Player-connect event received at 2025-07-06T12:19:09.461Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751804347403_f7859bwri' }
+👤 SERVER: Player connected via socket: asdsasds (4ZQhghcvZFaLjvucAAAB) at 2025-07-06T12:19:09.461Z
+🔌 SERVER: Client disconnected: 4ZQhghcvZFaLjvucAAAB (Total: 0) at 2025-07-06T12:19:22.429Z
+🔌 SERVER: Disconnect reason: transport error
+👤 SERVER: Player socket disconnected: asdsasds (4ZQhghcvZFaLjvucAAAB) at 2025-07-06T12:19:22.429Z
+👤 SERVER: Player disconnect reason: transport error
+👤 Player disconnected: asdsasds (player_1751804347403_f7859bwri)
+2025-07-06T12:19:24.460Z - GET /api/status
+2025-07-06T12:26:49.874Z - GET /api/status
+🔌 SERVER: Client connected: cqRJOdO_KWSjN4fOAAAD (Total: 1) at 2025-07-06T12:26:49.880Z
+🔌 SERVER: Client remote address: 192.168.1.133
+🔌 SERVER: Client user agent: Anagram Game/1
+2025-07-06T12:26:50.904Z - POST /api/players/register
+👤 Player registered: Asdsaadfssdfdfsa (player_1751804810904_uub6yzx8w)
+2025-07-06T12:26:50.906Z - GET /api/players/online
+📨 SERVER: Received event 'player-connect' from cqRJOdO_KWSjN4fOAAAD: [ { playerId: 'player_1751804810904_uub6yzx8w' } ]
+👤 SERVER: Player-connect event received at 2025-07-06T12:26:53.060Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751804810904_uub6yzx8w' }
+👤 SERVER: Player connected via socket: Asdsaadfssdfdfsa (cqRJOdO_KWSjN4fOAAAD) at 2025-07-06T12:26:53.060Z
+🔌 SERVER: Client disconnected: cqRJOdO_KWSjN4fOAAAD (Total: 0) at 2025-07-06T12:27:05.926Z
+🔌 SERVER: Disconnect reason: transport error
+👤 SERVER: Player socket disconnected: Asdsaadfssdfdfsa (cqRJOdO_KWSjN4fOAAAD) at 2025-07-06T12:27:05.926Z
+👤 SERVER: Player disconnect reason: transport error
+👤 Player disconnected: Asdsaadfssdfdfsa (player_1751804810904_uub6yzx8w)
+2025-07-06T12:27:36.317Z - GET /api/status
+2025-07-06T12:27:36.616Z - GET /api/status
