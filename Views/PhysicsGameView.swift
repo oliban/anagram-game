@@ -68,6 +68,19 @@ struct PhysicsGameView: View {
                                         scene.triggerQuickQuake()
                                     }
                                 }
+                            
+                            Text("Hint")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .background(Color.green.opacity(0.9))
+                                .cornerRadius(4)
+                                .padding(.horizontal, 8)
+                                .onTapGesture {
+                                    print("💡 Hint button tapped!")
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.triggerHint()
+                                    }
+                                }
                         }
                         .padding()
                     }
@@ -194,6 +207,7 @@ class PhysicsGameScene: SKScene {
     private var bookshelf: SKNode!
     private var floor: SKNode!
     private var tiles: [LetterTile] = []
+    private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var debugText: String = ""
     var celebrationText: String = ""
     private var isQuakeActive: Bool = false
@@ -289,11 +303,16 @@ class PhysicsGameScene: SKScene {
         // Create bookshelf frame structure
         createBookshelfFrame(width: shelfWidth, height: shelfHeight, depth: shelfDepth)
         
+        // Clear shelves array for clean setup
+        shelves.removeAll()
+        
         // Create multiple shelves with proper wood grain appearance
         for i in 0..<4 {
             let shelfY = CGFloat(-140 + (i * 94))  // Increased spacing by 56% total (-90*1.56, 60*1.56)
             let shelf = createRealisticShelf(width: shelfWidth - 20, y: shelfY, depth: shelfDepth)  // Reduced inset from 30 to 20
+            shelf.name = "shelf_\(i)"  // Add identifier for hint system
             bookshelf.addChild(shelf)
+            shelves.append(shelf)  // Track shelf for hint system
         }
         
     }
@@ -589,6 +608,132 @@ class PhysicsGameScene: SKScene {
         triggerQuakeWithDuration(0.5)
     }
     
+    func triggerHint() {
+        print("💡 Hint triggered - lighting up shelves!")
+        
+        let targetWords = gameModel.getExpectedWords()
+        let numberOfWords = targetWords.count
+        
+        print("💡 Target phrase: '\(gameModel.currentSentence)'")
+        print("💡 Number of words needed: \(numberOfWords)")
+        print("💡 Available shelves: \(shelves.count)")
+        
+        // Light up the same number of shelves as there are words in the target phrase
+        let shelvesToLight = min(numberOfWords, shelves.count)
+        
+        for i in 0..<shelvesToLight {
+            lightUpShelf(shelves[i], wordIndex: i)
+        }
+        
+        print("💡 Lit up \(shelvesToLight) shelves for \(numberOfWords) words")
+    }
+    
+    private func lightUpShelf(_ shelf: SKNode, wordIndex: Int) {
+        // Remove any existing highlights
+        shelf.childNode(withName: "hint_glow")?.removeFromParent()
+        
+        // Get shelf dimensions that match the actual shelf creation
+        let wallThickness: CGFloat = 12
+        let wallOverlap: CGFloat = 8
+        let shelfWidth: CGFloat = size.width * 0.75 - 20  // Match actual shelf width
+        let shelfThickness: CGFloat = 8
+        let depthOffset: CGFloat = 15
+        
+        // Softer, more subtle color palette
+        let hintColors: [UIColor] = [
+            UIColor(red: 1.0, green: 0.9, blue: 0.7, alpha: 1.0),   // Warm cream (1st word)
+            UIColor(red: 0.8, green: 1.0, blue: 0.8, alpha: 1.0),   // Soft mint (2nd word)
+            UIColor(red: 0.8, green: 0.9, blue: 1.0, alpha: 1.0),   // Light sky blue (3rd word)
+            UIColor(red: 0.95, green: 0.8, blue: 1.0, alpha: 1.0)   // Lavender (4th word)
+        ]
+        
+        let colorIndex = wordIndex % hintColors.count
+        let hintColor = hintColors[colorIndex]
+        
+        // Create a container for all glow elements
+        let glowContainer = SKNode()
+        glowContainer.name = "hint_glow"
+        
+        // 1. Create glow for the shelf top surface (matches the isometric top)
+        let topGlow = SKShapeNode()
+        let topPath = CGMutablePath()
+        topPath.move(to: CGPoint(x: -shelfWidth / 2 - wallThickness/2 - wallOverlap, y: shelfThickness / 2))
+        topPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap, y: shelfThickness / 2))
+        topPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
+        topPath.addLine(to: CGPoint(x: -shelfWidth / 2 - wallThickness/2 - wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
+        topPath.closeSubpath()
+        
+        topGlow.path = topPath
+        topGlow.fillColor = hintColor.withAlphaComponent(0.4)  // More prominent
+        topGlow.strokeColor = hintColor.withAlphaComponent(0.7)
+        topGlow.lineWidth = 2
+        topGlow.zPosition = 5  // Above the actual shelf
+        
+        // 2. Create glow for the shelf front face
+        let frontGlow = SKShapeNode()
+        let frontPath = CGMutablePath()
+        frontPath.move(to: CGPoint(x: -shelfWidth / 2 - wallThickness/2 - wallOverlap, y: -shelfThickness / 2))
+        frontPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap, y: -shelfThickness / 2))
+        frontPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap, y: shelfThickness / 2))
+        frontPath.addLine(to: CGPoint(x: -shelfWidth / 2 - wallThickness/2 - wallOverlap, y: shelfThickness / 2))
+        frontPath.closeSubpath()
+        
+        frontGlow.path = frontPath
+        frontGlow.fillColor = hintColor.withAlphaComponent(0.35)  // More prominent
+        frontGlow.strokeColor = hintColor.withAlphaComponent(0.6)
+        frontGlow.lineWidth = 2
+        frontGlow.zPosition = 4  // Just above the front face
+        
+        // 3. Create glow for the shelf right edge (3D depth side)
+        let rightGlow = SKShapeNode()
+        let rightPath = CGMutablePath()
+        rightPath.move(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap, y: shelfThickness / 2))
+        rightPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap, y: -shelfThickness / 2))
+        rightPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap + depthOffset, y: -shelfThickness / 2 + depthOffset))
+        rightPath.addLine(to: CGPoint(x: shelfWidth / 2 + wallThickness/2 + wallOverlap + depthOffset, y: shelfThickness / 2 + depthOffset))
+        rightPath.closeSubpath()
+        
+        rightGlow.path = rightPath
+        rightGlow.fillColor = hintColor.withAlphaComponent(0.25)  // More prominent
+        rightGlow.strokeColor = hintColor.withAlphaComponent(0.5)
+        rightGlow.lineWidth = 2
+        rightGlow.zPosition = 3
+        
+        // Add all glow elements to container
+        glowContainer.addChild(frontGlow)
+        glowContainer.addChild(rightGlow)
+        glowContainer.addChild(topGlow)
+        
+        // First: 2-second pulsating intro for attention
+        let pulseBright = SKAction.fadeAlpha(to: 1.0, duration: 0.3)
+        let pulseDim = SKAction.fadeAlpha(to: 0.4, duration: 0.3)
+        let pulseSequence = SKAction.sequence([pulseBright, pulseDim])
+        let pulsatingIntro = SKAction.repeat(pulseSequence, count: 3)  // 3 pulses = ~1.8 seconds
+        
+        // Then: settle into gentle breathing
+        let breatheOut = SKAction.fadeAlpha(to: 0.6, duration: 2.0)
+        let breatheIn = SKAction.fadeAlpha(to: 0.8, duration: 2.0)
+        let breathing = SKAction.sequence([breatheOut, breatheIn])
+        let repeatBreathing = SKAction.repeatForever(breathing)
+        
+        // Combine: pulsating intro then continuous breathing
+        let fullAnimation = SKAction.sequence([pulsatingIntro, repeatBreathing])
+        glowContainer.run(fullAnimation)
+        
+        // Add glow container to shelf
+        shelf.addChild(glowContainer)
+        
+        print("💡 Shelf \(wordIndex) lit up with 3D \(hintColor) glow covering all surfaces")
+    }
+    
+    private func clearAllHints() {
+        print("💡 Clearing all hint effects for new game")
+        for shelf in shelves {
+            // Remove the glow container which contains all glow elements
+            shelf.childNode(withName: "hint_glow")?.removeFromParent()
+        }
+    }
+    
     private func triggerQuakeWithDuration(_ duration: TimeInterval) {
         // Manually trigger quake effect for debugging
         print("🌍 QUAKE triggered manually for \(duration) seconds!")
@@ -738,6 +883,7 @@ class PhysicsGameScene: SKScene {
     }
     
     func resetGame() {
+        clearAllHints()  // Clear hint effects when starting new game
         createTiles()
         debugText = ""
     }
@@ -1130,6 +1276,9 @@ class PhysicsGameScene: SKScene {
     }
     
     private func startNewGame() {
+        // Clear hint effects when starting new game
+        clearAllHints()
+        
         // Reset game model to get new sentence
         gameModel.startNewGame()
         
@@ -1372,10 +1521,10 @@ class LetterTile: SKSpriteNode {
         
         // Apply offset to all child nodes (the 3D faces)
         for child in children {
-            if let shapeNode = child as? SKShapeNode {
+            if child is SKShapeNode {
                 // Reset to original position then apply rotation-based offset
                 child.position = CGPoint(x: offsetX, y: offsetY)
-            } else if let labelNode = child as? SKLabelNode {
+            } else if child is SKLabelNode {
                 // Keep letter centered but also apply offset
                 child.position = CGPoint(x: offsetX, y: offsetY)
             }
