@@ -91,21 +91,21 @@ struct PhysicsGameView: View {
                                 .padding(.horizontal, 4)
                             
                             
-                            if let nextPhrase = networkManager.pendingPhrases.first {
-                                Text("NEXT:")
+                            if let lastPhrase = networkManager.lastReceivedPhrase {
+                                Text("LAST RECEIVED:")
                                     .font(.caption2)
                                     .foregroundColor(.green)
                                     .fontWeight(.bold)
                                     .padding(.top, 4)
                                 
-                                Text(nextPhrase.content)
+                                Text(lastPhrase.content)
                                     .font(.caption2)
                                     .foregroundColor(.green)
                                     .background(Color.black.opacity(0.7))
                                     .cornerRadius(4)
                                     .padding(.horizontal, 4)
                                 
-                                Text("from \(nextPhrase.senderName)")
+                                Text("from \(lastPhrase.senderName)")
                                     .font(.caption2)
                                     .foregroundColor(.green)
                                     .italic()
@@ -116,7 +116,7 @@ struct PhysicsGameView: View {
                                     .fontWeight(.bold)
                                     .padding(.top, 4)
                                 
-                                Text("(random)")
+                                Text("(server phrase)")
                                     .font(.caption2)
                                     .foregroundColor(.gray)
                                     .background(Color.black.opacity(0.7))
@@ -301,7 +301,7 @@ struct PhysicsGameView: View {
             }
             
             // Update the tiltText state variable to display gravity on screen
-            self.tiltText = String(format: "Tilt Y: %.2f", motion.gravity.y)
+            self.tiltText = String(format: "Tilt Y: %.2f, Z: %.2f", motion.gravity.y, motion.gravity.z)
             
             // NO SwiftUI state updates here - everything handled in scene
             PhysicsGameView.sharedScene?.updateGravity(from: motion.gravity)
@@ -321,7 +321,9 @@ class PhysicsGameScene: SKScene {
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var debugText: String = ""
     var celebrationText: String = ""
-    private var isQuakeActive: Bool = false
+
+    private enum QuakeState { case none, normal, superQuake }
+    private var quakeState: QuakeState = .none
     private var quakeEndAction: SKAction?
     
     init(gameModel: GameModel, size: CGSize) {
@@ -634,28 +636,46 @@ class PhysicsGameScene: SKScene {
         }
     }
     
-    func updateGravity(from gravity: CMAcceleration) {        
-        // Check if we should trigger quake mode (when tilting forward) - lowered threshold
-        let shouldQuake = gravity.y < -0.90
-        
-        if shouldQuake && !isQuakeActive {
-            // Start natural quake mode
-            isQuakeActive = true
-            startShelfShaking()
-        } else if !shouldQuake && isQuakeActive {
-            // End natural quake mode
-            isQuakeActive = false
-            stopShelfShaking()
+    func updateGravity(from gravity: CMAcceleration) {
+        // Determine the desired quake state based on device tilt
+        let desiredState: QuakeState
+        if gravity.z > 0.29 {
+            desiredState = .superQuake
+        } else if gravity.z > 0.10 {
+            desiredState = .normal
+        } else {
+            desiredState = .none
         }
-        
+    
+        // Transition to the new state if it's different
+        if desiredState != self.quakeState {
+            switch desiredState {
+            case .none:
+                stopShelfShaking()
+            case .normal:
+                stopShelfShaking() // Stop any previous shaking before starting new one
+                startShelfShaking()
+            case .superQuake:
+                stopShelfShaking() // Stop any previous shaking
+                startSuperShelfShaking()
+            }
+            self.quakeState = desiredState
+        }
+
         // Always maintain normal gravity
         physicsWorld.gravity = CGVector(dx: 0, dy: -9.8)
-        
-        // Applied gravity (no logging to reduce spam)
-        
+
         // Update debug text within the scene (no SwiftUI state changes)
-        let status = shouldQuake ? " QUAKE!" : ""
-        debugText = "Tilt: x=\(String(format: "%.2f", gravity.x)), y=\(String(format: "%.2f", gravity.y))\(status)"
+        let status: String
+        switch self.quakeState {
+        case .none:
+            status = ""
+        case .normal:
+            status = " QUAKE!"
+        case .superQuake:
+            status = " SUPER QUAKE!"
+        }
+        debugText = "Tilt: y=\(String(format: "%.2f", gravity.y)), z=\(String(format: "%.2f", gravity.z))\(status)"
         
         // ALWAYS show tile positions for debugging (not just when falling)
         let floorY = size.height * 0.25
@@ -665,7 +685,7 @@ class PhysicsGameScene: SKScene {
             tile.childNode(withName: "status_marker")?.removeFromParent()
         }
         
-        if shouldQuake {
+        if self.quakeState != .none {
             // Apply forces to tiles on shelves only
             
             for (index, tile) in tiles.enumerated() {
@@ -686,9 +706,15 @@ class PhysicsGameScene: SKScene {
                     physicsBody.linearDamping = 0.1
                     physicsBody.angularDamping = 0.1
                     
-                    // Apply moderate forces so tiles don't vanish off screen
-                    physicsBody.applyForce(CGVector(dx: 0, dy: -2000))
-                    physicsBody.applyImpulse(CGVector(dx: CGFloat.random(in: -100...100), dy: -200))
+                    if self.quakeState == .superQuake {
+                        // Apply VIOLENT forces
+                        physicsBody.applyForce(CGVector(dx: 0, dy: -4000))
+                        physicsBody.applyImpulse(CGVector(dx: CGFloat.random(in: -200...200), dy: -400))
+                    } else {
+                        // Apply moderate forces so tiles don't vanish off screen
+                        physicsBody.applyForce(CGVector(dx: 0, dy: -2000))
+                        physicsBody.applyImpulse(CGVector(dx: CGFloat.random(in: -100...100), dy: -200))
+                    }
                 }
             }
             
@@ -843,9 +869,9 @@ class PhysicsGameScene: SKScene {
             removeAction(forKey: "shelfWiggling")
         }
         
-        if !isQuakeActive {
+        if quakeState == .none {
             // Start new quake
-            isQuakeActive = true
+            self.quakeState = .normal
             startShelfShaking()
         } else {
             // Extend existing quake
@@ -854,7 +880,7 @@ class PhysicsGameScene: SKScene {
         // Reset to normal after specified duration
         let resetAction = SKAction.run {
             self.stopShelfShaking()
-            self.isQuakeActive = false
+            self.quakeState = .none
             self.quakeEndAction = nil
         }
         let waitAction = SKAction.wait(forDuration: duration)
@@ -951,6 +977,40 @@ class PhysicsGameScene: SKScene {
         bookshelf.run(returnGroup)
     }
     
+    private func startSuperShelfShaking() {
+        print("📳 Starting SUPER VIOLENT shelf shaking and wiggling animation")
+        
+        // Create violent shaking motion for the bookshelf
+        let shakeIntensity: CGFloat = 24.0  // Double intensity
+        let shakeDuration: TimeInterval = 0.03  // Even faster
+        
+        let shakeLeft = SKAction.moveBy(x: -shakeIntensity, y: 0, duration: shakeDuration)
+        let shakeRight = SKAction.moveBy(x: shakeIntensity * 2, y: 0, duration: shakeDuration)
+        let shakeUp = SKAction.moveBy(x: 0, y: shakeIntensity, duration: shakeDuration)
+        let shakeDown = SKAction.moveBy(x: 0, y: -shakeIntensity * 2, duration: shakeDuration)
+        let shakeDiagonal1 = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
+        let shakeDiagonal2 = SKAction.moveBy(x: -shakeIntensity * 2, y: -shakeIntensity * 2, duration: shakeDuration)
+        let returnToCenter = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
+        
+        let shakeSequence = SKAction.sequence([shakeLeft, shakeRight, shakeUp, shakeDown, shakeDiagonal1, shakeDiagonal2, returnToCenter])
+        let repeatShaking = SKAction.repeatForever(shakeSequence)
+        
+        // Create wiggling rotation motion
+        let wiggleIntensity: CGFloat = 0.30  // Double intensity
+        let wiggleDuration: TimeInterval = 0.05
+        
+        let wiggleLeft = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
+        let wiggleRight = SKAction.rotate(byAngle: wiggleIntensity * 2, duration: wiggleDuration)
+        let wiggleCenter = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
+        
+        let wiggleSequence = SKAction.sequence([wiggleLeft, wiggleRight, wiggleCenter])
+        let repeatWiggling = SKAction.repeatForever(wiggleSequence)
+        
+        // Apply shaking to bookshelf for visual effect
+        bookshelf.run(repeatShaking, withKey: "shelfShaking")
+        bookshelf.run(repeatWiggling, withKey: "shelfWiggling")
+    }
+    
     override func update(_ currentTime: TimeInterval) {
         // Check for tiles that have left the screen and respawn them
         for tile in tiles {
@@ -996,7 +1056,7 @@ class PhysicsGameScene: SKScene {
         
         // Stop any ongoing physics effects
         removeAction(forKey: "quakeForces")
-        isQuakeActive = false
+        quakeState = .none
         
         // Reset bookshelf position and rotation in case quake was active
         bookshelf.removeAllActions()
