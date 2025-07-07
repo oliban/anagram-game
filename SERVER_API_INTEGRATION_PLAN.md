@@ -92,11 +92,13 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
     - [ ] Approve community-submitted global phrases
     - [ ] Requires admin authentication (future feature)
 
-- [ ] **4.3 Offline Mode Support**
-  - [ ] **NEW: `GET /api/phrases/offline/:playerId`**
-    - [ ] Download batch of phrases for offline play
-    - [ ] Returns 10-20 phrases with hints
-    - [ ] Tracks download in offline_phrases table
+- [x] **4.3 Offline Mode Support** ✅ COMPLETE
+  - [x] **NEW: `GET /api/phrases/download/:playerId`**
+    - [x] Download batch of phrases for offline play while online
+    - [x] Returns 10-20 phrases with hints (configurable via count parameter)
+    - [x] Tracks download in offline_phrases table to prevent duplicates
+    - [x] UUID validation and comprehensive error handling
+    - **Flow**: App downloads phrases while online → stores locally → plays offline
 
 - [ ] **4.4 Statistics & Analytics**
   - [ ] **Enhanced: `GET /api/status`**
@@ -107,6 +109,10 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
   - [ ] **NEW: `GET /api/stats/player/:playerId`**
     - [ ] Detailed player statistics
     - [ ] Completion rates, average times, created phrases
+    - [ ] We need a daily score and a weekly score and a total score
+    - [ ] We need leaderboards that track these metrics
+
+
 
 ## Phase 4 Validation & Security ✅ COMPLETE
 - [x] **Socket ID Type Validation**
@@ -165,14 +171,7 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 ## Phase 6: Migration & Compatibility (15 mins)
 - [ ] **6.1 Data Migration Strategy**
   - [ ] **No data loss**: Import existing in-memory data to database on first startup
-  - [ ] **Backward compatibility**: Keep old endpoints working during transition
-  - [ ] **Gradual migration**: Support both old and new client versions
-
-- [ ] **6.2 Feature Flags**
-  - [ ] Add feature flags for new hint system
-  - [ ] Allow toggling between old/new phrase selection logic
-  - [ ] Enable progressive rollout of new features
-
+  
 - [ ] **6.3 Performance Monitoring**
   - [ ] Add query performance logging
   - [ ] Monitor database connection pool health
@@ -196,8 +195,7 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 - [ ] **7.3 UI/UX Enhancements**
   - [ ] **Hint Display**: Design and implement hint presentation UI (modal/inline/toggle)
   - [ ] **Error States**: Handle new error scenarios (database down, invalid player sessions)
-  - [ ] **Migration UX**: Seamless user transition without data loss during app update
-
+  
 - [ ] **7.4 Testing & Validation**
   - [ ] **Integration Testing**: End-to-end testing with new database-driven server
   - [ ] **Migration Testing**: Validate upgrade path from old to new app version
@@ -210,13 +208,6 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 - **Data Safety**: Must preserve user progress and preferences during migration
 - **User Experience**: Seamless transition essential for retention
 
-### **Deployment Strategy:**
-1. **Complete Server Phase 4-6** (current path)
-2. **iOS App Migration** (Phase 7)
-3. **Coordinated Release** with feature flags
-4. **Progressive Rollout** to validate hint system
-5. **Legacy Cleanup** after successful deployment
-
 ## Implementation Order & Risk Mitigation
 
 ### Critical Path
@@ -226,11 +217,6 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 4. **New hint endpoints** (low risk - additive features)
 5. **Offline mode support** (low risk - new feature)
 
-### Rollback Strategy
-- Keep old PlayerStore/PhraseStore as fallback
-- Environment variable to switch between old/new systems
-- Database transaction rollback for failed operations
-- Graceful degradation if database is unavailable
 
 ### Testing Checkpoints
 1. **After Phase 1**: Database connectivity and health checks
@@ -254,8 +240,6 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 6. Migration documentation and rollback procedures
 
 ## Notes
-- This plan ensures zero downtime migration while adding the powerful new hint system and offline capabilities
-- Maintains full backward compatibility with existing iOS client
 - Adds foundation for offline mode and community phrase features
 - Database foundation already complete and tested
 
@@ -271,7 +255,7 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 
 ### Remaining Work:
 - ⚠️ **Phase 4.2**: Phrase approval system (`POST /api/phrases/:phraseId/approve`)
-- ⚠️ **Phase 4.3**: Offline mode support 
+- ✅ **Phase 4.3**: Offline mode support - COMPLETE
 - ⚠️ **Phase 4.4**: Enhanced statistics & analytics
 
 ## Testing Results ✅
