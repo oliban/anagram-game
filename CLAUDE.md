@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Testing Workflow**: After implementing features/fixes, you build and deploy to two test simulators (iPhone 15 and iPhone 15 Pro) using the build scripts, then await my feedback from testing before proceeding.
 
 ## Project Overview
-iOS "Anagram Game" for iPhone and Apple Watch built with SwiftUI. Players drag letter tiles to form words from scrambled sentences.
+iOS "Anagram Game" for iPhone built with SwiftUI. Players drag letter tiles to form words from scrambled sentences.
 
 ## Development Workflow
 - **Progress Tracking**: Update `DEVELOPMENT_PROGRESS.md` checkboxes as steps complete
-- **Current Focus**: Following 8-step implementation plan from project setup through Apple Watch version
+- **Current Focus**: Following 8-step implementation plan
 - **Time Estimates**: Each step has rough time estimates (30-120 minutes) for session planning
 - **Server Log Monitoring**: YOU are responsible for monitoring server logs automatically during testing. Do NOT wait for me to paste logs. Use proper log capture techniques (background processes, log files, tail commands) to monitor real-time server output and connection behavior.
 - **Testing Process**: After implementing features/fixes, run `./build_multi_sim.sh` to build and deploy to both iPhone 15 and iPhone 15 Pro simulators, then automatically monitor server logs and iOS device logs for debugging
@@ -145,7 +145,6 @@ Your code must be production-quality. No exceptions.
 Models/             # Data models and game logic
 Views/              # SwiftUI views and UI components
 Resources/          # Assets, data files, localizations
-Watch/              # Apple Watch specific code
 Anagram GameTests/  # Unit tests
 ```
 
@@ -237,3 +236,138 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
   - Verify full functionality across both test simulators
   - Run comprehensive tests to ensure no regressions
   - Await detailed user feedback before marking task complete
+
+## Server Development Commands
+
+### Start Server (Development)
+```bash
+# Start server with logging
+node server/server.js > server/server_output.log 2>&1 &
+
+# Monitor server logs
+tail -f server/server_output.log
+
+# Kill existing server
+pkill -f "node server.js"
+```
+
+### API Documentation Generation
+- **Automated Docs**: Use script-based approach with `swagger-autogen` to regenerate API documentation after changes
+- **Workflow**: Rerun documentation script every time API changes are made
+- **Location**: API documentation available at `/api-docs` endpoint
+- **Generation Script**: Run `npm run docs` to regenerate OpenAPI specification from existing routes
+
+### Database Operations
+```bash
+# Test database connection
+node -e "require('./server/database/connection').testConnection()"
+
+# Run database schema setup
+psql -d anagram_game -f server/database/schema.sql
+```
+
+### Server Testing
+```bash
+# Run server test suite
+cd server && ./run_tests.sh
+
+# Run specific test suites
+node server/test_api_suite.js
+node server/test_phase4_validation_suite.js
+node server/test_comprehensive_suite.js
+```
+
+### API Documentation
+```bash
+# Generate automated API documentation
+npm run docs
+
+# View interactive documentation
+# http://localhost:3000/api/docs/
+```
+
+## iOS Testing Commands
+
+### Unit Tests
+```bash
+# Run all tests
+xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15'
+
+# Run specific test class
+xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15' -only-testing:Anagram_GameTests/GameModelTests
+```
+
+### Build Commands
+```bash
+# Clean build
+xcodebuild clean -project "Anagram Game.xcodeproj" -scheme "Anagram Game"
+
+# Build only (no install)
+xcodebuild -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15' build
+```
+
+## Detailed Architecture
+
+### Client-Server Communication
+- **WebSocket**: Real-time multiplayer communication via Socket.IO
+- **REST API**: HTTP endpoints for player registration, phrase management
+- **Database**: PostgreSQL with connection pooling for persistent storage
+- **UUID-based Players**: Server uses proper UUIDs for player identification
+
+### iOS Architecture Patterns
+- **MVVM**: GameModel as observable ViewModel, SwiftUI Views
+- **Hybrid UI**: SwiftUI + SpriteKit for physics-based gameplay
+- **Networking**: URLSession for HTTP, Socket.IO for WebSocket
+- **Observable Pattern**: @Observable GameModel for state management
+
+### Key Network Endpoints
+- `GET /api/status` - Server health check with database stats
+- `POST /api/players` - Player registration (returns UUID)
+- `GET /api/players/online` - Online player list
+- `GET /api/phrases/for/:playerId` - Get targeted phrases for player
+- `POST /api/phrases` - Create new phrase with hint support
+- `POST /api/phrases/create` - Enhanced phrase creation with options
+- `GET /api/phrases/global` - Global community phrases
+- `GET /api/phrases/download/:playerId` - Offline mode phrase batch
+
+## Environment Setup
+
+### Server Environment
+```bash
+# Optional environment variables
+PORT=3000
+DATABASE_URL=postgresql://localhost/anagram_game
+```
+
+### iOS Simulator IDs
+- iPhone 15: `AF307F12-A657-4D6A-8123-240CBBEC5B31`
+- iPhone 15 Pro: `86355D8A-560E-465D-8FDC-3D037BCA482B`
+
+### Bundle Identifier
+`com.fredrik.anagramgame`
+
+## Common Debugging Patterns
+
+### WebSocket Connection Issues
+1. Check server logs: `tail -f server/server_output.log`
+2. Verify client connection in NetworkManager.swift
+3. Test with multiple simulators using `./build_multi_sim.sh`
+4. Check for proper UUID format in player identification
+
+### Build Failures
+1. Clean derived data: `rm -rf ~/Library/Developer/Xcode/DerivedData`
+2. Check Info.plist version numbers (both CFBundleVersion and CFBundleShortVersionString)
+3. Verify simulator UUIDs are correct
+4. Ensure local build directory: `-derivedDataPath ./build`
+
+### Database Issues
+1. Check PostgreSQL connection: `node -e "require('./server/database/connection').testConnection()"`
+2. Verify schema is applied: `psql -d anagram_game -c "\dt"`
+3. Test with server test suite: `./server/run_tests.sh`
+4. Monitor database errors in server logs
+
+### Player Registration Issues
+- Server now uses UUID-based players (breaking change from string IDs)
+- Old clients must re-register with new player format
+- Check NetworkManager.swift for proper UUID handling
+- Invalid player IDs return 400 errors (expected behavior)

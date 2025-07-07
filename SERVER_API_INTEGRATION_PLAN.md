@@ -109,9 +109,13 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
   - [ ] **NEW: `GET /api/stats/player/:playerId`**
     - [ ] Detailed player statistics
     - [ ] Completion rates, average times, created phrases
-    - [ ] We need a daily score and a weekly score and a total score
-    - [ ] We need leaderboards that track these metrics
-
+    
+  -  [ ] **NEW: `GET /api/stats/`**
+      - [ ] Scores and created phrases etc.
+      - [ ] We need a daily score and a weekly score and a total score
+      - [ ] We need leaderboards that track these metrics
+      
+  
 
 
 ## Phase 4 Validation & Security ✅ COMPLETE
@@ -135,47 +139,159 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
   - [x] Real phrase ID validation vs fake ID rejection
   - [x] App version 1.7 compatibility verified
 
-## Phase 5: Response Format Standardization (10 mins)
-- [ ] **5.1 Enhanced Response Objects**
-  ```javascript
-  // Old phrase response
-  {
-    "id": "uuid",
-    "content": "phrase text",
-    "senderId": "uuid", 
-    "targetId": "uuid",
-    "isConsumed": false
-  }
+## Phase 4.5: API Documentation Implementation ✅ COMPLETE
+- [x] **4.5.1 Automated Documentation Setup**
+  - [x] Install swagger-autogen for fully automated documentation generation
+  - [x] Install swagger-ui-express for interactive documentation UI
+  - [x] Configure automated OpenAPI specification generation
+  - [x] Set up interactive documentation at `/api/docs`
+  - [x] Add custom styling and branding for Swagger UI
 
-  // New phrase response (with hints)
-  {
-    "id": "uuid",
-    "content": "phrase text", 
-    "hint": "helpful hint text",
-    "difficultyLevel": 2,
-    "phraseType": "targeted|global",
-    "priority": 1,
-    "usageCount": 5,
-    "senderInfo": {
-      "id": "uuid",
-      "name": "PlayerName"
-    }
-  }
-  ```
+- [x] **4.5.2 Automated Endpoint Discovery**
+  - [x] Automatically detect and document all 11 API endpoints
+  - [x] Auto-generate request/response schemas from actual code
+  - [x] Automatically include error response codes and status codes
+  - [x] Add npm script for easy documentation regeneration: `npm run docs`
 
-- [ ] **5.2 Error Handling Improvements**
-  - [ ] Standardize database error responses
-  - [ ] Add specific error codes for hint validation failures
-  - [ ] Improve error messages for better client debugging
+- [x] **4.5.3 Zero-Maintenance Documentation System**
+  - [x] Fully automated API documentation with swagger-autogen
+  - [x] No manual JSDoc comments required - automatically extracts from Express routes
+  - [x] Automatic schema generation from route parameters and responses
+  - [x] Self-updating documentation that stays current with code changes
+  - [x] Production-ready interactive API documentation at `http://localhost:3000/api/docs/`
 
-## Phase 6: Migration & Compatibility (15 mins)
-- [ ] **6.1 Data Migration Strategy**
-  - [ ] **No data loss**: Import existing in-memory data to database on first startup
+## Phase 4.6: Language & Internationalization Support (45 mins)
+- [ ] **4.6.1 Database Schema Updates**
+  - [ ] Add `language` field to phrases table (en|sv)
+  - [ ] Add language detection and validation logic
+  - [ ] Update phrase creation to include language metadata
+
+- [ ] **4.6.2 API Language Support**
+  - [ ] Add language parameter to all phrase endpoints
+  - [ ] Update phrase responses to include language information
+  - [ ] Add language filtering to global phrase bank
+  - [ ] **Feature**: Add language preference to player profiles
+
+- [ ] **4.6.3 Multi-language Testing**
+  - [ ] Validate English and Swedish phrase handling
+  - [ ] Test language-specific phrase filtering
+  - [ ] Ensure backward compatibility for existing phrases
+
+## Phase 4.7: Difficulty Scoring Implementation (60 mins)
+- [ ] **4.7.1 Server-Side Scoring Algorithm**
+  - [ ] Implement difficulty scoring based on DIFFICULTY_SCORING_IMPLEMENTATION_PLAN.md
+  - [ ] Create `server/services/difficultyScorer.js` module
+  - [ ] Add English and Swedish letter frequency data
+  - [ ] Statistical algorithm: Letter Rarity (70%) + Structural Complexity (30%)
+
+- [ ] **4.7.2 Database Integration**
+  - [ ] Add `difficulty_score` field to phrases table (no, there should be one already)
+  - [ ] Integrate scoring into phrase creation process
+  - [ ] Add difficulty analysis endpoint: `POST /api/phrases/analyze-difficulty`
+
+- [ ] **4.7.3 API Enhancements**
+  - [ ] Return difficulty scores in all phrase responses
+  - [ ] Add difficulty filtering to phrase endpoints
+  - [ ] Update phrase creation UI to show calculated difficulty
+
+## Phase 4.8: Enhanced Hint System (45 mins)
+- [ ] **4.8.1 Progressive Hint System**
+  - [ ] **Hint Level 1**: Word count indication (highlight shelves)
+  - [ ] **Hint Level 2**: Show text hint that came with phrase
+  - [ ] **Hint Level 3**: Highlight first letters of each word (light blue)
   
-- [ ] **6.3 Performance Monitoring**
-  - [ ] Add query performance logging
-  - [ ] Monitor database connection pool health
-  - [ ] Add alerts for slow database operations
+- [ ] **4.8.2 Hint Tracking Database**
+  - [ ] Create `hint_usage` table to track hint progression
+  - [ ] Add hint level endpoints: `POST /api/phrases/:phraseId/hint/:level`
+  - [ ] Track hint usage for scoring calculations
+
+- [ ] **4.8.3 Hint API Integration**
+  - [ ] Add hint progression to phrase responses
+  - [ ] Implement hint penalty system for scoring
+  - [ ] Add hint status endpoint: `GET /api/phrases/:phraseId/hints/status`
+
+## Phase 4.9: Scoring System (45 mins)
+- [ ] **4.9.1 Point Calculation System**
+  - [ ] Base points = difficulty score (1-100)
+  - [ ] Hint penalties: Hint 1 (-10%), Hint 2 (-20%), Hint 3 (-30%) from total
+  - [ ] Real-time score calculation and tracking
+
+- [ ] **4.9.2 Scoring Database & API**
+  - [ ] Create scoring tables (player_scores, leaderboards)
+  - [ ] Add scoring endpoints: `GET /api/scores/player/:playerId`
+  - [ ] Implement leaderboards: `GET /api/leaderboards/:type` (daily|weekly|total)
+  - [ ] Score update endpoint: `POST /api/scores`
+
+- [ ] **4.9.3 Leaderboard System**
+  - [ ] Daily, weekly, and total score tracking
+  - [ ] Automated leaderboard reset and archival
+  - [ ] Leaderboard API with pagination and filtering
+
+## Phase 5: Complete Server Validation & API Documentation (60 mins) 🚨 CRITICAL
+- [ ] **5.1 API Documentation Completion**
+  - [x] Complete Swagger/OpenAPI documentation for all endpoints
+  - [ ] Document WebSocket events and real-time communication
+  - [ ] Add comprehensive request/response examples
+  - [ ] Include troubleshooting and error handling guides
+
+- [ ] **5.2 End-to-End Server Testing**
+  - [ ] Validate all 11+ API endpoints with new features
+  - [ ] Test language support across all endpoints
+  - [ ] Validate difficulty scoring integration
+  - [ ] Test enhanced hint system functionality
+  - [ ] Verify scoring system calculations
+
+- [ ] **5.3 Performance & Security Validation**
+  - [ ] Load testing with new features enabled
+  - [ ] Security audit of new endpoints
+  - [ ] Database performance optimization
+  - [ ] Memory leak detection and resolution
+
+- [ ] **5.4 Migration Testing**
+  - [ ] Database schema migration validation
+  - [ ] Backward compatibility testing
+  - [ ] Data integrity verification
+  - [ ] Rollback procedure testing
+
+## Phase 6: iOS Core Migration (90 mins)
+- [ ] **6.1 Player UUID Migration**
+  - [ ] Update NetworkManager.swift for UUID-based players
+  - [ ] Implement proper UUID handling and validation
+  - [ ] Update player registration flow
+
+- [ ] **6.2 Core Data Updates**
+  - [ ] Add new fields: language, difficulty, hints, scores
+  - [ ] Implement Core Data migration for existing users
+  - [ ] Update data models and relationships
+
+- [ ] **6.3 Basic API Integration**
+  - [ ] Update all network calls to use documented API
+  - [ ] Implement error handling for new status codes
+  - [ ] Test core functionality with new server
+
+## Phase 7: iOS Advanced Features (120 mins)
+- [ ] **7.1 Internationalization**
+  - [ ] Swedish localization for all UI strings
+  - [ ] Language picker UI (flag in upper right corner)
+  - [ ] Language preference persistence
+  - [ ] Dynamic language switching
+
+- [ ] **7.2 Enhanced Hint UI**
+  - [ ] Implement 3-step hint visualization system
+  - [ ] Shelf highlighting for word count indication
+  - [ ] First letter highlighting (light blue tiles)
+  - [ ] Progressive hint unlock interface
+
+- [ ] **7.3 Scoring UI**
+  - [ ] Points display with difficulty-based calculation
+  - [ ] Hint penalty visualization
+  - [ ] Leaderboard interface (daily/weekly/total)
+  - [ ] Score tracking and progress indicators
+
+- [ ] **7.4 Difficulty Display**
+  - [ ] Difficulty indicators in phrase creation
+  - [ ] Real-time difficulty calculation feedback
+  - [ ] Difficulty-based phrase filtering
 
 ## 🚨 CRITICAL: iOS App Migration Requirements
 **BREAKING CHANGE**: Server migration to PostgreSQL introduces UUID-based players, incompatible with current iOS app
@@ -186,21 +302,6 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
   - [ ] **Phrase Model**: Add hint property and new response fields (difficultyLevel, phraseType, priority)
   - [ ] **Local Storage**: Update CoreData schemas and migration logic for existing user data
 
-- [ ] **7.2 Network Layer Overhaul**
-  - [ ] **API Integration**: Update all endpoints to handle UUID requests/responses
-  - [ ] **Response Parsing**: Handle new phrase response format with hints and metadata
-  - [ ] **Error Handling**: Support new HTTP status codes (503 for DB unavailable, proper UUID validation)
-  - [ ] **WebSocket Events**: Update `player-connect` and `new-phrase` event handling for UUIDs and hints
-
-- [ ] **7.3 UI/UX Enhancements**
-  - [ ] **Hint Display**: Design and implement hint presentation UI (modal/inline/toggle)
-  - [ ] **Error States**: Handle new error scenarios (database down, invalid player sessions)
-  
-- [ ] **7.4 Testing & Validation**
-  - [ ] **Integration Testing**: End-to-end testing with new database-driven server
-  - [ ] **Migration Testing**: Validate upgrade path from old to new app version
-  - [ ] **Hint Functionality**: Comprehensive hint display and interaction testing
-  - [ ] **WebSocket Testing**: Real-time hint delivery and player targeting validation
 
 ### **Phase 7 Risk Assessment:**
 - **High Impact**: Complete rewrite of player identification system
@@ -225,11 +326,15 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 4. **After Phase 4**: Full feature set including offline mode
 5. **After Phase 5**: Client compatibility and performance testing
 
-## Expected Timeline
-- **Total time**: ~2 hours for complete migration
-- **Critical functionality**: ~45 minutes (Phases 1-3)
-- **New features**: ~45 minutes (Phases 4-5)
-- **Polish & migration**: ~30 minutes (Phase 6)
+## Expected Timeline (Revised)
+- **Total time**: ~6-8 hours for complete integration
+- **Server development**: ~4-5 hours (Phases 4.5-5)
+  - API Documentation: ~1.5 hours (Phase 4.5)
+  - New Features: ~3 hours (Phases 4.6-4.9)
+  - Validation: ~1 hour (Phase 5)
+- **iOS integration**: ~3-4 hours (Phases 6-7)
+  - Core Migration: ~1.5 hours (Phase 6)
+  - Advanced Features: ~2 hours (Phase 7)
 
 ## Deliverables
 1. Fully migrated server with database persistence
