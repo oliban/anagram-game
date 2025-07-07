@@ -56,7 +56,11 @@ struct PhysicsGameView: View {
                         Spacer()
                         
                         VStack {
-                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0") NEW")
+                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                                .onAppear {
+                                    print("📱 INFO DICT DEBUG: \(Bundle.main.infoDictionary ?? [:])")
+                                    print("📱 VERSION DEBUG: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "NOT FOUND")")
+                                }
                                 .font(.caption)
                                 .foregroundColor(.red)
                                 .fontWeight(.bold)
@@ -65,6 +69,13 @@ struct PhysicsGameView: View {
                                         scene.triggerQuake()
                                     }
                                 }
+                            
+                            Text(tiltText)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(4)
+                                .padding(.horizontal, 4)
                             
                             // Debug: Show solution words
                             Text("SOLUTION:")
@@ -288,6 +299,9 @@ struct PhysicsGameView: View {
                 print("❌ Motion error: \(error?.localizedDescription ?? "Unknown")")
                 return 
             }
+            
+            // Update the tiltText state variable to display gravity on screen
+            self.tiltText = String(format: "Tilt Y: %.2f", motion.gravity.y)
             
             // NO SwiftUI state updates here - everything handled in scene
             PhysicsGameView.sharedScene?.updateGravity(from: motion.gravity)
