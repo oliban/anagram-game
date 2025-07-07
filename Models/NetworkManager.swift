@@ -27,6 +27,36 @@ struct Player: Codable, Identifiable, Equatable {
     }
 }
 
+// Custom phrase model for multiplayer phrases
+struct CustomPhrase: Codable, Identifiable, Equatable {
+    let id: String
+    let content: String
+    let senderId: String
+    let targetId: String
+    let createdAt: Date
+    let isConsumed: Bool
+    let senderName: String
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, content, senderId, targetId, createdAt, isConsumed, senderName
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        content = try container.decode(String.self, forKey: .content)
+        senderId = try container.decode(String.self, forKey: .senderId)
+        targetId = try container.decode(String.self, forKey: .targetId)
+        isConsumed = try container.decode(Bool.self, forKey: .isConsumed)
+        senderName = try container.decode(String.self, forKey: .senderName)
+        
+        // Handle date parsing
+        let dateString = try container.decode(String.self, forKey: .createdAt)
+        let formatter = ISO8601DateFormatter()
+        createdAt = formatter.date(from: dateString) ?? Date()
+    }
+}
+
 private struct RegistrationRequestBody: Encodable {
     let name: String
 }
@@ -39,6 +69,9 @@ class NetworkManager: ObservableObject {
     @Published var isConnected: Bool = false
     @Published var currentPlayer: Player? = nil
     @Published var onlinePlayers: [Player] = []
+    @Published var pendingPhrases: [CustomPhrase] = []
+    @Published var lastReceivedPhrase: CustomPhrase? = nil
+    @Published var debugCounter: Int = 0
     
     private let baseURL = "http://192.168.1.133:3000"
     private var urlSession: URLSession
@@ -83,13 +116,27 @@ class NetworkManager: ObservableObject {
     }
     
     private init() {
+        // Initialize with basic configuration first
+        self.urlSession = URLSession.shared
+        
+        // Configure URLSession properly
+        configureURLSession()
+
+        // Initialize Socket.IO manager
+        setupSocketManager()
+        
+        // Monitor app lifecycle to maintain connections
+        setupAppLifecycleMonitoring()
+    }
+    
+    private func configureURLSession() {
         let config = URLSessionConfiguration.default
         
-        // Configure for long-lived WebSocket connections
-        config.timeoutIntervalForRequest = 60.0      // Increased from 10s
-        config.timeoutIntervalForResource = 0        // No resource timeout (infinite)
+        // Configure for HTTP requests with shorter timeouts
+        config.timeoutIntervalForRequest = 30.0      // 30 seconds
+        config.timeoutIntervalForResource = 60.0     // 60 seconds total
         config.allowsCellularAccess = true
-        config.waitsForConnectivity = true
+        config.waitsForConnectivity = false          // Don't wait indefinitely
         config.networkServiceType = .responsiveData
         
         // Disable caching for real-time connections
@@ -99,12 +146,6 @@ class NetworkManager: ObservableObject {
         print("📡 INIT: URLSession configured for HTTP requests")
         
         self.urlSession = URLSession(configuration: config)
-
-        // Initialize Socket.IO manager
-        setupSocketManager()
-        
-        // Monitor app lifecycle to maintain connections
-        setupAppLifecycleMonitoring()
     }
 
     private func setupSocketManager() {
@@ -228,17 +269,21 @@ class NetworkManager: ObservableObject {
         }
         
         if socket.status == .connected {
-            print("🔌 SOCKET: Already connected.")
+            print("🔌 SOCKET: Already connected - sending player-connect event")
+            // If already connected, just send the player-connect event
+            socket.emit("player-connect", with: [["playerId": playerId]], completion: nil)
+            print("👤 SOCKET: Sent 'player-connect' for already connected socket, player ID: \(playerId)")
             return
         }
 
-        print("🔌 SOCKET: Attempting to connect...")
+        print("🔌 SOCKET: Attempting to connect for player: \(playerId)")
         connectionStatus = .connecting
 
         // The player ID is sent upon connection
         socket.on(clientEvent: .connect) { [weak self] _, _ in
             guard let self = self else { return }
             print("🔌 SOCKET: Connected successfully!")
+            print("🔌 SOCKET: Socket status: \(self.socket?.status.rawValue ?? -1)")
             self.connectionStatus = .connected
             self.isConnected = true
             
@@ -251,6 +296,7 @@ class NetworkManager: ObservableObject {
         }
         
         socket.connect()
+        print("🔌 SOCKET: Connection attempt initiated")
     }
 
     func disconnect() {
@@ -259,7 +305,12 @@ class NetworkManager: ObservableObject {
     }
 
     private func setupSocketEventHandlers() {
-        guard let socket = socket else { return }
+        guard let socket = socket else { 
+            print("❌ SOCKET SETUP: No socket available")
+            return 
+        }
+        
+        print("🔧 SOCKET SETUP: Setting up event handlers")
 
         socket.on(clientEvent: .disconnect) { [weak self] _, _ in
             print("🔌 SOCKET: Disconnected.")
@@ -271,6 +322,7 @@ class NetworkManager: ObservableObject {
         socket.on(clientEvent: .error) { [weak self] data, _ in
             let error = data.first as? String ?? "Unknown error"
             print("❌ SOCKET: Connection error: \(error)")
+            print("❌ SOCKET: Error data: \(data)")
             self?.connectionStatus = .error(error)
             self?.isConnected = false
             self?.stopPeriodicPlayerListFetch()
@@ -317,6 +369,14 @@ class NetworkManager: ObservableObject {
                 await self.fetchOnlinePlayers()
             }
         }
+        
+        socket.on("new-phrase") { [weak self] data, _ in
+            print("📝 SOCKET: Received 'new-phrase' event")
+            print("📝 SOCKET: Raw data: \(data)")
+            self?.handleNewPhrase(data: data)
+        }
+        
+        print("🔧 SOCKET SETUP: ✅ All event handlers registered")
     }
 
     private func handlePlayerListUpdate(data: [Any]) {
@@ -337,6 +397,70 @@ class NetworkManager: ObservableObject {
             }
         } catch {
             print("❌ SOCKET: Failed to decode player list: \(error.localizedDescription)")
+        }
+    }
+    
+    private func handleNewPhrase(data: [Any]) {
+        print("📝 SOCKET: handleNewPhrase called with data count: \(data.count)")
+        
+        guard let payload = data.first as? [String: Any] else {
+            print("❌ SOCKET: No payload in data or not a dictionary")
+            print("❌ SOCKET: Data: \(data)")
+            return
+        }
+        
+        print("📝 SOCKET: Payload keys: \(payload.keys)")
+        
+        guard let phraseData = payload["phrase"] as? [String: Any] else {
+            print("❌ SOCKET: No 'phrase' field in payload or not a dictionary")
+            print("❌ SOCKET: Payload: \(payload)")
+            return
+        }
+        
+        guard let senderName = payload["senderName"] as? String else {
+            print("❌ SOCKET: No 'senderName' field in payload or not a string")
+            print("❌ SOCKET: Payload: \(payload)")
+            return
+        }
+        
+        print("📝 SOCKET: Found phrase data and senderName: \(senderName)")
+        
+        do {
+            // Add senderName to the phrase data for decoding
+            var mutablePhraseData = phraseData
+            mutablePhraseData["senderName"] = senderName
+            
+            print("📝 SOCKET: About to decode phrase data: \(mutablePhraseData)")
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: mutablePhraseData)
+            let decoder = JSONDecoder()
+            let phrase = try decoder.decode(CustomPhrase.self, from: jsonData)
+            
+            print("📝 SOCKET: Successfully decoded phrase: \(phrase)")
+            
+            DispatchQueue.main.async {
+                print("📝 SOCKET: About to add phrase to pendingPhrases")
+                print("📝 SOCKET: Current pendingPhrases count before adding: \(self.pendingPhrases.count)")
+                
+                // Force update the published array
+                self.debugCounter += 1
+                var updatedPhrases = self.pendingPhrases
+                updatedPhrases.append(phrase)
+                self.pendingPhrases = updatedPhrases
+                print("📝 SOCKET: Added phrase to pendingPhrases")
+                print("📝 SOCKET: Current pendingPhrases count after adding: \(self.pendingPhrases.count)")
+                
+                self.lastReceivedPhrase = phrase
+                print("📝 SOCKET: Set lastReceivedPhrase")
+                
+                print("📝 SOCKET: ✅ Received new phrase '\(phrase.content)' from \(senderName)")
+                print("📝 SOCKET: lastReceivedPhrase is now: \(String(describing: self.lastReceivedPhrase))")
+                print("📝 SOCKET: pendingPhrases contents: \(self.pendingPhrases.map { $0.content })")
+                print("🎯 NEXT WORD PREVIEW: Your next game will be: '\(phrase.content)' (when you complete current game)")
+            }
+        } catch {
+            print("❌ SOCKET: Failed to decode new phrase: \(error.localizedDescription)")
+            print("❌ SOCKET: Error details: \(error)")
         }
     }
     
@@ -372,8 +496,12 @@ class NetworkManager: ObservableObject {
                 self.currentPlayer = player
                 print("👤 REGISTER: Player registered successfully: \(player.name) (\(player.id))")
                 
-                // Now, connect to the socket
+                // Now, connect to the socket and wait a bit for connection
                 connect(playerId: player.id)
+                
+                // Give the socket time to connect before returning
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                print("👤 REGISTER: Socket connection status after wait: \(self.isConnected)")
                 
                 return true
             }
@@ -420,6 +548,107 @@ class NetworkManager: ObservableObject {
         }
     }
     
+    func sendPhrase(content: String, targetId: String) async -> Bool {
+        guard let url = URL(string: "\(baseURL)/api/phrases") else {
+            print("❌ PHRASE: Invalid URL for sending phrase")
+            return false
+        }
+        
+        guard let currentPlayer = currentPlayer else {
+            print("❌ PHRASE: No current player registered")
+            return false
+        }
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody: [String: Any] = [
+                "content": content,
+                "senderId": currentPlayer.id,
+                "targetId": targetId
+            ]
+            
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (_, response) = try await urlSession.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 {
+                print("📝 PHRASE: Successfully sent phrase '\(content)' to \(targetId)")
+                return true
+            } else {
+                print("❌ PHRASE: Failed to send phrase. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return false
+            }
+            
+        } catch {
+            print("❌ PHRASE: Error sending phrase: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    func fetchPhrasesForCurrentPlayer() async -> [CustomPhrase] {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ PHRASE: No current player registered")
+            return []
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/phrases/for/\(currentPlayer.id)") else {
+            print("❌ PHRASE: Invalid URL for fetching phrases")
+            return []
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ PHRASE: Failed to fetch phrases. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return []
+            }
+            
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let phrasesData = jsonResponse["phrases"] {
+                let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
+                let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
+                print("📝 PHRASE: Fetched \(phrases.count) phrases for current player")
+                return phrases
+            }
+            
+            return []
+        } catch {
+            print("❌ PHRASE: Error fetching phrases: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
+    func consumePhrase(phraseId: String) async -> Bool {
+        guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/consume") else {
+            print("❌ PHRASE: Invalid URL for consuming phrase")
+            return false
+        }
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let (_, response) = try await urlSession.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                print("✅ PHRASE: Successfully consumed phrase \(phraseId)")
+                return true
+            } else {
+                print("❌ PHRASE: Failed to consume phrase. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return false
+            }
+            
+        } catch {
+            print("❌ PHRASE: Error consuming phrase: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
     // MARK: - Periodic Updates
     
     func startPeriodicPlayerListFetch() {
@@ -449,14 +678,24 @@ class NetworkManager: ObservableObject {
     
     func testConnection() async -> Result<Bool, NetworkError> {
         guard let url = URL(string: "\(baseURL)/api/status") else {
+            print("❌ TEST: Invalid URL: \(baseURL)")
             return .failure(.invalidURL)
         }
         
+        print("🔍 TEST: Testing connection to \(baseURL)")
+        
         do {
-            let (data, response) = try await urlSession.data(from: url)
+            // Add timeout to prevent hanging
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 10.0 // 10 second timeout
+            
+            let (data, response) = try await urlSession.data(for: request)
+            
+            print("🔍 TEST: Got response, status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
             
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
+                print("❌ TEST: Server returned status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
                 return .failure(.serverOffline)
             }
             
@@ -464,11 +703,14 @@ class NetworkManager: ObservableObject {
             if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let status = jsonResponse["status"] as? String,
                status == "online" {
+                print("✅ TEST: Connection successful")
                 return .success(true)
             }
             
+            print("❌ TEST: Invalid response format")
             return .failure(.invalidResponse)
         } catch {
+            print("❌ TEST: Connection failed with error: \(error.localizedDescription)")
             return .failure(.connectionFailed)
         }
     }

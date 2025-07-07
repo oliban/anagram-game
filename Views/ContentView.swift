@@ -9,11 +9,34 @@ import SwiftUI
 import SwiftData
 import Foundation
 
+func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+    return try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            return try await operation()
+        }
+        
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TimeoutError()
+        }
+        
+        guard let result = try await group.next() else {
+            throw TimeoutError()
+        }
+        
+        group.cancelAll()
+        return result
+    }
+}
+
+struct TimeoutError: Error {}
+
 struct ContentView: View {
     @StateObject private var networkManager = NetworkManager.shared
     @State private var showingConnectionTest = false
     @State private var showingRegistration = false
     @State private var showingPlayersList = false
+    @State private var showingPhraseCreation = false
     @State private var isPlayerRegistered = false
     
     var body: some View {
@@ -51,15 +74,29 @@ struct ContentView: View {
                                 .font(.headline)
                                 .foregroundColor(.primary)
                             
-                            Button(action: {
-                                showingPlayersList = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "person.2.fill")
-                                    Text("\(networkManager.onlinePlayers.count) players online")
+                            HStack(spacing: 12) {
+                                Button(action: {
+                                    showingPlayersList = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "person.2.fill")
+                                        Text("\(networkManager.onlinePlayers.count) players online")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
                                 }
-                                .font(.caption)
-                                .foregroundColor(.blue)
+                                
+                                Button(action: {
+                                    showingPhraseCreation = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "plus.message.fill")
+                                        Text("Send Phrase")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                }
+                                .disabled(networkManager.onlinePlayers.filter { $0.id != networkManager.currentPlayer?.id }.isEmpty)
                             }
                         }
                     } else if showingConnectionTest {
@@ -77,16 +114,30 @@ struct ContentView: View {
                     // Debug/Testing buttons
                     VStack(spacing: 8) {
                         Button("Test Connection") {
-                            showingConnectionTest = true
+                            print("🔘 Test Connection button tapped")
+                            networkManager.connectionStatus = .connecting
                             Task {
+                                print("🔘 Starting connection test...")
                                 let result = await networkManager.testConnection()
-                                switch result {
-                                case .success:
-                                    networkManager.connect()
-                                case .failure(let error):
-                                    print("Connection test failed: \(error)")
+                                await MainActor.run {
+                                    switch result {
+                                    case .success:
+                                        print("🔘 Test successful - attempting registration")
+                                        networkManager.connectionStatus = .connected
+                                        Task {
+                                            let success = await networkManager.registerPlayer(name: "Player_\(Int.random(in: 100...999))")
+                                            if success {
+                                                print("🔘 Registration successful")
+                                            } else {
+                                                print("🔘 Registration failed")
+                                                networkManager.connectionStatus = .error("Registration failed")
+                                            }
+                                        }
+                                    case .failure(let error):
+                                        print("🔘 Connection test failed: \(error)")
+                                        networkManager.connectionStatus = .error("Test failed: \(error)")
+                                    }
                                 }
-                                showingConnectionTest = false
                             }
                         }
                         .padding(.horizontal, 20)
@@ -104,6 +155,23 @@ struct ContentView: View {
                         .background(Color.green.opacity(0.1))
                         .cornerRadius(8)
                         .disabled(!networkManager.isConnected)
+                        
+                        // Test button to manually add phrase
+                        Button("Add Test Phrase") {
+                            networkManager.debugCounter += 1
+                            // If we have a lastReceivedPhrase, copy it to pendingPhrases
+                            if let lastPhrase = networkManager.lastReceivedPhrase {
+                                networkManager.pendingPhrases = [lastPhrase]
+                                print("🧪 Copied lastReceivedPhrase to pendingPhrases, counter: \(networkManager.debugCounter)")
+                            } else {
+                                networkManager.pendingPhrases = [] // Just test the counter
+                                print("🧪 No lastReceivedPhrase, just testing counter: \(networkManager.debugCounter)")
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
                         
                         // Debug: Reset registration
                         Button("Reset Player Data") {
@@ -145,23 +213,14 @@ struct ContentView: View {
                     }
             }
         }
+        .sheet(isPresented: $showingPhraseCreation) {
+            PhraseCreationView(isPresented: $showingPhraseCreation)
+        }
         .onAppear {
-            // Check if player is already registered
-            if networkManager.currentPlayer == nil {
-                // For testing, auto-register if not registered
-                // In a real app, you might show the registration sheet
-                Task {
-                    let success = await networkManager.registerPlayer(name: "Player_\(Int.random(in: 100...999))")
-                    if success {
-                        print("TEMP: Auto-registered player")
-                    }
-                }
-            } else {
-                // If already registered, ensure we are connected
-                if let player = networkManager.currentPlayer {
-                    networkManager.connect(playerId: player.id)
-                }
-            }
+            print("📱 ContentView appeared - skipping auto-connect for debugging")
+            // Just reset state, don't auto-connect
+            networkManager.connectionStatus = .disconnected
+            networkManager.isConnected = false
         }
         .onChange(of: networkManager.currentPlayer) { oldValue, newValue in
             isPlayerRegistered = newValue != nil
@@ -178,15 +237,18 @@ struct ContentView: View {
         
         // Show connecting state
         await MainActor.run {
+            print("🚀 Setting showingConnectionTest = true")
             showingConnectionTest = true
+            networkManager.connectionStatus = .connecting
         }
         
-        // Test connection first
+        // Test connection first with timeout
+        print("🔍 Testing connection...")
         let connectionResult = await networkManager.testConnection()
         
         switch connectionResult {
         case .success:
-            print("✅ Connection test successful")
+            print("✅ Connection test successful - proceeding with registration")
             
             // Establish WebSocket connection
             networkManager.connect()
@@ -194,33 +256,21 @@ struct ContentView: View {
             // Wait briefly for connection to establish
             try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
             
-            // Check if user has saved player name
-            if let savedPlayerName = UserDefaults.standard.string(forKey: "playerName"),
-               !savedPlayerName.isEmpty {
-                print("👤 Found saved player name: \(savedPlayerName)")
+            // For testing: always create a new random player name
+            let randomPlayerName = "Player_\(Int.random(in: 100...999))"
+            print("👤 Creating test player: \(randomPlayerName)")
+            
+            // Register with random name
+            let success = await networkManager.registerPlayer(name: randomPlayerName)
+            
+            await MainActor.run {
+                showingConnectionTest = false
                 
-                // Register with existing name
-                let success = await networkManager.registerPlayer(name: savedPlayerName)
-                
-                await MainActor.run {
-                    showingConnectionTest = false
-                    
-                    if success {
-                        isPlayerRegistered = true
-                        print("✅ Auto-registered returning player: \(savedPlayerName)")
-                    } else {
-                        print("❌ Failed to register returning player")
-                        // Clear invalid saved name and show registration
-                        UserDefaults.standard.removeObject(forKey: "playerName")
-                        showingRegistration = true
-                    }
-                }
-            } else {
-                print("👤 No saved player name - first time user")
-                
-                await MainActor.run {
-                    showingConnectionTest = false
-                    isPlayerRegistered = false
+                if success {
+                    isPlayerRegistered = true
+                    print("✅ Auto-registered test player: \(randomPlayerName)")
+                } else {
+                    print("❌ Failed to register test player")
                     showingRegistration = true
                 }
             }
@@ -230,7 +280,8 @@ struct ContentView: View {
             
             await MainActor.run {
                 showingConnectionTest = false
-                // Keep UI in disconnected state
+                // Update connection status to show the specific error
+                networkManager.connectionStatus = .error("Test failed: \(error)")
             }
         }
     }

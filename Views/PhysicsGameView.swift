@@ -23,6 +23,8 @@ struct PhysicsGameView: View {
     @State private var gameScene: PhysicsGameScene?
     @State private var tiltText = "Loading tilt..."
     @State private var celebrationMessage = ""
+    @State private var phraseNotificationMessage = ""
+    @StateObject private var networkManager = NetworkManager.shared
     
     // Static reference to avoid SwiftUI state issues
     private static var sharedScene: PhysicsGameScene?
@@ -36,6 +38,19 @@ struct PhysicsGameView: View {
                 
                 // SwiftUI overlay for UI elements
                 VStack {
+                    // Custom phrase attribution (top center)
+                    if !gameModel.customPhraseInfo.isEmpty {
+                        Text(gameModel.customPhraseInfo)
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(12)
+                            .shadow(radius: 4)
+                            .padding(.top, 50)
+                    }
+                    
                     HStack {
                         Spacer()
                         
@@ -50,6 +65,104 @@ struct PhysicsGameView: View {
                                         scene.triggerQuake()
                                     }
                                 }
+                            
+                            // Debug: Show solution words
+                            Text("SOLUTION:")
+                                .font(.caption2)
+                                .foregroundColor(.yellow)
+                                .fontWeight(.bold)
+                            
+                            Text(gameModel.currentSentence)
+                                .font(.caption2)
+                                .foregroundColor(.yellow)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(4)
+                                .padding(.horizontal, 4)
+                            
+                            // Debug: Show connection and pending info
+                            Text("Socket: \(networkManager.isConnected ? "✅" : "❌")")
+                                .font(.caption2)
+                                .foregroundColor(networkManager.isConnected ? .green : .red)
+                                .padding(.top, 2)
+                            
+                            // Show connection status details - make it more visible when disconnected
+                            if !networkManager.isConnected {
+                                Text("ERROR: \(networkManager.connectionStatus.description)")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .background(Color.red.opacity(0.8))
+                                    .cornerRadius(6)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                            } else {
+                                Text(networkManager.connectionStatus.description)
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                                    .background(Color.black.opacity(0.7))
+                                    .cornerRadius(4)
+                                    .padding(.horizontal, 4)
+                            }
+                            
+                            Text("Pending: \(networkManager.pendingPhrases.count) (Try: \(networkManager.debugCounter))")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                            
+                            // Show if we have a current player (registered)
+                            Text("Player: \(networkManager.currentPlayer?.name ?? "None")")
+                                .font(.caption2)
+                                .foregroundColor(.cyan)
+                            
+                            // Show connection status
+                            Text("Status: \(networkManager.connectionStatus.description)")
+                                .font(.caption2)
+                                .foregroundColor(.purple)
+                            
+                            // Show last received phrase for debugging
+                            if let lastPhrase = networkManager.lastReceivedPhrase {
+                                Text("Last: \(lastPhrase.content)")
+                                    .font(.caption2)
+                                    .foregroundColor(.pink)
+                                    .background(Color.black.opacity(0.7))
+                                    .cornerRadius(4)
+                                    .padding(.horizontal, 4)
+                            } else {
+                                Text("Last: None")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            if let nextPhrase = networkManager.pendingPhrases.first {
+                                Text("NEXT:")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                                    .fontWeight(.bold)
+                                    .padding(.top, 4)
+                                
+                                Text(nextPhrase.content)
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                                    .background(Color.black.opacity(0.7))
+                                    .cornerRadius(4)
+                                    .padding(.horizontal, 4)
+                                
+                                Text("from \(nextPhrase.senderName)")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                                    .italic()
+                            } else {
+                                Text("NEXT:")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                    .fontWeight(.bold)
+                                    .padding(.top, 4)
+                                
+                                Text("(random)")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                    .background(Color.black.opacity(0.7))
+                                    .cornerRadius(4)
+                                    .padding(.horizontal, 4)
+                            }
                             
                             Text("3s Quake")
                                 .font(.caption)
@@ -104,6 +217,25 @@ struct PhysicsGameView: View {
                             .zIndex(3000)
                     }
                     
+                    // Phrase notification toast
+                    if !phraseNotificationMessage.isEmpty {
+                        VStack {
+                            Text(phraseNotificationMessage)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color.green.opacity(0.9))
+                                .cornerRadius(25)
+                                .shadow(radius: 6)
+                                .transition(.scale.combined(with: .opacity))
+                            
+                            Spacer()
+                        }
+                        .padding(.top, 120)
+                        .zIndex(2000)
+                    }
+                    
                 }
             }
         }
@@ -117,6 +249,28 @@ struct PhysicsGameView: View {
         }
         .onDisappear {
             motionManager.stopDeviceMotionUpdates()
+        }
+        .onChange(of: networkManager.lastReceivedPhrase) { oldValue, newValue in
+            print("🎮 GAME: onChange triggered - oldValue: \(String(describing: oldValue)), newValue: \(String(describing: newValue))")
+            
+            if let newPhrase = newValue, newPhrase != oldValue {
+                print("🎮 GAME: New phrase detected: '\(newPhrase.content)' from \(newPhrase.senderName)")
+                
+                withAnimation(.spring()) {
+                    phraseNotificationMessage = "New phrase from \(newPhrase.senderName)!"
+                    print("🎮 GAME: Set phraseNotificationMessage to: '\(phraseNotificationMessage)'")
+                }
+                
+                // Clear notification after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation(.easeOut) {
+                        phraseNotificationMessage = ""
+                        print("🎮 GAME: Cleared phraseNotificationMessage")
+                    }
+                }
+            } else {
+                print("🎮 GAME: No new phrase or same as old value")
+            }
         }
     }
     
@@ -873,8 +1027,17 @@ class PhysicsGameScene: SKScene {
     }
     
     func resetGame() {
+        print("🎮 SCENE: resetGame() called")
         clearAllHints()  // Clear hint effects when starting new game
-        createTiles()
+        
+        // Start a new game with the GameModel (this will check for custom phrases)
+        Task {
+            await gameModel.startNewGame()
+            print("🎮 SCENE: GameModel finished loading, creating tiles with sentence: '\(gameModel.currentSentence)'")
+            print("🎮 SCENE: GameModel state: \(gameModel.gameState)")
+            createTiles()
+        }
+        
         debugText = ""
     }
     
@@ -1270,14 +1433,16 @@ class PhysicsGameScene: SKScene {
         clearAllHints()
         
         // Reset game model to get new sentence
-        gameModel.startNewGame()
-        
-        // Reset scene state
-        celebrationText = ""
-        debugText = ""
-        
-        // Recreate tiles with new letters
-        createTiles()
+        Task {
+            await gameModel.startNewGame()
+            
+            // Reset scene state
+            celebrationText = ""
+            debugText = ""
+            
+            // Recreate tiles with new letters
+            createTiles()
+        }
         
         print("🎮 Started new game with: \(gameModel.currentSentence)")
     }
