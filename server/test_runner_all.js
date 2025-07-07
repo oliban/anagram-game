@@ -13,6 +13,8 @@ const APITestSuite = require('./test_api_suite');
 const ComprehensiveTestSuite = require('./test_comprehensive_suite');
 const Phase4EnhancedCreationTests = require('./test_phase4_enhanced_creation');
 const Phase4GlobalPhrasesTests = require('./test_phase4_global_phrases');
+const PhraseApprovalTests = require('./test_phrase_approval');
+const Phase4ValidationTests = require('./test_phase4_validation_suite');
 
 class TestRunner {
   constructor() {
@@ -21,6 +23,8 @@ class TestRunner {
       comprehensive: null,
       phase4Enhanced: null,
       phase4Global: null,
+      phase4Approval: null,
+      phase4Validation: null,
       combined: {
         passed: 0,
         failed: 0,
@@ -153,6 +157,54 @@ class TestRunner {
     }
   }
 
+  async runPhase4ApprovalTests() {
+    this.log('\n✅ Running Phase 4.2 Phrase Approval Tests...');
+    this.log('================================================');
+    
+    const approvalSuite = new PhraseApprovalTests();
+    try {
+      const success = await approvalSuite.runAllTests();
+      this.results.phase4Approval = {
+        success,
+        passed: approvalSuite.results.passed,
+        failed: approvalSuite.results.failed,
+        skipped: approvalSuite.results.skipped,
+        total: approvalSuite.results.passed + approvalSuite.results.failed + approvalSuite.results.skipped
+      };
+      
+      await approvalSuite.cleanup();
+      return success;
+    } catch (error) {
+      this.log(`❌ Phase 4.2 approval tests failed: ${error.message}`, 'error');
+      this.results.phase4Approval = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
+  async runPhase4ValidationTests() {
+    this.log('\n🛡️ Running Phase 4 Validation & Security Tests...');
+    this.log('================================================');
+    
+    const validationSuite = new Phase4ValidationTests();
+    try {
+      const success = await validationSuite.runAllTests();
+      this.results.phase4Validation = {
+        success,
+        passed: validationSuite.results.passed,
+        failed: validationSuite.results.failed,
+        skipped: validationSuite.results.skipped,
+        total: validationSuite.results.passed + validationSuite.results.failed + validationSuite.results.skipped
+      };
+      
+      await validationSuite.cleanup();
+      return success;
+    } catch (error) {
+      this.log(`❌ Phase 4 validation tests failed: ${error.message}`, 'error');
+      this.results.phase4Validation = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
   generateReport() {
     this.log('\n📊 COMPLETE TEST REPORT');
     this.log('========================');
@@ -184,6 +236,20 @@ class TestRunner {
       this.results.combined.failed += this.results.phase4Global.failed;
       this.results.combined.skipped += this.results.phase4Global.skipped;
       this.results.combined.total += this.results.phase4Global.total;
+    }
+
+    if (this.results.phase4Approval) {
+      this.results.combined.passed += this.results.phase4Approval.passed;
+      this.results.combined.failed += this.results.phase4Approval.failed;
+      this.results.combined.skipped += this.results.phase4Approval.skipped;
+      this.results.combined.total += this.results.phase4Approval.total;
+    }
+
+    if (this.results.phase4Validation) {
+      this.results.combined.passed += this.results.phase4Validation.passed;
+      this.results.combined.failed += this.results.phase4Validation.failed;
+      this.results.combined.skipped += this.results.phase4Validation.skipped;
+      this.results.combined.total += this.results.phase4Validation.total;
     }
 
     // Test suite summaries
@@ -221,6 +287,24 @@ class TestRunner {
       this.log(`   ⏭️ Skipped: ${this.results.phase4Global.skipped}`);
       this.log(`   🎯 Total: ${this.results.phase4Global.total}`);
       this.log(`   📈 Success Rate: ${Math.round((this.results.phase4Global.passed / this.results.phase4Global.total) * 100)}%`);
+    }
+
+    if (this.results.phase4Approval) {
+      this.log(`\n✅ Phase 4.2 Phrase Approval Tests:`);
+      this.log(`   ✅ Passed: ${this.results.phase4Approval.passed}`);
+      this.log(`   ❌ Failed: ${this.results.phase4Approval.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.phase4Approval.skipped}`);
+      this.log(`   🎯 Total: ${this.results.phase4Approval.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.phase4Approval.passed / this.results.phase4Approval.total) * 100)}%`);
+    }
+
+    if (this.results.phase4Validation) {
+      this.log(`\n🛡️ Phase 4 Validation & Security Tests:`);
+      this.log(`   ✅ Passed: ${this.results.phase4Validation.passed}`);
+      this.log(`   ❌ Failed: ${this.results.phase4Validation.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.phase4Validation.skipped}`);
+      this.log(`   🎯 Total: ${this.results.phase4Validation.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.phase4Validation.passed / this.results.phase4Validation.total) * 100)}%`);
     }
 
     // Combined summary
@@ -342,6 +426,12 @@ class TestRunner {
       
       const phase4GlobalSuccess = await this.runPhase4GlobalTests();
       overallSuccess = overallSuccess && phase4GlobalSuccess;
+      
+      const phase4ApprovalSuccess = await this.runPhase4ApprovalTests();
+      overallSuccess = overallSuccess && phase4ApprovalSuccess;
+      
+      const phase4ValidationSuccess = await this.runPhase4ValidationTests();
+      overallSuccess = overallSuccess && phase4ValidationSuccess;
     }
 
     // Generate final report
