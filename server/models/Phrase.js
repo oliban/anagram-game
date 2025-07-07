@@ -1,0 +1,73 @@
+class Phrase {
+  constructor(id, content, senderId, targetId, createdAt = new Date()) {
+    this.id = id;
+    this.content = content;
+    this.senderId = senderId;
+    this.targetId = targetId;
+    this.createdAt = createdAt;
+    this.isConsumed = false;
+  }
+
+  /**
+   * Get public info (safe to send to clients)
+   */
+  getPublicInfo() {
+    return {
+      id: this.id,
+      content: this.content,
+      senderId: this.senderId,
+      targetId: this.targetId,
+      createdAt: this.createdAt,
+      isConsumed: this.isConsumed
+    };
+  }
+
+  /**
+   * Mark phrase as consumed (delivered/used)
+   */
+  consume() {
+    this.isConsumed = true;
+  }
+
+  /**
+   * Validate phrase content
+   */
+  static validateContent(content) {
+    if (!content || typeof content !== 'string') {
+      return { valid: false, error: 'Content must be a non-empty string' };
+    }
+
+    const trimmed = content.trim();
+    if (trimmed.length === 0) {
+      return { valid: false, error: 'Content cannot be empty' };
+    }
+
+    // Split into words and validate count (2-6 words)
+    const words = trimmed.split(/\s+/);
+    if (words.length < 2) {
+      return { valid: false, error: 'Phrase must contain at least 2 words' };
+    }
+    if (words.length > 6) {
+      return { valid: false, error: 'Phrase cannot contain more than 6 words' };
+    }
+
+    // Validate each word contains only letters, numbers, and basic punctuation
+    const validWordPattern = /^[a-zA-Z0-9\-']+$/;
+    for (let word of words) {
+      if (!validWordPattern.test(word)) {
+        return { valid: false, error: 'Words can only contain letters, numbers, hyphens, and apostrophes' };
+      }
+    }
+
+    return { valid: true, content: trimmed };
+  }
+
+  /**
+   * Generate unique phrase ID
+   */
+  static generateId() {
+    return 'phrase_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+}
+
+module.exports = Phrase;
