@@ -1,219 +1,1052 @@
+[dotenv@17.0.1] injecting env (0) from .env – [tip] encrypt with dotenvx: https://dotenvx.com
+🔄 Initializing database connection...
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+✅ DATABASE: Connection successful
+📅 DATABASE: Server time: Mon Jul 07 2025 19:34:48 GMT+0200 (Central European Summer Time)
+🔢 DATABASE: PostgreSQL version: 14.18
+✅ Database connection established
+📊 Database-powered phrase system ready
 🚀 Anagram Game Server running on port 3000
 📡 Status endpoint: http://localhost:3000/api/status
 🔌 WebSocket server ready for connections
-🔌 SERVER: Client connected: s0_KLiA6nxI1oReBAAAB (Total: 1) at 2025-07-07T06:16:46.398Z
+💾 Database mode: PostgreSQL
+2025-07-07T17:34:51.278Z - GET /api/phrases/for/player_1751882240322_tznkz8ai6
+📋 DATABASE: Client acquired from pool
+🔌 SERVER: Client connected: 7c2cNKxJv3uGV2IbAAAB (Total: 1) at 2025-07-07T17:34:51.280Z
 🔌 SERVER: Client remote address: 192.168.1.133
 🔌 SERVER: Client user agent: Unknown
-🔌 SERVER: Client connected: hjTryfzjzyFYnZvmAAAD (Total: 2) at 2025-07-07T06:16:47.197Z
+❌ DATABASE: Query error: invalid input syntax for type uuid: "player_1751882240322_tznkz8ai6"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'player_1751882240322_tznkz8ai6' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "player_1751882240322_tznkz8ai6"
+📨 SERVER: Received event 'player-connect' from 7c2cNKxJv3uGV2IbAAAB: [ { playerId: 'player_1751882240322_tznkz8ai6' } ]
+👤 Player-connect event received at 2025-07-07T17:34:51.282Z
+👤 Player-connect data: { playerId: 'player_1751882240322_tznkz8ai6' }
+2025-07-07T17:34:51.284Z - GET /api/players/online
+2025-07-07T17:34:51.285Z - GET /api/phrases/for/player_1751882240322_tznkz8ai6
+🗑️ DATABASE: Client removed from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "player_1751882240322_tznkz8ai6"
+📝 DATABASE: Query: 
+        UPDATE players 
+        SET socket_id = $2, is_active = true, last_seen = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      
+📋 DATABASE: Params: [ 'player_1751882240322_tznkz8ai6', '7c2cNKxJv3uGV2IbAAAB' ]
+❌ DATABASE: Error updating socket ID: invalid input syntax for type uuid: "player_1751882240322_tznkz8ai6"
+❌ Player not found for ID: player_1751882240322_tznkz8ai6
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+🗑️ DATABASE: Client removed from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+❌ DATABASE: Query error: invalid input syntax for type uuid: "player_1751882240322_tznkz8ai6"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'player_1751882240322_tznkz8ai6' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "player_1751882240322_tznkz8ai6"
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:34:51.529Z - GET /api/phrases/for/player_1751880982707_8bdfn6lb7
+📋 DATABASE: Client acquired from pool
+🔌 SERVER: Client connected: j8jaE6R85VomgUNRAAAD (Total: 2) at 2025-07-07T17:34:51.530Z
 🔌 SERVER: Client remote address: 192.168.1.133
 🔌 SERVER: Client user agent: Unknown
-🔌 SERVER: Client connected: hNq7LDdaAsrPSGs_AAAF (Total: 3) at 2025-07-07T06:16:47.463Z
-🔌 SERVER: Client remote address: 192.168.1.133
+📨 SERVER: Received event 'player-connect' from j8jaE6R85VomgUNRAAAD: [ { playerId: 'player_1751880982707_8bdfn6lb7' } ]
+👤 Player-connect event received at 2025-07-07T17:34:51.532Z
+👤 Player-connect data: { playerId: 'player_1751880982707_8bdfn6lb7' }
+❌ DATABASE: Query error: invalid input syntax for type uuid: "player_1751880982707_8bdfn6lb7"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'player_1751880982707_8bdfn6lb7' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "player_1751880982707_8bdfn6lb7"
+2025-07-07T17:34:51.537Z - GET /api/players/online
+2025-07-07T17:34:51.537Z - GET /api/phrases/for/player_1751880982707_8bdfn6lb7
+🗑️ DATABASE: Client removed from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "player_1751880982707_8bdfn6lb7"
+📝 DATABASE: Query: 
+        UPDATE players 
+        SET socket_id = $2, is_active = true, last_seen = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      
+📋 DATABASE: Params: [ 'player_1751880982707_8bdfn6lb7', 'j8jaE6R85VomgUNRAAAD' ]
+❌ DATABASE: Error updating socket ID: invalid input syntax for type uuid: "player_1751880982707_8bdfn6lb7"
+❌ Player not found for ID: player_1751880982707_8bdfn6lb7
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+🗑️ DATABASE: Client removed from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "player_1751880982707_8bdfn6lb7"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'player_1751880982707_8bdfn6lb7' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "player_1751880982707_8bdfn6lb7"
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+🗑️ DATABASE: Client removed from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:34:56.102Z - GET /api/status
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:35:06.293Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:06.542Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:21.291Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:21.540Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:36.286Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:36.538Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:51.290Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:35:51.540Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:06.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:06.541Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:21.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:21.538Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:36.293Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:36.544Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:51.286Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:51.539Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:52.943Z - GET /api/status
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:52.955Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+👤 Player registered: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+2025-07-07T17:36:52.963Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: TestUser2 (29274f2e-5b34-4727-97fc-69c84bdbd595)
+👤 Player registered: TestUser2 (29274f2e-5b34-4727-97fc-69c84bdbd595)
+2025-07-07T17:36:52.968Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: AliceTestPlayer (e7abca8f-4530-4e94-8ce8-a9e82fcfdc5d)
+👤 Player registered: AliceTestPlayer (e7abca8f-4530-4e94-8ce8-a9e82fcfdc5d)
+2025-07-07T17:36:52.980Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: BobTestPlayer (3de25faa-49ca-4e35-ab6d-82f6cdbd37f0)
+👤 Player registered: BobTestPlayer (3de25faa-49ca-4e35-ab6d-82f6cdbd37f0)
+2025-07-07T17:36:52.983Z - POST /api/players/register
+2025-07-07T17:36:52.984Z - POST /api/players/register
+❌ Registration error: Error: Player name must be between 2 and 50 characters
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:36:52.985Z - POST /api/players/register
+❌ Registration error: Error: Player name must be between 2 and 50 characters
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:36:52.986Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:36:52.987Z - POST /api/players/register
+2025-07-07T17:36:52.988Z - POST /api/players/register
+2025-07-07T17:36:52.989Z - POST /api/players/register
+2025-07-07T17:36:52.989Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+👤 Player registered: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+2025-07-07T17:36:52.995Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 5 online players
+2025-07-07T17:36:53.000Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "hello world test" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751909812962-0.12933423051836646)
+2025-07-07T17:36:53.002Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "quick brown fox" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751909812962-0.12933423051836646)
+2025-07-07T17:36:53.010Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "sample phrase creation" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751909812962-0.12933423051836646)
+2025-07-07T17:36:53.011Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "anagram game test" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751909812962-0.12933423051836646)
+2025-07-07T17:36:53.015Z - POST /api/phrases
+2025-07-07T17:36:53.016Z - POST /api/phrases
+2025-07-07T17:36:53.017Z - POST /api/phrases
+2025-07-07T17:36:53.018Z - POST /api/phrases
+2025-07-07T17:36:53.018Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-id"
+🗑️ DATABASE: Client removed from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:53.117Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-id"
+2025-07-07T17:36:53.119Z - GET /api/phrases/for/ba9fcb00-3262-421e-a4a4-b297f2bfd098
+🗑️ DATABASE: Client removed from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:53.134Z - GET /api/phrases/for/29274f2e-5b34-4727-97fc-69c84bdbd595
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:53.135Z - GET /api/phrases/for/e7abca8f-4530-4e94-8ce8-a9e82fcfdc5d
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:53.150Z - GET /api/phrases/for/3de25faa-49ca-4e35-ab6d-82f6cdbd37f0
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:53.151Z - GET /api/phrases/for/invalid-player-id
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-player-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-player-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-player-id"
+2025-07-07T17:36:53.152Z - POST /api/phrases/phrase_1751909813001_hk2v0x3ta/consume
+✅ Phrase consumed: phrase_1751909813001_hk2v0x3ta
+2025-07-07T17:36:53.153Z - POST /api/phrases/invalid-phrase-id/consume
+2025-07-07T17:36:53.154Z - POST /api/phrases/test-phrase-id/skip
+🗑️ DATABASE: Client removed from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+⏭️ Phrase skipped: test-phrase-id by player TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+2025-07-07T17:36:53.169Z - POST /api/phrases/test-phrase-id/skip
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-player-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-player-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-player-id"
+🗑️ DATABASE: Client removed from pool
+🔌 SERVER: Client connected: y_3RdO6g2ywtH49bAAAF (Total: 3) at 2025-07-07T17:36:53.182Z
+🔌 SERVER: Client remote address: 127.0.0.1
 🔌 SERVER: Client user agent: Unknown
-2025-07-07T06:16:57.953Z - GET /api/status
-2025-07-07T06:16:57.966Z - POST /api/players/register
-👤 Player registered: Player_955 (player_1751869017966_kp9enpslc)
-📨 SERVER: Received event 'player-connect' from s0_KLiA6nxI1oReBAAAB: [ { playerId: 'player_1751869017966_kp9enpslc' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:16:57.974Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751869017966_kp9enpslc' }
-👤 SERVER: Player connected via socket: Player_955 (s0_KLiA6nxI1oReBAAAB) at 2025-07-07T06:16:57.974Z
-2025-07-07T06:16:58.045Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
-2025-07-07T06:16:58.055Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
-2025-07-07T06:16:58.060Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
-2025-07-07T06:17:02.670Z - GET /api/status
-2025-07-07T06:17:02.676Z - POST /api/players/register
-👤 Player registered: Player_273 (player_1751869022676_m4xt771ci)
-📨 SERVER: Received event 'player-connect' from hjTryfzjzyFYnZvmAAAD: [ { playerId: 'player_1751869022676_m4xt771ci' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:17:02.678Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751869022676_m4xt771ci' }
-👤 SERVER: Player connected via socket: Player_273 (hjTryfzjzyFYnZvmAAAD) at 2025-07-07T06:17:02.678Z
-2025-07-07T06:17:02.693Z - GET /api/phrases/for/player_1751869022676_m4xt771ci
-2025-07-07T06:17:02.693Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
-2025-07-07T06:17:02.695Z - GET /api/phrases/for/player_1751869022676_m4xt771ci
-2025-07-07T06:17:02.696Z - GET /api/phrases/for/player_1751869022676_m4xt771ci
-2025-07-07T06:17:13.500Z - POST /api/phrases
-📝 Phrase created: "fdsadf Dfasd" from Player_955 to Player_273
-📨 Sent new-phrase notification to Player_273 (hjTryfzjzyFYnZvmAAAD)
-2025-07-07T06:17:13.527Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
-✅ Phrase consumed: phrase_1751869033500_88i28v55h
-2025-07-07T06:17:33.840Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
-✅ Phrase consumed: phrase_1751869033500_88i28v55h
-2025-07-07T06:18:26.745Z - POST /api/phrases
-📝 Phrase created: "Fet Apa" from Player_273 to Player_955
-📨 Sent new-phrase notification to Player_955 (s0_KLiA6nxI1oReBAAAB)
-2025-07-07T06:18:26.798Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
-✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
-2025-07-07T06:18:55.784Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
-✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
-👤 Player disconnected: Player_955 (player_1751869017966_kp9enpslc)
-👤 Player disconnected: Player_273 (player_1751869022676_m4xt771ci)
-🧹 Cleaned up 2 inactive players
-🧹 Cleaned up 2 inactive players
-2025-07-07T06:26:46.211Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
-✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
-2025-07-07T06:26:46.212Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
-✅ Phrase consumed: phrase_1751869033500_88i28v55h
-🔌 SERVER: Client disconnected: hjTryfzjzyFYnZvmAAAD (Total: 2) at 2025-07-07T06:54:20.970Z
-🔌 SERVER: Disconnect reason: transport close
-🔌 SERVER: No player found for disconnected socket: hjTryfzjzyFYnZvmAAAD
-🔌 SERVER: Client connected: syd78s9e3qp5v_-VAAAH (Total: 3) at 2025-07-07T06:54:35.613Z
-🔌 SERVER: Client remote address: 192.168.1.133
+📨 SERVER: Received event 'player-connect' from y_3RdO6g2ywtH49bAAAF: [ { playerId: 'ba9fcb00-3262-421e-a4a4-b297f2bfd098' } ]
+👤 Player-connect event received at 2025-07-07T17:36:54.180Z
+👤 Player-connect data: { playerId: 'ba9fcb00-3262-421e-a4a4-b297f2bfd098' }
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+🔌 DATABASE: Socket updated for player ba9fcb00-3262-421e-a4a4-b297f2bfd098: y_3RdO6g2ywtH49bAAAF
+👤 Player connected via socket: TestUser1 (y_3RdO6g2ywtH49bAAAF)
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 5 online players
+📨 SERVER: Received event 'player-connect' from y_3RdO6g2ywtH49bAAAF: [ { playerId: 'invalid-id' } ]
+👤 Player-connect event received at 2025-07-07T17:36:54.681Z
+👤 Player-connect data: { playerId: 'invalid-id' }
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-id"
+📝 DATABASE: Query: 
+        UPDATE players 
+        SET socket_id = $2, is_active = true, last_seen = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      
+📋 DATABASE: Params: [ 'invalid-id', 'y_3RdO6g2ywtH49bAAAF' ]
+❌ DATABASE: Error updating socket ID: invalid input syntax for type uuid: "invalid-id"
+❌ Player not found for ID: invalid-id
+🗑️ DATABASE: Client removed from pool
+🔌 Client disconnected: y_3RdO6g2ywtH49bAAAF (Total: 2)
+🔌 Disconnect reason: client namespace disconnect
+2025-07-07T17:36:56.185Z - GET /api/nonexistent/endpoint
+Server error: SyntaxError: Unexpected token '"', ""invalid-json"" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at createStrictSyntaxError (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/body-parser/lib/types/json.js:169:10)
+    at parse (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/body-parser/lib/types/json.js:86:15)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/raw-body/index.js:238:16)
+    at done (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:507:28)
+    at endReadableNT (node:internal/streams/readable:1701:12) {
+  expose: true,
+  statusCode: 400,
+  status: 400,
+  body: '"invalid-json"',
+  type: 'entity.parse.failed'
+}
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+📴 DATABASE: Player TestUser1 set as inactive
+👤 Player disconnected: TestUser1 (y_3RdO6g2ywtH49bAAAF)
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:36:56.207Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:36:56.209Z - GET /api/players/online
+👥 DATABASE: Found 4 online players
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:06.284Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:06.546Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:21.289Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:21.548Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:37:36.293Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:36.541Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:51.293Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:37:51.539Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:06.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:06.541Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:21.283Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:21.539Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:36.296Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:36.539Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:51.288Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:38:51.539Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:06.289Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:06.538Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:21.284Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:21.535Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:36.283Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:36.541Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: aggregate functions are not allowed in RETURNING
+📝 DATABASE: Query: 
+        DELETE FROM players 
+        WHERE is_active = false 
+          AND last_seen < CURRENT_TIMESTAMP - INTERVAL '30 days'
+        RETURNING count(*)
+      
+📋 DATABASE: Params: []
+❌ DATABASE: Error cleaning up inactive players: aggregate functions are not allowed in RETURNING
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:39:51.292Z - GET /api/players/online
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:39:51.537Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:06.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:06.534Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:21.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:21.538Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:36.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:36.535Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:51.290Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:40:51.538Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:06.288Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:06.540Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:21.286Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:21.552Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:36.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:36.547Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:51.289Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:41:51.533Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 4 online players
+2025-07-07T17:42:01.261Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: ComprehensiveTestUser1 (0e5b8bc8-fa5c-4cbd-b900-55c53d0263ba)
+👤 Player registered: ComprehensiveTestUser1 (0e5b8bc8-fa5c-4cbd-b900-55c53d0263ba)
+2025-07-07T17:42:01.270Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: ComprehensiveTestUser2 (f976d33d-7710-427d-989e-198a6aa868be)
+👤 Player registered: ComprehensiveTestUser2 (f976d33d-7710-427d-989e-198a6aa868be)
+2025-07-07T17:42:01.279Z - GET /api/status
+📋 DATABASE: Client acquired from pool
+🔌 SERVER: Client connected: xDEJK4e82nyYoFNgAAAI (Total: 3) at 2025-07-07T17:42:01.297Z
+🔌 SERVER: Client remote address: 127.0.0.1
 🔌 SERVER: Client user agent: Unknown
-🔌 SERVER: Client disconnected: hNq7LDdaAsrPSGs_AAAF (Total: 2) at 2025-07-07T06:54:43.543Z
-🔌 SERVER: Disconnect reason: transport close
-🔌 SERVER: No player found for disconnected socket: hNq7LDdaAsrPSGs_AAAF
-🔌 SERVER: Client connected: V_FP4TR9nOkSqSO0AAAJ (Total: 3) at 2025-07-07T06:54:46.909Z
-🔌 SERVER: Client remote address: 192.168.1.133
+🔌 SERVER: Client connected: -Y8ykCGZiI_k9oCyAAAJ (Total: 4) at 2025-07-07T17:42:01.297Z
+🔌 SERVER: Client remote address: 127.0.0.1
 🔌 SERVER: Client user agent: Unknown
-2025-07-07T06:55:03.721Z - GET /api/status
-2025-07-07T06:55:03.727Z - POST /api/players/register
-👤 Player registered: Player_952 (player_1751871303727_zhap317lp)
-📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871303727_zhap317lp' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:55:03.730Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871303727_zhap317lp' }
-👤 SERVER: Player connected via socket: Player_952 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:55:03.730Z
-2025-07-07T06:55:03.788Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
-✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
-2025-07-07T06:55:03.797Z - GET /api/phrases/for/player_1751871303727_zhap317lp
-2025-07-07T06:55:03.799Z - GET /api/phrases/for/player_1751871303727_zhap317lp
-2025-07-07T06:55:03.804Z - GET /api/phrases/for/player_1751871303727_zhap317lp
-2025-07-07T06:56:18.179Z - GET /api/status
-2025-07-07T06:56:18.184Z - POST /api/players/register
-👤 Player registered: Player_965 (player_1751871378184_lt0ntx20z)
-📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871378184_lt0ntx20z' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:56:18.187Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871378184_lt0ntx20z' }
-👤 SERVER: Player connected via socket: Player_965 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:56:18.187Z
-2025-07-07T06:56:18.198Z - GET /api/phrases/for/player_1751871303727_zhap317lp
-2025-07-07T06:56:18.199Z - GET /api/phrases/for/player_1751871378184_lt0ntx20z
-2025-07-07T06:56:18.201Z - GET /api/phrases/for/player_1751871378184_lt0ntx20z
-2025-07-07T06:56:18.204Z - GET /api/phrases/for/player_1751871378184_lt0ntx20z
-2025-07-07T06:56:24.721Z - POST /api/phrases
-📝 Phrase created: "As Ass" from Player_952 to Player_965
-📨 Sent new-phrase notification to Player_965 (V_FP4TR9nOkSqSO0AAAJ)
-2025-07-07T06:56:24.744Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:56:51.306Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-🔌 SERVER: Client disconnected: s0_KLiA6nxI1oReBAAAB (Total: 2) at 2025-07-07T06:56:56.903Z
-🔌 SERVER: Disconnect reason: ping timeout
-🔌 SERVER: No player found for disconnected socket: s0_KLiA6nxI1oReBAAAB
-2025-07-07T06:58:13.228Z - GET /api/status
-2025-07-07T06:58:13.229Z - GET /api/phrases/for/player_1751871303727_zhap317lp
-2025-07-07T06:58:13.232Z - POST /api/players/register
-👤 Player registered: Player_101 (player_1751871493232_lw3rkgasu)
-2025-07-07T06:58:13.233Z - GET /api/phrases/for/player_1751871303727_zhap317lp
-📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871493232_lw3rkgasu' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:13.235Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871493232_lw3rkgasu' }
-👤 SERVER: Player connected via socket: Player_101 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:58:13.235Z
-2025-07-07T06:58:13.237Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
-2025-07-07T06:58:13.240Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
-2025-07-07T06:58:13.249Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:13.944Z - GET /api/status
-2025-07-07T06:58:13.946Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
-2025-07-07T06:58:13.947Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
-2025-07-07T06:58:13.948Z - POST /api/players/register
-👤 Player registered: Player_939 (player_1751871493948_ocoy9rz6x)
-📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871493948_ocoy9rz6x' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:13.950Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871493948_ocoy9rz6x' }
-👤 SERVER: Player connected via socket: Player_939 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:58:13.950Z
-2025-07-07T06:58:13.952Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
-2025-07-07T06:58:13.955Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
-2025-07-07T06:58:13.957Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:14.644Z - GET /api/status
-2025-07-07T06:58:14.646Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
-2025-07-07T06:58:14.648Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
-2025-07-07T06:58:14.649Z - POST /api/players/register
-👤 Player registered: Player_962 (player_1751871494649_cxltoba93)
-📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871494649_cxltoba93' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:14.651Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871494649_cxltoba93' }
-👤 SERVER: Player connected via socket: Player_962 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:58:14.651Z
-2025-07-07T06:58:14.653Z - GET /api/phrases/for/player_1751871494649_cxltoba93
-2025-07-07T06:58:14.656Z - GET /api/phrases/for/player_1751871494649_cxltoba93
-2025-07-07T06:58:14.657Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.321Z - GET /api/status
-2025-07-07T06:58:16.322Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.324Z - POST /api/players/register
-👤 Player registered: Player_186 (player_1751871496324_m1d3kd0md)
-2025-07-07T06:58:16.325Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496324_m1d3kd0md' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.327Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871496324_m1d3kd0md' }
-👤 SERVER: Player connected via socket: Player_186 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.327Z
-2025-07-07T06:58:16.329Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.331Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.331Z - GET /api/phrases/for/player_1751871494649_cxltoba93
-2025-07-07T06:58:16.465Z - GET /api/status
-2025-07-07T06:58:16.466Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.468Z - POST /api/players/register
-👤 Player registered: Player_878 (player_1751871496468_ktwc0gcfj)
-2025-07-07T06:58:16.468Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496468_ktwc0gcfj' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.470Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871496468_ktwc0gcfj' }
-👤 SERVER: Player connected via socket: Player_878 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.470Z
-2025-07-07T06:58:16.472Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.475Z - GET /api/phrases/for/player_1751871494649_cxltoba93
-2025-07-07T06:58:16.475Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.608Z - GET /api/status
-2025-07-07T06:58:16.609Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.610Z - POST /api/players/register
-👤 Player registered: Player_284 (player_1751871496611_6q0dzgahq)
-2025-07-07T06:58:16.611Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496611_6q0dzgahq' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.612Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871496611_6q0dzgahq' }
-👤 SERVER: Player connected via socket: Player_284 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.612Z
-2025-07-07T06:58:16.613Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.616Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.619Z - GET /api/phrases/for/player_1751871494649_cxltoba93
-2025-07-07T06:58:16.753Z - GET /api/status
-2025-07-07T06:58:16.754Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.757Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.757Z - POST /api/players/register
-👤 Player registered: Player_115 (player_1751871496757_jwpw3afzn)
-📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496757_jwpw3afzn' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.758Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871496757_jwpw3afzn' }
-👤 SERVER: Player connected via socket: Player_115 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.758Z
-2025-07-07T06:58:16.760Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.763Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.767Z - GET /api/phrases/for/player_1751871494649_cxltoba93
-2025-07-07T06:58:16.915Z - GET /api/status
-2025-07-07T06:58:16.915Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.918Z - POST /api/players/register
-👤 Player registered: Player_754 (player_1751871496918_pod8sh6hl)
-2025-07-07T06:58:16.918Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496918_pod8sh6hl' } ]
-👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.919Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751871496918_pod8sh6hl' }
-👤 SERVER: Player connected via socket: Player_754 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.919Z
-2025-07-07T06:58:16.921Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.924Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
-✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
-2025-07-07T06:58:16.928Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T17:42:06.293Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 6 online players
+2025-07-07T17:42:06.538Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 6 online players
+🔌 Client disconnected: xDEJK4e82nyYoFNgAAAI (Total: 3)
+🔌 Disconnect reason: client namespace disconnect
+📋 DATABASE: Client acquired from pool
+🔌 Client disconnected: -Y8ykCGZiI_k9oCyAAAJ (Total: 2)
+🔌 Disconnect reason: client namespace disconnect
+2025-07-07T17:42:09.316Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+🔌 No player found for disconnected socket: xDEJK4e82nyYoFNgAAAI
+2025-07-07T17:42:09.319Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.320Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.321Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.322Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.323Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: Player-123 (e36b8cc2-5ffa-42eb-8d4e-cc5fa4074677)
+👤 Player registered: Player-123 (e36b8cc2-5ffa-42eb-8d4e-cc5fa4074677)
+2025-07-07T17:42:09.328Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: Test_User (a02d96a4-f1f6-417b-b612-aa7bd2f65faf)
+👤 Player registered: Test_User (a02d96a4-f1f6-417b-b612-aa7bd2f65faf)
+2025-07-07T17:42:09.331Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.332Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.333Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:09.334Z - POST /api/phrases
+2025-07-07T17:42:09.336Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.342Z - POST /api/players/register
+2025-07-07T17:42:09.344Z - POST /api/players/register
+2025-07-07T17:42:09.345Z - POST /api/players/register
+2025-07-07T17:42:09.346Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: ConcurrentUser_0_1751910129334 (0f79e501-054b-434d-b714-5aabb9af6bf2)
+👤 Player registered: ConcurrentUser_0_1751910129334 (0f79e501-054b-434d-b714-5aabb9af6bf2)
+🔌 No player found for disconnected socket: -Y8ykCGZiI_k9oCyAAAJ
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: ConcurrentUser_1_1751910129335 (68ac3094-c920-4404-a3d3-bd529dda4fa5)
+👤 Player registered: ConcurrentUser_1_1751910129335 (68ac3094-c920-4404-a3d3-bd529dda4fa5)
+👤 DATABASE: New player created: ConcurrentUser_2_1751910129335 (f28944ec-8298-4593-875e-1365638c8313)
+👤 Player registered: ConcurrentUser_2_1751910129335 (f28944ec-8298-4593-875e-1365638c8313)
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: ConcurrentUser_4_1751910129335 (3309ab86-c0d6-4c00-9d82-47efb4f51adc)
+👤 Player registered: ConcurrentUser_4_1751910129335 (3309ab86-c0d6-4c00-9d82-47efb4f51adc)
+👤 DATABASE: New player created: ConcurrentUser_3_1751910129335 (dbc62d5a-f82d-4852-882c-43f9563b6c23)
+👤 Player registered: ConcurrentUser_3_1751910129335 (dbc62d5a-f82d-4852-882c-43f9563b6c23)
+2025-07-07T17:42:09.357Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: IntegrationPlayer1_1751910129356 (d0da4894-13c6-4532-a977-1978a1082e6e)
+👤 Player registered: IntegrationPlayer1_1751910129356 (d0da4894-13c6-4532-a977-1978a1082e6e)
+2025-07-07T17:42:09.358Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: IntegrationPlayer2_1751910129358 (7d84cbe3-3020-44f7-aa37-4900feec5039)
+👤 Player registered: IntegrationPlayer2_1751910129358 (7d84cbe3-3020-44f7-aa37-4900feec5039)
+2025-07-07T17:42:09.360Z - GET /api/status
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.364Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.364Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.364Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.364Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.365Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 15 online players
+👥 DATABASE: Found 15 online players
+👥 DATABASE: Found 15 online players
+👥 DATABASE: Found 15 online players
+👥 DATABASE: Found 15 online players
+2025-07-07T17:42:09.368Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 15 online players
+2025-07-07T17:42:09.369Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.369Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 15 online players
+👥 DATABASE: Found 15 online players
+2025-07-07T17:42:09.383Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:09.383Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 15 online players
+👥 DATABASE: Found 15 online players
+2025-07-07T17:42:09.385Z - POST /api/players/register
+2025-07-07T17:42:09.386Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: New player created: test (8299d480-659b-4e06-866a-7da36f85f389)
+👤 Player registered: test (8299d480-659b-4e06-866a-7da36f85f389)
+2025-07-07T17:42:09.391Z - POST /api/players/register
+2025-07-07T17:42:21.289Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:21.542Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:23.381Z - GET /api/status
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:23.388Z - GET /api/status
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:23.399Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+👤 Player registered: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+2025-07-07T17:42:23.401Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: TestUser2 (29274f2e-5b34-4727-97fc-69c84bdbd595)
+👤 Player registered: TestUser2 (29274f2e-5b34-4727-97fc-69c84bdbd595)
+2025-07-07T17:42:23.415Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: AliceTestPlayer (e7abca8f-4530-4e94-8ce8-a9e82fcfdc5d)
+👤 Player registered: AliceTestPlayer (e7abca8f-4530-4e94-8ce8-a9e82fcfdc5d)
+2025-07-07T17:42:23.417Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: BobTestPlayer (3de25faa-49ca-4e35-ab6d-82f6cdbd37f0)
+👤 Player registered: BobTestPlayer (3de25faa-49ca-4e35-ab6d-82f6cdbd37f0)
+2025-07-07T17:42:23.423Z - POST /api/players/register
+2025-07-07T17:42:23.425Z - POST /api/players/register
+❌ Registration error: Error: Player name must be between 2 and 50 characters
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:23.426Z - POST /api/players/register
+❌ Registration error: Error: Player name must be between 2 and 50 characters
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:23.428Z - POST /api/players/register
+❌ Registration error: Error: Player name can only contain letters, numbers, spaces, hyphens, and underscores
+    at DatabasePlayer.createPlayer (/Users/fredriksafsten/Workprojects/anagram-game/server/models/DatabasePlayer.js:59:13)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:109:41
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/express/lib/router/index.js:280:10)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/server.js:48:3
+2025-07-07T17:42:23.428Z - POST /api/players/register
+2025-07-07T17:42:23.429Z - POST /api/players/register
+2025-07-07T17:42:23.430Z - POST /api/players/register
+2025-07-07T17:42:23.431Z - POST /api/players/register
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+👤 DATABASE: Existing player logged in: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+👤 Player registered: TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+2025-07-07T17:42:23.433Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 17 online players
+2025-07-07T17:42:23.442Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "hello world test" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751910143401-0.15978820685923145)
+2025-07-07T17:42:23.446Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "quick brown fox" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751910143401-0.15978820685923145)
+2025-07-07T17:42:23.448Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "sample phrase creation" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751910143401-0.15978820685923145)
+2025-07-07T17:42:23.450Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+📝 Phrase created: "anagram game test" from TestUser1 to TestUser2
+📨 Sent new-phrase notification to TestUser2 (test-socket-1751910143401-0.15978820685923145)
+2025-07-07T17:42:23.462Z - POST /api/phrases
+2025-07-07T17:42:23.462Z - POST /api/phrases
+2025-07-07T17:42:23.463Z - POST /api/phrases
+2025-07-07T17:42:23.464Z - POST /api/phrases
+2025-07-07T17:42:23.464Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-id"
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:23.467Z - POST /api/phrases
+📋 DATABASE: Client acquired from pool
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-id"
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:42:23.469Z - GET /api/phrases/for/ba9fcb00-3262-421e-a4a4-b297f2bfd098
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:23.471Z - GET /api/phrases/for/29274f2e-5b34-4727-97fc-69c84bdbd595
+📋 DATABASE: Client acquired from pool
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:42:23.475Z - GET /api/phrases/for/e7abca8f-4530-4e94-8ce8-a9e82fcfdc5d
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:23.477Z - GET /api/phrases/for/3de25faa-49ca-4e35-ab6d-82f6cdbd37f0
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:23.477Z - GET /api/phrases/for/invalid-player-id
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-player-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-player-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-player-id"
+2025-07-07T17:42:23.479Z - POST /api/phrases/phrase_1751910143445_x5wczhjxv/consume
+✅ Phrase consumed: phrase_1751910143445_x5wczhjxv
+2025-07-07T17:42:23.479Z - POST /api/phrases/invalid-phrase-id/consume
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:42:23.480Z - POST /api/phrases/test-phrase-id/skip
+📋 DATABASE: Client acquired from pool
+⏭️ Phrase skipped: test-phrase-id by player TestUser1 (ba9fcb00-3262-421e-a4a4-b297f2bfd098)
+2025-07-07T17:42:23.481Z - POST /api/phrases/test-phrase-id/skip
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-player-id"
+📝 DATABASE: Query: 
+        SELECT * FROM players WHERE id = $1
+      
+📋 DATABASE: Params: [ 'invalid-player-id' ]
+❌ DATABASE: Error getting player by ID: invalid input syntax for type uuid: "invalid-player-id"
+🗑️ DATABASE: Client removed from pool
+🔌 SERVER: Client connected: qv4C3HZMTYA0fJUdAAAL (Total: 3) at 2025-07-07T17:42:23.488Z
+🔌 SERVER: Client remote address: 127.0.0.1
+🔌 SERVER: Client user agent: Unknown
+📨 SERVER: Received event 'player-connect' from qv4C3HZMTYA0fJUdAAAL: [ { playerId: 'ba9fcb00-3262-421e-a4a4-b297f2bfd098' } ]
+👤 Player-connect event received at 2025-07-07T17:42:24.490Z
+👤 Player-connect data: { playerId: 'ba9fcb00-3262-421e-a4a4-b297f2bfd098' }
+📋 DATABASE: Client acquired from pool
+🔌 DATABASE: Socket updated for player ba9fcb00-3262-421e-a4a4-b297f2bfd098: qv4C3HZMTYA0fJUdAAAL
+👤 Player connected via socket: TestUser1 (qv4C3HZMTYA0fJUdAAAL)
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 17 online players
+📨 SERVER: Received event 'player-connect' from qv4C3HZMTYA0fJUdAAAL: [ { playerId: 'invalid-id' } ]
+👤 Player-connect event received at 2025-07-07T17:42:24.985Z
+👤 Player-connect data: { playerId: 'invalid-id' }
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: invalid input syntax for type uuid: "invalid-id"
+📝 DATABASE: Query: 
+        UPDATE players 
+        SET socket_id = $2, is_active = true, last_seen = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      
+📋 DATABASE: Params: [ 'invalid-id', 'qv4C3HZMTYA0fJUdAAAL' ]
+❌ DATABASE: Error updating socket ID: invalid input syntax for type uuid: "invalid-id"
+❌ Player not found for ID: invalid-id
+🗑️ DATABASE: Client removed from pool
+🔌 Client disconnected: qv4C3HZMTYA0fJUdAAAL (Total: 2)
+🔌 Disconnect reason: client namespace disconnect
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:26.496Z - GET /api/nonexistent/endpoint
+📴 DATABASE: Player TestUser1 set as inactive
+👤 Player disconnected: TestUser1 (qv4C3HZMTYA0fJUdAAAL)
+📋 DATABASE: Client acquired from pool
+Server error: SyntaxError: Unexpected token '"', ""invalid-json"" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at createStrictSyntaxError (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/body-parser/lib/types/json.js:169:10)
+    at parse (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/body-parser/lib/types/json.js:86:15)
+    at /Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/raw-body/index.js:238:16)
+    at done (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/Users/fredriksafsten/Workprojects/anagram-game/server/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:507:28)
+    at endReadableNT (node:internal/streams/readable:1701:12) {
+  expose: true,
+  statusCode: 400,
+  status: 400,
+  body: '"invalid-json"',
+  type: 'entity.parse.failed'
+}
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:26.504Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+2025-07-07T17:42:26.507Z - GET /api/players/online
+👥 DATABASE: Found 16 online players
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:36.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:36.537Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:51.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:42:51.547Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:43:06.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:06.537Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:21.289Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:21.555Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:36.286Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:36.543Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:51.282Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:43:51.536Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:06.286Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:06.537Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:21.284Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:21.535Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:36.285Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:36.540Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+📋 DATABASE: Client acquired from pool
+❌ DATABASE: Query error: aggregate functions are not allowed in RETURNING
+📝 DATABASE: Query: 
+        DELETE FROM players 
+        WHERE is_active = false 
+          AND last_seen < CURRENT_TIMESTAMP - INTERVAL '30 days'
+        RETURNING count(*)
+      
+📋 DATABASE: Params: []
+❌ DATABASE: Error cleaning up inactive players: aggregate functions are not allowed in RETURNING
+🗑️ DATABASE: Client removed from pool
+2025-07-07T17:44:51.284Z - GET /api/players/online
+🔌 DATABASE: New client connected
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:44:51.533Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:06.282Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:06.547Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:21.286Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:21.547Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:36.296Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:36.556Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:51.306Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:45:51.565Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:06.303Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:06.566Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:21.305Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:21.561Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:36.305Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:36.558Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:51.303Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:46:51.559Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:47:06.306Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:47:06.557Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:47:21.306Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
+2025-07-07T17:47:21.565Z - GET /api/players/online
+📋 DATABASE: Client acquired from pool
+👥 DATABASE: Found 16 online players
