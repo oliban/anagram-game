@@ -44,14 +44,20 @@ class PhraseStore {
   /**
    * Get all phrases for a specific player
    */
-  getPhrasesForPlayer(playerId) {
+  getPhrasesForPlayer(playerId, playerStore = null) {
     const phraseIds = this.playerPhrases.get(playerId) || new Set();
     const phrases = [];
+    
+    // Get player instance to check skip bucket
+    const player = playerStore ? playerStore.getPlayer(playerId) : null;
     
     for (let id of phraseIds) {
       const phrase = this.phrases.get(id);
       if (phrase && !phrase.isConsumed) {
-        phrases.push(phrase);
+        // If player exists, filter out skipped phrases
+        if (!player || !player.isSkipped(id)) {
+          phrases.push(phrase);
+        }
       }
     }
 
@@ -59,11 +65,42 @@ class PhraseStore {
   }
 
   /**
+   * Get skipped phrases for a player (when all regular phrases are exhausted)
+   */
+  getSkippedPhrasesForPlayer(playerId, playerStore = null) {
+    const phraseIds = this.playerPhrases.get(playerId) || new Set();
+    const skippedPhrases = [];
+    
+    // Get player instance to check skip bucket
+    const player = playerStore ? playerStore.getPlayer(playerId) : null;
+    
+    if (!player) {
+      return skippedPhrases;
+    }
+    
+    for (let id of phraseIds) {
+      const phrase = this.phrases.get(id);
+      if (phrase && !phrase.isConsumed && player.isSkipped(id)) {
+        skippedPhrases.push(phrase);
+      }
+    }
+
+    return skippedPhrases;
+  }
+
+  /**
    * Get next unconsumed phrase for a player
    */
-  getNextPhraseForPlayer(playerId) {
-    const phrases = this.getPhrasesForPlayer(playerId);
-    return phrases.length > 0 ? phrases[0] : null;
+  getNextPhraseForPlayer(playerId, playerStore = null) {
+    // First try to get regular (non-skipped) phrases
+    const phrases = this.getPhrasesForPlayer(playerId, playerStore);
+    if (phrases.length > 0) {
+      return phrases[0];
+    }
+    
+    // If no regular phrases, get from skip bucket
+    const skippedPhrases = this.getSkippedPhrasesForPlayer(playerId, playerStore);
+    return skippedPhrases.length > 0 ? skippedPhrases[0] : null;
   }
 
   /**

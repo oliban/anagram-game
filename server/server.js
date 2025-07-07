@@ -203,8 +203,8 @@ app.get('/api/phrases/for/:playerId', (req, res) => {
       });
     }
     
-    // Get phrases for player
-    const phrases = phraseStore.getPhrasesForPlayer(playerId);
+    // Get phrases for player (excluding skipped ones)
+    const phrases = phraseStore.getPhrasesForPlayer(playerId, playerStore);
     
     // Get sender names for each phrase
     const phrasesWithSenders = phrases.map(phrase => {
@@ -251,6 +251,53 @@ app.post('/api/phrases/:phraseId/consume', (req, res) => {
     console.error('Error consuming phrase:', error);
     res.status(500).json({ 
       error: 'Failed to consume phrase' 
+    });
+  }
+});
+
+// Skip phrase endpoint
+app.post('/api/phrases/:phraseId/skip', (req, res) => {
+  try {
+    const { phraseId } = req.params;
+    const { playerId } = req.body;
+    
+    // Validate player exists
+    const player = playerStore.getPlayer(playerId);
+    if (!player) {
+      return res.status(404).json({ 
+        error: 'Player not found' 
+      });
+    }
+    
+    // Validate phrase exists
+    const phrase = phraseStore.getPhrase(phraseId);
+    if (!phrase) {
+      return res.status(404).json({ 
+        error: 'Phrase not found' 
+      });
+    }
+    
+    // Validate phrase belongs to player
+    if (phrase.targetId !== playerId) {
+      return res.status(403).json({ 
+        error: 'Phrase does not belong to this player' 
+      });
+    }
+    
+    // Skip the phrase
+    player.skipPhrase(phraseId);
+    
+    console.log(`⏭️ Phrase skipped: ${phraseId} by player ${player.name} (${playerId})`);
+    
+    res.json({
+      success: true,
+      message: 'Phrase skipped successfully'
+    });
+    
+  } catch (error) {
+    console.error('Error skipping phrase:', error);
+    res.status(500).json({ 
+      error: 'Failed to skip phrase' 
     });
   }
 });
