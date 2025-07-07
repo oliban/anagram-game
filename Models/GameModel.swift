@@ -140,7 +140,23 @@ class GameModel {
     }
     
     func skipCurrentGame() async {
-        print("🚀 Skip button pressed - starting new game")
+        print("🚀 Skip button pressed")
+        
+        // If we have a current custom phrase, skip it on the server
+        if let customPhrase = currentCustomPhrase {
+            print("⏭️ Skipping custom phrase: \(customPhrase.content)")
+            let networkManager = NetworkManager.shared
+            let skipSuccess = await networkManager.skipPhrase(phraseId: customPhrase.id)
+            
+            if skipSuccess {
+                print("✅ Successfully skipped phrase on server")
+            } else {
+                print("❌ Failed to skip phrase on server")
+            }
+        }
+        
+        // Start a new game regardless of skip result
+        print("🚀 Starting new game after skip")
         await startNewGame()
     }
 }

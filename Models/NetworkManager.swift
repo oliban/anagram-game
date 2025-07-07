@@ -615,6 +615,42 @@ class NetworkManager: ObservableObject {
         }
     }
     
+    func skipPhrase(phraseId: String) async -> Bool {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ PHRASE: No current player to skip phrase")
+            return false
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/skip") else {
+            print("❌ PHRASE: Invalid URL for skipping phrase")
+            return false
+        }
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            // Add playerId in request body as required by server
+            let requestBody = ["playerId": currentPlayer.id]
+            request.httpBody = try JSONEncoder().encode(requestBody)
+            
+            let (_, response) = try await urlSession.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                print("⏭️ PHRASE: Successfully skipped phrase \(phraseId)")
+                return true
+            } else {
+                print("❌ PHRASE: Failed to skip phrase. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return false
+            }
+            
+        } catch {
+            print("❌ PHRASE: Error skipping phrase: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
     // MARK: - Periodic Updates
     
     func startPeriodicPlayerListFetch() {
