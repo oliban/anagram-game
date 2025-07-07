@@ -114,27 +114,20 @@ struct ContentView: View {
                     // Debug/Testing buttons
                     VStack(spacing: 8) {
                         Button("Test Connection") {
-                            print("🔘 Test Connection button tapped")
                             networkManager.connectionStatus = .connecting
                             Task {
-                                print("🔘 Starting connection test...")
                                 let result = await networkManager.testConnection()
                                 await MainActor.run {
                                     switch result {
                                     case .success:
-                                        print("🔘 Test successful - attempting registration")
                                         networkManager.connectionStatus = .connected
                                         Task {
                                             let success = await networkManager.registerPlayer(name: "Player_\(Int.random(in: 100...999))")
-                                            if success {
-                                                print("🔘 Registration successful")
-                                            } else {
-                                                print("🔘 Registration failed")
+                                            if !success {
                                                 networkManager.connectionStatus = .error("Registration failed")
                                             }
                                         }
                                     case .failure(let error):
-                                        print("🔘 Connection test failed: \(error)")
                                         networkManager.connectionStatus = .error("Test failed: \(error)")
                                     }
                                 }
@@ -146,50 +139,6 @@ struct ContentView: View {
                         .cornerRadius(8)
                         .disabled(showingConnectionTest)
                         
-                        // Manual ping test button
-                        Button("Send Manual Ping") {
-                            networkManager.sendManualPing()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
-                        .disabled(!networkManager.isConnected)
-                        
-                        // Test button to manually add phrase
-                        Button("Add Test Phrase") {
-                            networkManager.debugCounter += 1
-                            // If we have a lastReceivedPhrase, copy it to pendingPhrases
-                            if let lastPhrase = networkManager.lastReceivedPhrase {
-                                networkManager.pendingPhrases = [lastPhrase]
-                                print("🧪 Copied lastReceivedPhrase to pendingPhrases, counter: \(networkManager.debugCounter)")
-                            } else {
-                                networkManager.pendingPhrases = [] // Just test the counter
-                                print("🧪 No lastReceivedPhrase, just testing counter: \(networkManager.debugCounter)")
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(Color.orange.opacity(0.1))
-                        .cornerRadius(8)
-                        
-                        // Debug: Reset registration
-                        Button("Reset Player Data") {
-                            UserDefaults.standard.removeObject(forKey: "playerName")
-                            networkManager.disconnect()
-                            networkManager.currentPlayer = nil
-                            isPlayerRegistered = false
-                            
-                            // Auto-reconnect after reset
-                            Task {
-                                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                                await autoConnectAndRegister()
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(8)
                         .font(.caption)
                     }
                 }
