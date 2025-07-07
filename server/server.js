@@ -477,6 +477,14 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error getting phrases for player:', error);
+    
+    // Handle UUID format errors as client errors (400)
+    if (error.message && error.message.includes('invalid input syntax for type uuid')) {
+      return res.status(400).json({
+        error: 'Invalid player ID format'
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Failed to get phrases' 
     });
