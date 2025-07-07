@@ -175,13 +175,8 @@ struct PhraseCreationView: View {
                 isLoading = false
                 
                 if success {
-                    let targetPlayer = availableTargets.first { $0.id == selectedTargetId }
-                    successMessage = "Phrase sent to \(targetPlayer?.name ?? "player")!"
-                    showingAlert = true
-                    
-                    // Reset form
-                    phraseText = ""
-                    selectedTargetId = ""
+                    // Directly dismiss the view on success
+                    isPresented = false
                 } else {
                     errorMessage = "Failed to send phrase. Please try again."
                     showingAlert = true
