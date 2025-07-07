@@ -11,6 +11,10 @@ const { testConnection, getStats: getDbStats, shutdown: shutdownDb, pool } = req
 const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 
+// Swagger documentation setup
+const swaggerUi = require('swagger-ui-express');
+const swaggerFile = require('./swagger-output.json');
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -44,6 +48,12 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
+
+// Swagger UI setup
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Anagram Game API Documentation'
+}));
 
 // API Routes
 app.get('/api/status', async (req, res) => {
@@ -85,7 +95,75 @@ app.get('/api/status', async (req, res) => {
   }
 });
 
-// Player registration endpoint
+/**
+ * @swagger
+ * /api/players/register:
+ *   post:
+ *     summary: Register a new player
+ *     description: Creates a new player in the database with a unique UUID and establishes their presence
+ *     tags: [Player Management]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - socketId
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Player display name
+ *                 example: "John Doe"
+ *               socketId:
+ *                 type: string
+ *                 description: Socket.IO connection ID for real-time communication
+ *                 example: "xyz123abc"
+ *     responses:
+ *       201:
+ *         description: Player registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 playerId:
+ *                   type: string
+ *                   format: uuid
+ *                   description: Unique player identifier
+ *                 name:
+ *                   type: string
+ *                   description: Player display name
+ *                 message:
+ *                   type: string
+ *                   example: "Player registered successfully"
+ *       400:
+ *         description: Invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               invalidName:
+ *                 value:
+ *                   error: "Player name is required and must be a string"
+ *               invalidSocketId:
+ *                 value:
+ *                   error: "Socket ID is required and must be a string"
+ *       503:
+ *         description: Database unavailable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Database error during registration
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/players/register', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
@@ -151,7 +229,55 @@ app.post('/api/players/register', async (req, res) => {
   }
 });
 
-// Get online players
+/**
+ * @swagger
+ * /api/players/online:
+ *   get:
+ *     summary: Get list of online players
+ *     description: Returns all currently active players with their public information
+ *     tags: [Player Management]
+ *     responses:
+ *       200:
+ *         description: List of online players retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 players:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Player'
+ *                 count:
+ *                   type: integer
+ *                   description: Number of online players
+ *                   example: 5
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Response timestamp
+ *             example:
+ *               players:
+ *                 - id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   name: "John Doe"
+ *                   lastSeen: "2023-12-07T10:30:00.000Z"
+ *                   isActive: true
+ *                   phrasesCompleted: 15
+ *               count: 1
+ *               timestamp: "2023-12-07T10:30:00.000Z"
+ *       503:
+ *         description: Database unavailable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.get('/api/players/online', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
@@ -176,7 +302,82 @@ app.get('/api/players/online', async (req, res) => {
   }
 });
 
-// Phrase API endpoints
+/**
+ * @swagger
+ * /api/phrases:
+ *   post:
+ *     summary: Create a basic phrase (legacy endpoint)
+ *     description: Creates a new targeted phrase between two players with automatic hint generation
+ *     tags: [Phrase Management]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *               - senderId
+ *               - targetId
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: The phrase content to be scrambled
+ *                 example: "Hello world"
+ *               senderId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: UUID of the player creating the phrase
+ *               targetId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: UUID of the target player
+ *               hint:
+ *                 type: string
+ *                 description: Optional hint for the phrase (auto-generated if not provided)
+ *                 example: "A greeting to the world"
+ *     responses:
+ *       201:
+ *         description: Phrase created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Phrase created successfully"
+ *                 phrase:
+ *                   $ref: '#/components/schemas/Phrase'
+ *       400:
+ *         description: Invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               missingFields:
+ *                 value:
+ *                   error: "Content, senderId, and targetId are required"
+ *               selfTarget:
+ *                 value:
+ *                   error: "Cannot send phrase to yourself"
+ *               invalidUuid:
+ *                 value:
+ *                   error: "Invalid player ID format"
+ *       404:
+ *         description: Player not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Database error during phrase creation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/phrases', async (req, res) => {
   try {
     const { content, senderId, targetId } = req.body;
@@ -258,7 +459,114 @@ app.post('/api/phrases', async (req, res) => {
   }
 });
 
-// Enhanced phrase creation endpoint (Phase 4.1)
+/**
+ * @swagger
+ * /api/phrases/create:
+ *   post:
+ *     summary: Create enhanced phrase with advanced options (Phase 4.1)
+ *     description: Advanced phrase creation with support for global phrases, multiple targets, difficulty levels, and custom priorities
+ *     tags: [Phrase Management]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *               - senderId
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: The phrase content to be scrambled
+ *                 example: "Advanced anagram challenge"
+ *               hint:
+ *                 type: string
+ *                 description: Helpful hint for solving the phrase
+ *                 example: "This is about word puzzles"
+ *               senderId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: UUID of the player creating the phrase
+ *               targetIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of target player UUIDs (empty for global phrases)
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               isGlobal:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether phrase should be available globally
+ *               difficultyLevel:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 default: 1
+ *                 description: Difficulty level of the phrase
+ *               phraseType:
+ *                 type: string
+ *                 enum: [custom, community, daily]
+ *                 default: custom
+ *                 description: Type of phrase being created
+ *               priority:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 10
+ *                 default: 1
+ *                 description: Priority level for phrase delivery
+ *     responses:
+ *       201:
+ *         description: Enhanced phrase created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 phrases:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Phrase'
+ *                 message:
+ *                   type: string
+ *                   example: "Enhanced phrase created successfully"
+ *                 created:
+ *                   type: integer
+ *                   description: Number of phrases created
+ *                 targets:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Target player names
+ *       400:
+ *         description: Invalid input data or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Sender or target players not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       503:
+ *         description: Database unavailable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Database error during phrase creation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.post('/api/phrases/create', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
@@ -384,7 +692,106 @@ app.post('/api/phrases/create', async (req, res) => {
   }
 });
 
-// Global Phrase Bank endpoint (Phase 4.2)
+/**
+ * @swagger
+ * /api/phrases/global:
+ *   get:
+ *     summary: Get global phrase bank (Phase 4.2)
+ *     description: Retrieve paginated list of approved global phrases with optional difficulty filtering
+ *     tags: [Phrase Management]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of phrases to return (max 100)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: Number of phrases to skip for pagination
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *         description: Filter by difficulty level (1-5)
+ *       - in: query
+ *         name: approved
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Whether to include only approved phrases
+ *     responses:
+ *       200:
+ *         description: Global phrases retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 phrases:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Phrase'
+ *                 count:
+ *                   type: integer
+ *                   description: Number of phrases returned
+ *                   example: 25
+ *                 totalCount:
+ *                   type: integer
+ *                   description: Total number of available phrases
+ *                   example: 150
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                       example: 50
+ *                     offset:
+ *                       type: integer
+ *                       example: 0
+ *                     hasMore:
+ *                       type: boolean
+ *                       example: true
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     difficulty:
+ *                       type: integer
+ *                       nullable: true
+ *                       example: 3
+ *                     approved:
+ *                       type: boolean
+ *                       example: true
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid query parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       503:
+ *         description: Database unavailable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Database error during retrieval
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 app.get('/api/phrases/global', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
