@@ -234,25 +234,35 @@ class ComprehensiveTestSuite {
 
       // Simulate events to trigger WebSocket responses
       setTimeout(async () => {
-        // Register a player to trigger player-joined
-        if (this.testPlayers.length > 0) {
-          const result = await this.makeRequest('POST', '/api/players/register', {
-            name: `WSTestPlayer_${Date.now()}`,
+        try {
+          // Register players to trigger player-joined events
+          const player1Result = await this.makeRequest('POST', '/api/players/register', {
+            name: `WSTestPlayer1_${Date.now()}`,
             socketId: socket1.id
           });
           
-          if (result.success) {
+          const player2Result = await this.makeRequest('POST', '/api/players/register', {
+            name: `WSTestPlayer2_${Date.now()}`,
+            socketId: socket2.id
+          });
+          
+          if (player1Result.success && player2Result.success) {
             // Create a phrase to trigger new-phrase event
             setTimeout(async () => {
-              if (this.testPlayers.length >= 2) {
-                await this.makeRequest('POST', '/api/phrases', {
-                  content: 'websocket test phrase',
-                  senderId: this.testPlayers[0].id,
-                  targetId: this.testPlayers[1].id
-                });
-              }
+              await this.makeRequest('POST', '/api/phrases', {
+                content: 'websocket test phrase',
+                senderId: player1Result.data.player.id,
+                targetId: player2Result.data.player.id
+              });
+              
+              // Disconnect player2 to trigger player-left event
+              setTimeout(() => {
+                socket2.disconnect();
+              }, 500);
             }, 1000);
           }
+        } catch (error) {
+          console.log('WebSocket test setup error:', error.message);
         }
       }, 2000);
 
@@ -289,11 +299,13 @@ class ComprehensiveTestSuite {
     }
 
     // Test 2: Unicode and emoji handling
-    for (const edgeName of TEST_DATA.edgeCaseNames) {
+    for (let i = 0; i < TEST_DATA.edgeCaseNames.length; i++) {
+      const edgeName = TEST_DATA.edgeCaseNames[i];
+      const uniqueName = `${edgeName}_${Date.now()}_${i}`;
       const result = await this.makeRequest('POST', '/api/players/register', {
-        name: edgeName,
-        socketId: `test-${Date.now()}`
-      });
+        name: uniqueName,
+        socketId: `test-${Date.now()}-${i}`
+      }, 201); // Expect 201 for successful registration
 
       const passed = result.success || result.status === 400; // Should either work or be properly rejected
       this.logResult(`Edge case - Unicode name: "${edgeName}"`,
@@ -335,7 +347,7 @@ class ComprehensiveTestSuite {
         this.makeRequest('POST', '/api/players/register', {
           name: `ConcurrentUser_${i}_${Date.now()}`,
           socketId: `concurrent-${i}`
-        })
+        }, 201)
       );
     }
 
@@ -365,16 +377,16 @@ class ComprehensiveTestSuite {
       const player1 = await this.makeRequest('POST', '/api/players/register', {
         name: `IntegrationPlayer1_${Date.now()}`,
         socketId: 'integration-socket-1'
-      });
+      }, 201);
 
       const player2 = await this.makeRequest('POST', '/api/players/register', {
         name: `IntegrationPlayer2_${Date.now()}`,
         socketId: 'integration-socket-2'
-      });
+      }, 201);
 
       if (!player1.success || !player2.success) {
         this.logResult('Integration - Player registration step', false,
-          'Failed to register test players', 'Integration');
+          `Failed to register test players: P1=${player1.status} ${player1.error}, P2=${player2.status} ${player2.error}`, 'Integration');
         return false;
       }
 
@@ -391,7 +403,7 @@ class ComprehensiveTestSuite {
         content: 'integration test phrase',
         senderId: player1.data.player.id,
         targetId: player2.data.player.id
-      });
+      }, 201);
 
       this.logResult('Integration - Phrase creation', phraseResult.success,
         phraseResult.success ? `Phrase ID: ${phraseResult.data.phrase.id}` : `Error: ${phraseResult.error}`, 'Integration');

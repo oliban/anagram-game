@@ -102,6 +102,13 @@ app.post('/api/players/register', async (req, res) => {
         error: 'Player name is required and must be a string' 
       });
     }
+
+    // Validate socketId if provided
+    if (socketId !== null && socketId !== undefined && typeof socketId !== 'string') {
+      return res.status(400).json({
+        error: 'Socket ID must be a string or null'
+      });
+    }
     
     const player = await DatabasePlayer.createPlayer(name, socketId || null);
     console.log(`👤 Player registered: ${player.name} (${player.id})`);

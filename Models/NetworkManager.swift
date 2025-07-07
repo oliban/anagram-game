@@ -7,11 +7,12 @@ import SocketIO
 struct Player: Codable, Identifiable, Equatable {
     let id: String
     let name: String
-    let connectedAt: Date
+    let lastSeen: Date
     let isActive: Bool
+    let phrasesCompleted: Int
     
     private enum CodingKeys: String, CodingKey {
-        case id, name, connectedAt, isActive
+        case id, name, lastSeen, isActive, phrasesCompleted
     }
     
     init(from decoder: Decoder) throws {
@@ -19,11 +20,12 @@ struct Player: Codable, Identifiable, Equatable {
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         isActive = try container.decode(Bool.self, forKey: .isActive)
+        phrasesCompleted = try container.decode(Int.self, forKey: .phrasesCompleted)
         
         // Handle date parsing
-        let dateString = try container.decode(String.self, forKey: .connectedAt)
+        let dateString = try container.decode(String.self, forKey: .lastSeen)
         let formatter = ISO8601DateFormatter()
-        connectedAt = formatter.date(from: dateString) ?? Date()
+        lastSeen = formatter.date(from: dateString) ?? Date()
     }
 }
 
