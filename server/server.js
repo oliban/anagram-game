@@ -57,7 +57,7 @@ app.get('/api/status', async (req, res) => {
     }
     
     const dbStats = await getDbStats();
-    const phraseStats = phraseStore.getStats();
+    const phraseStats = await DatabasePhrase.getStats();
     
     // Add pool statistics
     const poolStats = {
@@ -373,6 +373,70 @@ app.post('/api/phrases/create', async (req, res) => {
 
     res.status(500).json({
       error: error.message || 'Failed to create enhanced phrase'
+    });
+  }
+});
+
+// Global Phrase Bank endpoint (Phase 4.2)
+app.get('/api/phrases/global', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for phrase data'
+      });
+    }
+
+    // Parse query parameters with defaults
+    const rawLimit = parseInt(req.query.limit) || 50;
+    const limit = Math.min(Math.max(rawLimit, 1), 100); // Ensure positive and max 100 phrases per request
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0); // Ensure non-negative
+    const rawDifficulty = parseInt(req.query.difficulty);
+    const difficulty = (rawDifficulty >= 1 && rawDifficulty <= 5) ? rawDifficulty : null; // Only valid difficulties
+    const approved = req.query.approved !== 'false'; // Default to approved only
+
+    console.log(`🌍 REQUEST: Global phrases - limit: ${limit}, offset: ${offset}, difficulty: ${difficulty || 'all'}, approved: ${approved}`);
+
+    // Get global phrases with optional filtering
+    const phrases = await DatabasePhrase.getGlobalPhrases(limit, offset, difficulty, approved);
+    
+    // Get total count for pagination
+    const totalCount = await DatabasePhrase.getGlobalPhrasesCount(difficulty, approved);
+
+    // Enhanced response with pagination metadata
+    res.json({
+      success: true,
+      phrases: phrases.map(phrase => ({
+        id: phrase.id,
+        content: phrase.content,
+        hint: phrase.hint,
+        difficultyLevel: phrase.difficultyLevel,
+        phraseType: phrase.phraseType,
+        priority: phrase.priority,
+        usageCount: phrase.usageCount,
+        isApproved: phrase.isApproved,
+        createdAt: phrase.createdAt,
+        createdByName: phrase.createdByName || 'Anonymous'
+      })),
+      pagination: {
+        limit,
+        offset,
+        total: totalCount,
+        count: phrases.length,
+        hasMore: offset + phrases.length < totalCount
+      },
+      filters: {
+        difficulty: difficulty || 'all',
+        approved
+      },
+      timestamp: new Date().toISOString()
+    });
+
+    console.log(`✅ DATABASE: Returned ${phrases.length} global phrases (${totalCount} total)`);
+
+  } catch (error) {
+    console.error('❌ Error getting global phrases:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve global phrases'
     });
   }
 });
