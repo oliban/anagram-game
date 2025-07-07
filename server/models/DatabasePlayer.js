@@ -305,7 +305,6 @@ class DatabasePlayer {
         DELETE FROM players 
         WHERE is_active = false 
           AND last_seen < CURRENT_TIMESTAMP - INTERVAL '30 days'
-        RETURNING count(*)
       `);
 
       const deletedCount = result.rowCount || 0;
