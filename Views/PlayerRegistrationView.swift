@@ -125,7 +125,7 @@ struct PlayerRegistrationView: View {
     }
     
     private var canRegister: Bool {
-        return isValidName && networkManager.isConnected && !isRegistering
+        return isValidName && !isRegistering
     }
     
     private var buttonBackgroundColor: Color {
@@ -146,6 +146,20 @@ struct PlayerRegistrationView: View {
         
         Task {
             let trimmedName = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // First, test connection to server
+            let connectionResult = await networkManager.testConnection()
+            
+            guard case .success = connectionResult else {
+                await MainActor.run {
+                    isRegistering = false
+                    errorMessage = "Cannot connect to server. Please check your connection."
+                    showError = true
+                }
+                return
+            }
+            
+            // Register player (this will also establish WebSocket connection)
             let success = await networkManager.registerPlayer(name: trimmedName)
             
             await MainActor.run {

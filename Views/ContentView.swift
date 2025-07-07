@@ -111,35 +111,18 @@ struct ContentView: View {
                         }
                     }
                     
-                    // Debug/Testing buttons
-                    VStack(spacing: 8) {
-                        Button("Test Connection") {
-                            networkManager.connectionStatus = .connecting
-                            Task {
-                                let result = await networkManager.testConnection()
-                                await MainActor.run {
-                                    switch result {
-                                    case .success:
-                                        networkManager.connectionStatus = .connected
-                                        Task {
-                                            let success = await networkManager.registerPlayer(name: "Player_\(Int.random(in: 100...999))")
-                                            if !success {
-                                                networkManager.connectionStatus = .error("Registration failed")
-                                            }
-                                        }
-                                    case .failure(let error):
-                                        networkManager.connectionStatus = .error("Test failed: \(error)")
-                                    }
-                                }
+                    // Manual Registration Button (only show if not registered and not connecting)
+                    if !isPlayerRegistered && !showingConnectionTest && networkManager.connectionStatus != .connecting {
+                        VStack(spacing: 8) {
+                            Button("Connect") {
+                                showingRegistration = true
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(8)
+                            .font(.caption)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
-                        .disabled(showingConnectionTest)
-                        
-                        .font(.caption)
                     }
                 }
                 .padding(.bottom, 100)
@@ -166,10 +149,21 @@ struct ContentView: View {
             PhraseCreationView(isPresented: $showingPhraseCreation)
         }
         .onAppear {
-            print("📱 ContentView appeared - skipping auto-connect for debugging")
-            // Just reset state, don't auto-connect
-            networkManager.connectionStatus = .disconnected
-            networkManager.isConnected = false
+            print("📱 ContentView appeared - checking for existing player or showing registration")
+            
+            // Check if we have a stored player name from previous session
+            if let storedName = UserDefaults.standard.string(forKey: "playerName") {
+                print("📱 Found stored player name: \(storedName) - attempting auto-connect")
+                Task {
+                    await autoConnectWithStoredName(storedName)
+                }
+            } else {
+                print("📱 No stored player name - showing registration")
+                // Reset connection state and show registration
+                networkManager.connectionStatus = .disconnected
+                networkManager.isConnected = false
+                showingRegistration = true
+            }
         }
         .onChange(of: networkManager.currentPlayer) { oldValue, newValue in
             isPlayerRegistered = newValue != nil
@@ -180,6 +174,50 @@ struct ContentView: View {
     }
     
     // MARK: - Auto Connect Methods
+    
+    private func autoConnectWithStoredName(_ playerName: String) async {
+        print("🚀 Starting auto-connect with stored name: \(playerName)")
+        
+        // Show connecting state
+        await MainActor.run {
+            showingConnectionTest = true
+            networkManager.connectionStatus = .connecting
+        }
+        
+        // Test connection first
+        print("🔍 Testing connection...")
+        let connectionResult = await networkManager.testConnection()
+        
+        switch connectionResult {
+        case .success:
+            print("✅ Connection test successful - proceeding with registration")
+            
+            // Register with stored name
+            let success = await networkManager.registerPlayer(name: playerName)
+            
+            await MainActor.run {
+                showingConnectionTest = false
+                
+                if success {
+                    isPlayerRegistered = true
+                    print("✅ Auto-registered with stored name: \(playerName)")
+                } else {
+                    print("❌ Failed to register with stored name - showing registration")
+                    showingRegistration = true
+                }
+            }
+            
+        case .failure(let error):
+            print("❌ Connection test failed: \(error)")
+            
+            await MainActor.run {
+                showingConnectionTest = false
+                networkManager.connectionStatus = .error("Connection failed: \(error)")
+                // Show registration view for manual retry
+                showingRegistration = true
+            }
+        }
+    }
     
     private func autoConnectAndRegister() async {
         print("🚀 Starting auto-connect process...")
