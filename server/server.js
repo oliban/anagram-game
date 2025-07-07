@@ -448,6 +448,62 @@ app.get('/api/phrases/global', async (req, res) => {
   }
 });
 
+// Phrase Approval endpoint (Phase 4.2 completion)
+app.post('/api/phrases/:phraseId/approve', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for phrase approval'
+      });
+    }
+
+    const { phraseId } = req.params;
+
+    // Basic UUID validation for phraseId
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(phraseId)) {
+      return res.status(400).json({
+        error: 'Invalid phrase ID format'
+      });
+    }
+
+    console.log(`✅ REQUEST: Approve phrase ${phraseId}`);
+
+    // Approve the phrase (this method checks if phrase exists and is global)
+    const approved = await DatabasePhrase.approvePhrase(phraseId);
+
+    if (approved) {
+      res.status(200).json({
+        success: true,
+        phraseId,
+        approved: true,
+        message: 'Phrase approved successfully',
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ APPROVAL: Phrase ${phraseId} approved for global use`);
+    } else {
+      res.status(404).json({
+        error: 'Phrase not found or not eligible for approval'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Error approving phrase:', error);
+    
+    // Handle UUID validation errors specifically
+    if (error.message.includes('invalid input syntax for type uuid')) {
+      return res.status(400).json({
+        error: 'Invalid phrase ID format'
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to approve phrase'
+    });
+  }
+});
+
 app.get('/api/phrases/for/:playerId', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
@@ -487,6 +543,96 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
     
     res.status(500).json({ 
       error: 'Failed to get phrases' 
+    });
+  }
+});
+
+// Download phrases for offline play
+app.get('/api/phrases/download/:playerId', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for phrase download'
+      });
+    }
+    
+    const { playerId } = req.params;
+    const countParam = req.query.count;
+    const count = countParam !== undefined ? parseInt(countParam) : 15;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(playerId)) {
+      return res.status(400).json({
+        error: 'Invalid player ID format'
+      });
+    }
+    
+    // Validate count parameter
+    if (countParam !== undefined && (isNaN(count) || count < 1 || count > 50)) {
+      return res.status(400).json({
+        error: 'Count must be between 1 and 50'
+      });
+    }
+    
+    // Validate that player exists in database
+    const player = await DatabasePlayer.getPlayerById(playerId);
+    if (!player) {
+      return res.status(404).json({ 
+        error: 'Player not found' 
+      });
+    }
+    
+    // Get phrases for offline download
+    const phrases = await DatabasePhrase.getOfflinePhrases(playerId, count);
+    
+    console.log(`📱 Phrases downloaded for offline play: ${phrases.length} phrases for player ${player.name}`);
+    
+    // Set appropriate message
+    let message = `Downloaded ${phrases.length} phrases for offline play`;
+    
+    if (phrases.length === 0) {
+      const { query } = require('./database/connection');
+      
+      // Check if there are any global phrases available at all
+      const totalGlobalResult = await query(`
+        SELECT COUNT(*) as total
+        FROM phrases p
+        WHERE p.is_global = true 
+          AND p.is_approved = true
+          AND p.created_by_player_id != $1
+      `, [playerId]);
+      
+      const totalAvailable = parseInt(totalGlobalResult.rows[0].total);
+      
+      if (totalAvailable === 0) {
+        message = "No global phrases are currently available. Check back soon for new content!";
+      } else {
+        message = "No new phrases available for download at this time";
+      }
+    }
+    
+    res.json({
+      success: true,
+      phrases: phrases.map(p => p.getPublicInfo()),
+      count: phrases.length,
+      requestedCount: count,
+      timestamp: new Date().toISOString(),
+      message: message
+    });
+    
+  } catch (error) {
+    console.error('❌ Error downloading phrases:', error);
+    
+    // Handle UUID format errors as client errors (400)
+    if (error.message && error.message.includes('invalid input syntax for type uuid')) {
+      return res.status(400).json({
+        error: 'Invalid player ID format'
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to download phrases' 
     });
   }
 });
