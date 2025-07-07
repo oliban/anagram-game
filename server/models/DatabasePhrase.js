@@ -81,17 +81,24 @@ class DatabasePhrase {
       const trimmedHint = hint.trim();
       if (trimmedHint.length === 0) {
         errors.push('Hint cannot be empty');
+      } else if (trimmedHint.length < 10) {
+        errors.push('Hint must be at least 10 characters long');
       } else if (trimmedHint.length > 300) {
         errors.push('Hint cannot be longer than 300 characters');
       }
       
-      // Check that hint doesn't contain the exact answer words (only words longer than 3 chars)
+      // Check that hint doesn't contain the exact answer words (only words longer than 5 chars)
+      // This prevents giving away the answer while allowing common words like "test", "word", etc.
       const contentLower = content.toLowerCase();
       const hintLower = trimmedHint.toLowerCase();
       const words = contentLower.split(/\s+/);
       
+      // Skip common words that are reasonable to use in hints
+      const allowedCommonWords = ['test', 'word', 'words', 'phrase', 'message', 'challenge', 'custom', 'global', 'community'];
+      
       for (let word of words) {
-        if (word.length > 3 && (hintLower.includes(` ${word} `) || hintLower.includes(` ${word}`) || hintLower.includes(`${word} `))) {
+        if (word.length > 5 && !allowedCommonWords.includes(word) && 
+            (hintLower.includes(` ${word} `) || hintLower.includes(` ${word}`) || hintLower.includes(`${word} `))) {
           errors.push('Hint should not contain exact words from the phrase');
           break;
         }
@@ -107,60 +114,35 @@ class DatabasePhrase {
   }
 
   /**
-   * Create a new phrase in the database
-   * Compatible with both old signature (content, senderId, targetId) and new signature with options
+   * Create a new phrase in the database (simplified for existing API)
    */
-  static async createPhrase(contentOrOptions, senderId = null, targetId = null) {
-    let content, hint, options = {};
-    
-    // Handle both old signature and new signature
-    if (typeof contentOrOptions === 'object' && contentOrOptions.content) {
-      // New signature: createPhrase({ content, senderId, targetId, hint })
-      ({ content, hint, ...options } = contentOrOptions);
-      senderId = contentOrOptions.senderId;
-      targetId = contentOrOptions.targetId;
-    } else {
-      // Old signature: createPhrase(content, senderId, targetId)
-      content = contentOrOptions;
-      hint = options.hint || `Unscramble these words: ${content}`;
-    }
-
-    // For targeted phrases (old API), we don't validate hint requirement
-    const isTargeted = senderId && targetId;
-    if (!isTargeted) {
-      const validation = this.validatePhrase(content, hint);
-      if (!validation.valid) {
-        throw new Error(validation.errors.join(', '));
-      }
-      content = validation.content;
-      hint = validation.hint;
-    } else {
-      // Basic validation for targeted phrases
-      if (!content || typeof content !== 'string' || content.trim().length === 0) {
-        throw new Error('Content must be a non-empty string');
-      }
-      content = content.trim();
-      
-      // Generate automatic hint if none provided
-      if (!hint) {
-        const words = content.split(/\s+/);
-        hint = words.length > 1 ? `Unscramble these ${words.length} words` : 'Unscramble this word';
-      }
-    }
-
+  static async createPhrase(options) {
     const {
-      difficultyLevel = 1,
-      isGlobal = false,
-      createdByPlayerId = senderId,
-      isApproved = isGlobal ? false : true // Global phrases need approval
+      content,
+      senderId,
+      targetId,
+      hint
     } = options;
+
+    // Basic validation
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      throw new Error('Content must be a non-empty string');
+    }
+    
+    const cleanContent = content.trim();
+    
+    // Generate automatic hint if none provided
+    const cleanHint = hint || (() => {
+      const words = cleanContent.split(/\s+/);
+      return words.length > 1 ? `Unscramble these ${words.length} words` : 'Unscramble this word';
+    })();
 
     try {
       const result = await query(`
         INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
-      `, [content, hint, difficultyLevel, isGlobal, createdByPlayerId, isApproved]);
+      `, [cleanContent, cleanHint, 1, false, senderId, true]);
 
       const phraseData = result.rows[0];
       console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
@@ -471,6 +453,84 @@ class DatabasePhrase {
     } catch (error) {
       console.error('❌ DATABASE: Error getting offline phrases:', error.message);
       return [];
+    }
+  }
+
+  /**
+   * Enhanced phrase creation with comprehensive options (Phase 4.1)
+   * Supports global phrases, multi-player targeting, and advanced hint validation
+   */
+  static async createEnhancedPhrase(options) {
+    const {
+      content,
+      hint,
+      senderId,
+      targetIds = [], // Array for multi-player targeting
+      isGlobal = false,
+      difficultyLevel = 1,
+      phraseType = 'custom',
+      priority = 1
+    } = options;
+
+    // Comprehensive validation
+    const validation = this.validatePhrase(content, hint);
+    if (!validation.valid) {
+      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const cleanContent = validation.content;
+    const cleanHint = validation.hint;
+
+    // Validate difficulty level
+    if (difficultyLevel < 1 || difficultyLevel > 5) {
+      throw new Error('Difficulty level must be between 1 and 5');
+    }
+
+    // Validate phrase type
+    const validTypes = ['custom', 'global', 'community', 'challenge'];
+    if (!validTypes.includes(phraseType)) {
+      throw new Error(`Invalid phrase type. Must be one of: ${validTypes.join(', ')}`);
+    }
+
+    try {
+      return await transaction(async (client) => {
+        // Create the phrase
+        const phraseResult = await client.query(`
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, priority)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING *
+        `, [cleanContent, cleanHint, difficultyLevel, isGlobal, senderId, phraseType, priority]);
+
+        const phrase = new DatabasePhrase(phraseResult.rows[0]);
+
+        // Handle targeting
+        let targetCount = 0;
+        if (isGlobal) {
+          // Global phrases are available to all players
+          console.log(`🌍 DATABASE: Global phrase created - "${cleanContent}"`);
+        } else if (targetIds.length > 0) {
+          // Multi-player targeting
+          for (const targetId of targetIds) {
+            await client.query(`
+              INSERT INTO player_phrases (target_player_id, phrase_id)
+              VALUES ($1, $2)
+              ON CONFLICT DO NOTHING
+            `, [targetId, phrase.id]);
+            targetCount++;
+          }
+          console.log(`🎯 DATABASE: Phrase ${phrase.id} assigned to ${targetCount} players`);
+        }
+
+        console.log(`📝 DATABASE: Enhanced phrase created - "${cleanContent}" with hint: "${cleanHint}"`);
+        return {
+          phrase,
+          targetCount,
+          isGlobal
+        };
+      });
+    } catch (error) {
+      console.error('❌ DATABASE: Error creating enhanced phrase:', error.message);
+      throw error;
     }
   }
 }

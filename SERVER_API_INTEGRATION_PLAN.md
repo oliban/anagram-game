@@ -73,12 +73,12 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
     - [x] Maintain backward compatibility with existing client
 
 ## Phase 4: New Features & Endpoints (25 mins)
-- [ ] **4.1 Hint System Endpoints**
-  - [ ] **NEW: `POST /api/phrases/create`** (Enhanced creation)
-    - [ ] Comprehensive phrase creation with full options
-    - [ ] Support for global community phrases
-    - [ ] Targeting multiple players
-    - [ ] Hint validation and quality checking
+- [x] **4.1 Hint System Endpoints** ✅ COMPLETE
+  - [x] **NEW: `POST /api/phrases/create`** (Enhanced creation)
+    - [x] Comprehensive phrase creation with full options
+    - [x] Support for global community phrases  
+    - [x] Targeting multiple players
+    - [x] Hint validation and quality checking
 
 - [ ] **4.2 Global Phrase Bank**
   - [ ] **NEW: `GET /api/phrases/global`**
@@ -154,6 +154,45 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
   - [ ] Add query performance logging
   - [ ] Monitor database connection pool health
   - [ ] Add alerts for slow database operations
+
+## 🚨 CRITICAL: iOS App Migration Requirements
+**BREAKING CHANGE**: Server migration to PostgreSQL introduces UUID-based players, incompatible with current iOS app
+
+### **Phase 7: iOS App Database Migration (60-90 mins)**
+- [ ] **7.1 Core Data Model Changes**
+  - [ ] **Player Model**: Migrate from string IDs (`player_123_abc`) to UUIDs (`d2d3d95a-5a94-4cda-8b13-667e95388d84`)
+  - [ ] **Phrase Model**: Add hint property and new response fields (difficultyLevel, phraseType, priority)
+  - [ ] **Local Storage**: Update CoreData schemas and migration logic for existing user data
+
+- [ ] **7.2 Network Layer Overhaul**
+  - [ ] **API Integration**: Update all endpoints to handle UUID requests/responses
+  - [ ] **Response Parsing**: Handle new phrase response format with hints and metadata
+  - [ ] **Error Handling**: Support new HTTP status codes (503 for DB unavailable, proper UUID validation)
+  - [ ] **WebSocket Events**: Update `player-connect` and `new-phrase` event handling for UUIDs and hints
+
+- [ ] **7.3 UI/UX Enhancements**
+  - [ ] **Hint Display**: Design and implement hint presentation UI (modal/inline/toggle)
+  - [ ] **Error States**: Handle new error scenarios (database down, invalid player sessions)
+  - [ ] **Migration UX**: Seamless user transition without data loss during app update
+
+- [ ] **7.4 Testing & Validation**
+  - [ ] **Integration Testing**: End-to-end testing with new database-driven server
+  - [ ] **Migration Testing**: Validate upgrade path from old to new app version
+  - [ ] **Hint Functionality**: Comprehensive hint display and interaction testing
+  - [ ] **WebSocket Testing**: Real-time hint delivery and player targeting validation
+
+### **Phase 7 Risk Assessment:**
+- **High Impact**: Complete rewrite of player identification system
+- **Medium Risk**: Coordinated server/client deployment required
+- **Data Safety**: Must preserve user progress and preferences during migration
+- **User Experience**: Seamless transition essential for retention
+
+### **Deployment Strategy:**
+1. **Complete Server Phase 4-6** (current path)
+2. **iOS App Migration** (Phase 7)
+3. **Coordinated Release** with feature flags
+4. **Progressive Rollout** to validate hint system
+5. **Legacy Cleanup** after successful deployment
 
 ## Implementation Order & Risk Mitigation
 

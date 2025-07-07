@@ -251,6 +251,132 @@ app.post('/api/phrases', async (req, res) => {
   }
 });
 
+// Enhanced phrase creation endpoint (Phase 4.1)
+app.post('/api/phrases/create', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for phrase creation'
+      });
+    }
+
+    const {
+      content,
+      hint,
+      senderId,
+      targetIds = [],
+      isGlobal = false,
+      difficultyLevel = 1,
+      phraseType = 'custom',
+      priority = 1
+    } = req.body;
+
+    // Validate required fields
+    if (!content) {
+      return res.status(400).json({
+        error: 'Content is required'
+      });
+    }
+
+    if (!senderId) {
+      return res.status(400).json({
+        error: 'Sender ID is required'
+      });
+    }
+
+    // Validate sender exists
+    const sender = await DatabasePlayer.getPlayerById(senderId);
+    if (!sender) {
+      return res.status(404).json({
+        error: 'Sender player not found'
+      });
+    }
+
+    // Validate target players if provided
+    const validTargets = [];
+    if (targetIds.length > 0) {
+      for (const targetId of targetIds) {
+        const target = await DatabasePlayer.getPlayerById(targetId);
+        if (!target) {
+          return res.status(404).json({
+            error: `Target player ${targetId} not found`
+          });
+        }
+        if (target.id === senderId) {
+          return res.status(400).json({
+            error: 'Cannot target yourself'
+          });
+        }
+        validTargets.push(target);
+      }
+    }
+
+    // Create enhanced phrase
+    const result = await DatabasePhrase.createEnhancedPhrase({
+      content,
+      hint,
+      senderId,
+      targetIds,
+      isGlobal,
+      difficultyLevel,
+      phraseType,
+      priority
+    });
+
+    const { phrase, targetCount, isGlobal: phraseIsGlobal } = result;
+
+    console.log(`📝 Enhanced phrase created: "${content}" from ${sender.name}${phraseIsGlobal ? ' (global)' : ` to ${targetCount} players`}`);
+
+    // Send real-time notifications to target players
+    const notifications = [];
+    for (const target of validTargets) {
+      if (target.socketId) {
+        io.to(target.socketId).emit('new-phrase', {
+          phrase: phrase.getPublicInfo(),
+          senderName: sender.name,
+          timestamp: new Date().toISOString()
+        });
+        notifications.push(target.name);
+        console.log(`📨 Sent enhanced phrase notification to ${target.name} (${target.socketId})`);
+      }
+    }
+
+    // Enhanced response format
+    res.status(201).json({
+      success: true,
+      phrase: {
+        ...phrase.getPublicInfo(),
+        senderInfo: {
+          id: sender.id,
+          name: sender.name
+        }
+      },
+      targeting: {
+        isGlobal: phraseIsGlobal,
+        targetCount,
+        notificationsSent: notifications.length
+      },
+      message: 'Enhanced phrase created successfully'
+    });
+
+  } catch (error) {
+    console.error('Error creating enhanced phrase:', error);
+
+    // Handle validation errors as 400 (client errors)
+    if (error.message.includes('Validation failed') ||
+        error.message.includes('Difficulty level must be') ||
+        error.message.includes('Invalid phrase type')) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: error.message || 'Failed to create enhanced phrase'
+    });
+  }
+});
+
 app.get('/api/phrases/for/:playerId', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
@@ -508,7 +634,7 @@ setInterval(async () => {
   
   try {
     const cleanedPlayersCount = await DatabasePlayer.cleanupInactivePlayers();
-    const cleanedPhrasesCount = phraseStore.cleanupOldPhrases();
+    // Note: Phrase cleanup not yet implemented for database - will be added in Phase 4
     
     if (cleanedPlayersCount > 0) {
       console.log(`🧹 Cleaned up ${cleanedPlayersCount} inactive players`);
@@ -517,10 +643,6 @@ setInterval(async () => {
         players: onlinePlayers,
         timestamp: new Date().toISOString()
       });
-    }
-    
-    if (cleanedPhrasesCount > 0) {
-      console.log(`🧹 Cleaned up ${cleanedPhrasesCount} old phrases`);
     }
   } catch (error) {
     console.error('❌ Cleanup error:', error);
