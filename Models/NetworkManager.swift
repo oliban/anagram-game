@@ -71,7 +71,6 @@ class NetworkManager: ObservableObject {
     @Published var onlinePlayers: [Player] = []
     @Published var pendingPhrases: [CustomPhrase] = []
     @Published var lastReceivedPhrase: CustomPhrase? = nil
-    @Published var debugCounter: Int = 0
     
     private let baseURL = "http://192.168.1.133:3000"
     private var urlSession: URLSession
@@ -269,38 +268,29 @@ class NetworkManager: ObservableObject {
         }
         
         if socket.status == .connected {
-            print("🔌 SOCKET: Already connected - sending player-connect event")
             // If already connected, just send the player-connect event
             socket.emit("player-connect", with: [["playerId": playerId]], completion: nil)
-            print("👤 SOCKET: Sent 'player-connect' for already connected socket, player ID: \(playerId)")
             return
         }
-
-        print("🔌 SOCKET: Attempting to connect for player: \(playerId)")
         connectionStatus = .connecting
 
         // The player ID is sent upon connection
         socket.on(clientEvent: .connect) { [weak self] _, _ in
             guard let self = self else { return }
-            print("🔌 SOCKET: Connected successfully!")
-            print("🔌 SOCKET: Socket status: \(self.socket?.status.rawValue ?? -1)")
             self.connectionStatus = .connected
             self.isConnected = true
             
             // Emit player-connect event to associate player ID with socket ID
             self.socket?.emit("player-connect", with: [["playerId": playerId]], completion: nil)
-            print("👤 SOCKET: Sent 'player-connect' for player ID: \(playerId)")
 
             // Start periodic updates
             self.startPeriodicPlayerListFetch()
         }
         
         socket.connect()
-        print("🔌 SOCKET: Connection attempt initiated")
     }
 
     func disconnect() {
-        print("🔌 SOCKET: Disconnecting...")
         socket?.disconnect()
     }
 
@@ -313,7 +303,6 @@ class NetworkManager: ObservableObject {
         print("🔧 SOCKET SETUP: Setting up event handlers")
 
         socket.on(clientEvent: .disconnect) { [weak self] _, _ in
-            print("🔌 SOCKET: Disconnected.")
             self?.connectionStatus = .disconnected
             self?.isConnected = false
             self?.stopPeriodicPlayerListFetch()
@@ -334,7 +323,6 @@ class NetworkManager: ObservableObject {
             self?.isConnected = true
             if let playerId = self?.currentPlayer?.id {
                 self?.socket?.emit("player-connect", with: [["playerId": playerId]], completion: nil)
-                print("👤 SOCKET: Sent 'player-connect' on reconnect for player ID: \(playerId)")
             }
         }
         
@@ -357,12 +345,10 @@ class NetworkManager: ObservableObject {
         }
         
         socket.on("player-joined") { [weak self] data, _ in
-            print("👤 SOCKET: Received 'player-joined'")
             self?.handlePlayerListUpdate(data: data)
         }
         
         socket.on("player-left") { [weak self] _, _ in
-            print("👤 SOCKET: Received 'player-left'")
             // For simplicity, we just refetch the whole list.
             guard let self = self else { return }
             Task { @MainActor in
@@ -371,8 +357,6 @@ class NetworkManager: ObservableObject {
         }
         
         socket.on("new-phrase") { [weak self] data, _ in
-            print("📝 SOCKET: Received 'new-phrase' event")
-            print("📝 SOCKET: Raw data: \(data)")
             self?.handleNewPhrase(data: data)
         }
         
@@ -401,7 +385,6 @@ class NetworkManager: ObservableObject {
     }
     
     private func handleNewPhrase(data: [Any]) {
-        print("📝 SOCKET: handleNewPhrase called with data count: \(data.count)")
         
         guard let payload = data.first as? [String: Any] else {
             print("❌ SOCKET: No payload in data or not a dictionary")
@@ -409,7 +392,6 @@ class NetworkManager: ObservableObject {
             return
         }
         
-        print("📝 SOCKET: Payload keys: \(payload.keys)")
         
         guard let phraseData = payload["phrase"] as? [String: Any] else {
             print("❌ SOCKET: No 'phrase' field in payload or not a dictionary")
@@ -423,39 +405,27 @@ class NetworkManager: ObservableObject {
             return
         }
         
-        print("📝 SOCKET: Found phrase data and senderName: \(senderName)")
         
         do {
             // Add senderName to the phrase data for decoding
             var mutablePhraseData = phraseData
             mutablePhraseData["senderName"] = senderName
             
-            print("📝 SOCKET: About to decode phrase data: \(mutablePhraseData)")
             
             let jsonData = try JSONSerialization.data(withJSONObject: mutablePhraseData)
             let decoder = JSONDecoder()
             let phrase = try decoder.decode(CustomPhrase.self, from: jsonData)
             
-            print("📝 SOCKET: Successfully decoded phrase: \(phrase)")
             
             DispatchQueue.main.async {
-                print("📝 SOCKET: About to add phrase to pendingPhrases")
-                print("📝 SOCKET: Current pendingPhrases count before adding: \(self.pendingPhrases.count)")
                 
                 // Force update the published array
-                self.debugCounter += 1
                 var updatedPhrases = self.pendingPhrases
                 updatedPhrases.append(phrase)
                 self.pendingPhrases = updatedPhrases
-                print("📝 SOCKET: Added phrase to pendingPhrases")
-                print("📝 SOCKET: Current pendingPhrases count after adding: \(self.pendingPhrases.count)")
                 
                 self.lastReceivedPhrase = phrase
-                print("📝 SOCKET: Set lastReceivedPhrase")
                 
-                print("📝 SOCKET: ✅ Received new phrase '\(phrase.content)' from \(senderName)")
-                print("📝 SOCKET: lastReceivedPhrase is now: \(String(describing: self.lastReceivedPhrase))")
-                print("📝 SOCKET: pendingPhrases contents: \(self.pendingPhrases.map { $0.content })")
                 print("🎯 NEXT WORD PREVIEW: Your next game will be: '\(phrase.content)' (when you complete current game)")
             }
         } catch {
@@ -494,14 +464,12 @@ class NetworkManager: ObservableObject {
                 let player = try JSONDecoder().decode(Player.self, from: playerDataJSON)
                 
                 self.currentPlayer = player
-                print("👤 REGISTER: Player registered successfully: \(player.name) (\(player.id))")
                 
                 // Now, connect to the socket and wait a bit for connection
                 connect(playerId: player.id)
                 
                 // Give the socket time to connect before returning
                 try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                print("👤 REGISTER: Socket connection status after wait: \(self.isConnected)")
                 
                 return true
             }
@@ -575,7 +543,6 @@ class NetworkManager: ObservableObject {
             let (_, response) = try await urlSession.data(for: request)
             
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 {
-                print("📝 PHRASE: Successfully sent phrase '\(content)' to \(targetId)")
                 return true
             } else {
                 print("❌ PHRASE: Failed to send phrase. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
@@ -611,7 +578,6 @@ class NetworkManager: ObservableObject {
                let phrasesData = jsonResponse["phrases"] {
                 let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
                 let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
-                print("📝 PHRASE: Fetched \(phrases.count) phrases for current player")
                 return phrases
             }
             

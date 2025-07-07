@@ -60,7 +60,6 @@ struct PhysicsGameView: View {
                                 .foregroundColor(.red)
                                 .fontWeight(.bold)
                                 .onTapGesture {
-                                    print("🌍 Debug: Version number tapped - triggering 3s quake!")
                                     if let scene = gameScene ?? PhysicsGameView.sharedScene {
                                         scene.triggerQuake()
                                     }
@@ -79,57 +78,6 @@ struct PhysicsGameView: View {
                                 .cornerRadius(4)
                                 .padding(.horizontal, 4)
                             
-                            // Debug: Show connection and pending info
-                            Text("Socket: \(networkManager.isConnected ? "✅" : "❌")")
-                                .font(.caption2)
-                                .foregroundColor(networkManager.isConnected ? .green : .red)
-                                .padding(.top, 2)
-                            
-                            // Show connection status details - make it more visible when disconnected
-                            if !networkManager.isConnected {
-                                Text("ERROR: \(networkManager.connectionStatus.description)")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .background(Color.red.opacity(0.8))
-                                    .cornerRadius(6)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                            } else {
-                                Text(networkManager.connectionStatus.description)
-                                    .font(.caption2)
-                                    .foregroundColor(.white)
-                                    .background(Color.black.opacity(0.7))
-                                    .cornerRadius(4)
-                                    .padding(.horizontal, 4)
-                            }
-                            
-                            Text("Pending: \(networkManager.pendingPhrases.count) (Try: \(networkManager.debugCounter))")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-                            
-                            // Show if we have a current player (registered)
-                            Text("Player: \(networkManager.currentPlayer?.name ?? "None")")
-                                .font(.caption2)
-                                .foregroundColor(.cyan)
-                            
-                            // Show connection status
-                            Text("Status: \(networkManager.connectionStatus.description)")
-                                .font(.caption2)
-                                .foregroundColor(.purple)
-                            
-                            // Show last received phrase for debugging
-                            if let lastPhrase = networkManager.lastReceivedPhrase {
-                                Text("Last: \(lastPhrase.content)")
-                                    .font(.caption2)
-                                    .foregroundColor(.pink)
-                                    .background(Color.black.opacity(0.7))
-                                    .cornerRadius(4)
-                                    .padding(.horizontal, 4)
-                            } else {
-                                Text("Last: None")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                            }
                             
                             if let nextPhrase = networkManager.pendingPhrases.first {
                                 Text("NEXT:")
@@ -164,36 +112,6 @@ struct PhysicsGameView: View {
                                     .padding(.horizontal, 4)
                             }
                             
-                            Text("3s Quake")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .background(Color.blue.opacity(0.9))
-                                .cornerRadius(4)
-                            
-                            Text("Quick Test")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .background(Color.orange.opacity(0.9))
-                                .cornerRadius(4)
-                                .onTapGesture {
-                                    print("🌍 Debug: Quick test tapped - triggering 0.5s quake!")
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.triggerQuickQuake()
-                                    }
-                                }
-                            
-                            Text("Hint")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .background(Color.green.opacity(0.9))
-                                .cornerRadius(4)
-                                .padding(.horizontal, 8)
-                                .onTapGesture {
-                                    print("💡 Hint button tapped!")
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.triggerHint()
-                                    }
-                                }
                         }
                         .padding()
                     }
@@ -251,25 +169,17 @@ struct PhysicsGameView: View {
             motionManager.stopDeviceMotionUpdates()
         }
         .onChange(of: networkManager.lastReceivedPhrase) { oldValue, newValue in
-            print("🎮 GAME: onChange triggered - oldValue: \(String(describing: oldValue)), newValue: \(String(describing: newValue))")
-            
             if let newPhrase = newValue, newPhrase != oldValue {
-                print("🎮 GAME: New phrase detected: '\(newPhrase.content)' from \(newPhrase.senderName)")
-                
                 withAnimation(.spring()) {
                     phraseNotificationMessage = "New phrase from \(newPhrase.senderName)!"
-                    print("🎮 GAME: Set phraseNotificationMessage to: '\(phraseNotificationMessage)'")
                 }
                 
                 // Clear notification after 3 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     withAnimation(.easeOut) {
                         phraseNotificationMessage = ""
-                        print("🎮 GAME: Cleared phraseNotificationMessage")
                     }
                 }
-            } else {
-                print("🎮 GAME: No new phrase or same as old value")
             }
         }
     }
@@ -289,7 +199,6 @@ struct PhysicsGameView: View {
     }
     
     private func setupGame() {
-        print("🎮 Setting up game...")
         
         // Set up gameScene reference and callbacks
         if let sharedScene = PhysicsGameView.sharedScene {
@@ -363,7 +272,6 @@ class PhysicsGameScene: SKScene {
         
         // Initialize debug text with default values
         debugText = "Connecting motion..."
-        print("🎮 PhysicsGameScene initialized")
         
         setupPhysicsWorld()
         setupEnvironment()
@@ -674,12 +582,10 @@ class PhysicsGameScene: SKScene {
         
         if shouldQuake && !isQuakeActive {
             // Start natural quake mode
-            print("🌍 Natural QUAKE started from device tilt!")
             isQuakeActive = true
             startShelfShaking()
         } else if !shouldQuake && isQuakeActive {
             // End natural quake mode
-            print("🌍 Natural QUAKE ended - device returned to normal position")
             isQuakeActive = false
             stopShelfShaking()
         }
@@ -753,14 +659,8 @@ class PhysicsGameScene: SKScene {
     }
     
     func triggerHint() {
-        print("💡 Hint triggered - lighting up shelves!")
-        
         let targetWords = gameModel.getExpectedWords()
         let numberOfWords = targetWords.count
-        
-        print("💡 Target phrase: '\(gameModel.currentSentence)'")
-        print("💡 Number of words needed: \(numberOfWords)")
-        print("💡 Available shelves: \(shelves.count)")
         
         // Light up the same number of shelves as there are words in the target phrase
         let shelvesToLight = min(numberOfWords, shelves.count)
@@ -769,7 +669,6 @@ class PhysicsGameScene: SKScene {
             lightUpShelf(shelves[i], wordIndex: i)
         }
         
-        print("💡 Lit up \(shelvesToLight) shelves for \(numberOfWords) words")
     }
     
     private func lightUpShelf(_ shelf: SKNode, wordIndex: Int) {
@@ -867,11 +766,9 @@ class PhysicsGameScene: SKScene {
         // Add glow container to shelf
         shelf.addChild(glowContainer)
         
-        print("💡 Shelf \(wordIndex) lit up with 3D \(hintColor) glow covering all surfaces")
     }
     
     private func clearAllHints() {
-        print("💡 Clearing all hint effects for new game")
         for shelf in shelves {
             // Remove the glow container which contains all glow elements
             shelf.childNode(withName: "hint_glow")?.removeFromParent()
@@ -880,7 +777,6 @@ class PhysicsGameScene: SKScene {
     
     private func triggerQuakeWithDuration(_ duration: TimeInterval) {
         // Manually trigger quake effect for debugging
-        print("🌍 QUAKE triggered manually for \(duration) seconds!")
         
         // Cancel any existing quake end action
         if quakeEndAction != nil {
@@ -893,10 +789,8 @@ class PhysicsGameScene: SKScene {
             // Start new quake
             isQuakeActive = true
             startShelfShaking()
-            print("🌍 QUAKE started - shelves shaking!")
         } else {
             // Extend existing quake
-            print("🌍 QUAKE extended!")
         }
         
         // Reset to normal after specified duration
@@ -904,7 +798,6 @@ class PhysicsGameScene: SKScene {
             self.stopShelfShaking()
             self.isQuakeActive = false
             self.quakeEndAction = nil
-            print("🌍 QUAKE ended - shaking stopped")
         }
         let waitAction = SKAction.wait(forDuration: duration)
         let sequence = SKAction.sequence([waitAction, resetAction])
@@ -1027,14 +920,11 @@ class PhysicsGameScene: SKScene {
     }
     
     func resetGame() {
-        print("🎮 SCENE: resetGame() called")
         clearAllHints()  // Clear hint effects when starting new game
         
         // Start a new game with the GameModel (this will check for custom phrases)
         Task {
             await gameModel.startNewGame()
-            print("🎮 SCENE: GameModel finished loading, creating tiles with sentence: '\(gameModel.currentSentence)'")
-            print("🎮 SCENE: GameModel state: \(gameModel.gameState)")
             createTiles()
         }
         
@@ -1444,7 +1334,6 @@ class PhysicsGameScene: SKScene {
             createTiles()
         }
         
-        print("🎮 Started new game with: \(gameModel.currentSentence)")
     }
     
     private func createFireworks() {

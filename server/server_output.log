@@ -53,3 +53,167 @@
 ✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
 2025-07-07T06:26:46.212Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
 ✅ Phrase consumed: phrase_1751869033500_88i28v55h
+🔌 SERVER: Client disconnected: hjTryfzjzyFYnZvmAAAD (Total: 2) at 2025-07-07T06:54:20.970Z
+🔌 SERVER: Disconnect reason: transport close
+🔌 SERVER: No player found for disconnected socket: hjTryfzjzyFYnZvmAAAD
+🔌 SERVER: Client connected: syd78s9e3qp5v_-VAAAH (Total: 3) at 2025-07-07T06:54:35.613Z
+🔌 SERVER: Client remote address: 192.168.1.133
+🔌 SERVER: Client user agent: Unknown
+🔌 SERVER: Client disconnected: hNq7LDdaAsrPSGs_AAAF (Total: 2) at 2025-07-07T06:54:43.543Z
+🔌 SERVER: Disconnect reason: transport close
+🔌 SERVER: No player found for disconnected socket: hNq7LDdaAsrPSGs_AAAF
+🔌 SERVER: Client connected: V_FP4TR9nOkSqSO0AAAJ (Total: 3) at 2025-07-07T06:54:46.909Z
+🔌 SERVER: Client remote address: 192.168.1.133
+🔌 SERVER: Client user agent: Unknown
+2025-07-07T06:55:03.721Z - GET /api/status
+2025-07-07T06:55:03.727Z - POST /api/players/register
+👤 Player registered: Player_952 (player_1751871303727_zhap317lp)
+📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871303727_zhap317lp' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:55:03.730Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871303727_zhap317lp' }
+👤 SERVER: Player connected via socket: Player_952 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:55:03.730Z
+2025-07-07T06:55:03.788Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
+✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
+2025-07-07T06:55:03.797Z - GET /api/phrases/for/player_1751871303727_zhap317lp
+2025-07-07T06:55:03.799Z - GET /api/phrases/for/player_1751871303727_zhap317lp
+2025-07-07T06:55:03.804Z - GET /api/phrases/for/player_1751871303727_zhap317lp
+2025-07-07T06:56:18.179Z - GET /api/status
+2025-07-07T06:56:18.184Z - POST /api/players/register
+👤 Player registered: Player_965 (player_1751871378184_lt0ntx20z)
+📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871378184_lt0ntx20z' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:56:18.187Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871378184_lt0ntx20z' }
+👤 SERVER: Player connected via socket: Player_965 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:56:18.187Z
+2025-07-07T06:56:18.198Z - GET /api/phrases/for/player_1751871303727_zhap317lp
+2025-07-07T06:56:18.199Z - GET /api/phrases/for/player_1751871378184_lt0ntx20z
+2025-07-07T06:56:18.201Z - GET /api/phrases/for/player_1751871378184_lt0ntx20z
+2025-07-07T06:56:18.204Z - GET /api/phrases/for/player_1751871378184_lt0ntx20z
+2025-07-07T06:56:24.721Z - POST /api/phrases
+📝 Phrase created: "As Ass" from Player_952 to Player_965
+📨 Sent new-phrase notification to Player_965 (V_FP4TR9nOkSqSO0AAAJ)
+2025-07-07T06:56:24.744Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:56:51.306Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+🔌 SERVER: Client disconnected: s0_KLiA6nxI1oReBAAAB (Total: 2) at 2025-07-07T06:56:56.903Z
+🔌 SERVER: Disconnect reason: ping timeout
+🔌 SERVER: No player found for disconnected socket: s0_KLiA6nxI1oReBAAAB
+2025-07-07T06:58:13.228Z - GET /api/status
+2025-07-07T06:58:13.229Z - GET /api/phrases/for/player_1751871303727_zhap317lp
+2025-07-07T06:58:13.232Z - POST /api/players/register
+👤 Player registered: Player_101 (player_1751871493232_lw3rkgasu)
+2025-07-07T06:58:13.233Z - GET /api/phrases/for/player_1751871303727_zhap317lp
+📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871493232_lw3rkgasu' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:13.235Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871493232_lw3rkgasu' }
+👤 SERVER: Player connected via socket: Player_101 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:58:13.235Z
+2025-07-07T06:58:13.237Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
+2025-07-07T06:58:13.240Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
+2025-07-07T06:58:13.249Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:13.944Z - GET /api/status
+2025-07-07T06:58:13.946Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
+2025-07-07T06:58:13.947Z - GET /api/phrases/for/player_1751871493232_lw3rkgasu
+2025-07-07T06:58:13.948Z - POST /api/players/register
+👤 Player registered: Player_939 (player_1751871493948_ocoy9rz6x)
+📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871493948_ocoy9rz6x' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:13.950Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871493948_ocoy9rz6x' }
+👤 SERVER: Player connected via socket: Player_939 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:58:13.950Z
+2025-07-07T06:58:13.952Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
+2025-07-07T06:58:13.955Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
+2025-07-07T06:58:13.957Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:14.644Z - GET /api/status
+2025-07-07T06:58:14.646Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
+2025-07-07T06:58:14.648Z - GET /api/phrases/for/player_1751871493948_ocoy9rz6x
+2025-07-07T06:58:14.649Z - POST /api/players/register
+👤 Player registered: Player_962 (player_1751871494649_cxltoba93)
+📨 SERVER: Received event 'player-connect' from syd78s9e3qp5v_-VAAAH: [ { playerId: 'player_1751871494649_cxltoba93' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:14.651Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871494649_cxltoba93' }
+👤 SERVER: Player connected via socket: Player_962 (syd78s9e3qp5v_-VAAAH) at 2025-07-07T06:58:14.651Z
+2025-07-07T06:58:14.653Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T06:58:14.656Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T06:58:14.657Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.321Z - GET /api/status
+2025-07-07T06:58:16.322Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.324Z - POST /api/players/register
+👤 Player registered: Player_186 (player_1751871496324_m1d3kd0md)
+2025-07-07T06:58:16.325Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496324_m1d3kd0md' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.327Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871496324_m1d3kd0md' }
+👤 SERVER: Player connected via socket: Player_186 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.327Z
+2025-07-07T06:58:16.329Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.331Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.331Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T06:58:16.465Z - GET /api/status
+2025-07-07T06:58:16.466Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.468Z - POST /api/players/register
+👤 Player registered: Player_878 (player_1751871496468_ktwc0gcfj)
+2025-07-07T06:58:16.468Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496468_ktwc0gcfj' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.470Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871496468_ktwc0gcfj' }
+👤 SERVER: Player connected via socket: Player_878 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.470Z
+2025-07-07T06:58:16.472Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.475Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T06:58:16.475Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.608Z - GET /api/status
+2025-07-07T06:58:16.609Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.610Z - POST /api/players/register
+👤 Player registered: Player_284 (player_1751871496611_6q0dzgahq)
+2025-07-07T06:58:16.611Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496611_6q0dzgahq' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.612Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871496611_6q0dzgahq' }
+👤 SERVER: Player connected via socket: Player_284 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.612Z
+2025-07-07T06:58:16.613Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.616Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.619Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T06:58:16.753Z - GET /api/status
+2025-07-07T06:58:16.754Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.757Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.757Z - POST /api/players/register
+👤 Player registered: Player_115 (player_1751871496757_jwpw3afzn)
+📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496757_jwpw3afzn' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.758Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871496757_jwpw3afzn' }
+👤 SERVER: Player connected via socket: Player_115 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.758Z
+2025-07-07T06:58:16.760Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.763Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.767Z - GET /api/phrases/for/player_1751871494649_cxltoba93
+2025-07-07T06:58:16.915Z - GET /api/status
+2025-07-07T06:58:16.915Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.918Z - POST /api/players/register
+👤 Player registered: Player_754 (player_1751871496918_pod8sh6hl)
+2025-07-07T06:58:16.918Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+📨 SERVER: Received event 'player-connect' from V_FP4TR9nOkSqSO0AAAJ: [ { playerId: 'player_1751871496918_pod8sh6hl' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:58:16.919Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751871496918_pod8sh6hl' }
+👤 SERVER: Player connected via socket: Player_754 (V_FP4TR9nOkSqSO0AAAJ) at 2025-07-07T06:58:16.919Z
+2025-07-07T06:58:16.921Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.924Z - POST /api/phrases/phrase_1751871384721_v5cc1kq7g/consume
+✅ Phrase consumed: phrase_1751871384721_v5cc1kq7g
+2025-07-07T06:58:16.928Z - GET /api/phrases/for/player_1751871494649_cxltoba93
