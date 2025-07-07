@@ -1,0 +1,353 @@
+const { query, transaction } = require('../database/connection');
+
+/**
+ * DatabasePhrase model implementing the new phrase system with hints and targeting
+ * This replaces the old in-memory PhraseStore with persistent database storage
+ */
+class DatabasePhrase {
+  constructor(data) {
+    this.id = data.id;
+    this.content = data.content;
+    this.hint = data.hint;
+    this.difficultyLevel = data.difficulty_level || 1;
+    this.isGlobal = data.is_global || false;
+    this.createdByPlayerId = data.created_by_player_id;
+    this.createdAt = data.created_at;
+    this.isApproved = data.is_approved || false;
+    this.usageCount = data.usage_count || 0;
+    this.phraseType = data.phrase_type || 'other';
+    this.priority = data.priority || 1;
+  }
+
+  /**
+   * Get public info (safe to send to clients)
+   */
+  getPublicInfo() {
+    return {
+      id: this.id,
+      content: this.content,
+      hint: this.hint,
+      difficultyLevel: this.difficultyLevel,
+      isGlobal: this.isGlobal,
+      phraseType: this.phraseType,
+      priority: this.priority,
+      usageCount: this.usageCount
+    };
+  }
+
+  /**
+   * Validate phrase content and hint
+   */
+  static validatePhrase(content, hint) {
+    const errors = [];
+
+    // Validate content
+    if (!content || typeof content !== 'string') {
+      errors.push('Content must be a non-empty string');
+    } else {
+      const trimmed = content.trim();
+      if (trimmed.length === 0) {
+        errors.push('Content cannot be empty');
+      } else {
+        // Split into words and validate count (2-6 words)
+        const words = trimmed.split(/\s+/);
+        if (words.length < 2) {
+          errors.push('Phrase must contain at least 2 words');
+        }
+        if (words.length > 6) {
+          errors.push('Phrase cannot contain more than 6 words');
+        }
+
+        // Validate each word contains only letters, numbers, and basic punctuation
+        const validWordPattern = /^[a-zA-Z0-9\-']+$/;
+        for (let word of words) {
+          if (!validWordPattern.test(word)) {
+            errors.push('Words can only contain letters, numbers, hyphens, and apostrophes');
+            break;
+          }
+        }
+      }
+    }
+
+    // Validate hint
+    if (!hint || typeof hint !== 'string') {
+      errors.push('Hint must be a non-empty string');
+    } else {
+      const trimmedHint = hint.trim();
+      if (trimmedHint.length === 0) {
+        errors.push('Hint cannot be empty');
+      } else if (trimmedHint.length > 300) {
+        errors.push('Hint cannot be longer than 300 characters');
+      }
+      
+      // Check that hint doesn't contain the exact answer words (only words longer than 3 chars)
+      const contentLower = content.toLowerCase();
+      const hintLower = trimmedHint.toLowerCase();
+      const words = contentLower.split(/\s+/);
+      
+      for (let word of words) {
+        if (word.length > 3 && (hintLower.includes(` ${word} `) || hintLower.includes(` ${word}`) || hintLower.includes(`${word} `))) {
+          errors.push('Hint should not contain exact words from the phrase');
+          break;
+        }
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      content: content ? content.trim() : '',
+      hint: hint ? hint.trim() : ''
+    };
+  }
+
+  /**
+   * Create a new phrase in the database
+   */
+  static async createPhrase(content, hint, options = {}) {
+    const validation = this.validatePhrase(content, hint);
+    if (!validation.valid) {
+      throw new Error(validation.errors.join(', '));
+    }
+
+    const {
+      difficultyLevel = 1,
+      isGlobal = false,
+      createdByPlayerId = null,
+      isApproved = isGlobal ? false : true // Global phrases need approval
+    } = options;
+
+    try {
+      const result = await query(`
+        INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [validation.content, validation.hint, difficultyLevel, isGlobal, createdByPlayerId, isApproved]);
+
+      const phraseData = result.rows[0];
+      console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
+      
+      return new DatabasePhrase(phraseData);
+    } catch (error) {
+      console.error('❌ DATABASE: Error creating phrase:', error.message);
+      throw new Error('Failed to create phrase');
+    }
+  }
+
+  /**
+   * Get next phrase for a player using the database function
+   */
+  static async getNextPhraseForPlayer(playerId) {
+    try {
+      const result = await query(`
+        SELECT * FROM get_next_phrase_for_player($1)
+      `, [playerId]);
+
+      if (result.rows.length === 0) {
+        console.log(`📭 DATABASE: No phrases available for player ${playerId}`);
+        return null;
+      }
+
+      const phraseData = result.rows[0];
+      const phrase = new DatabasePhrase({
+        id: phraseData.phrase_id,
+        content: phraseData.content,
+        hint: phraseData.hint,
+        difficulty_level: phraseData.difficulty_level,
+        phrase_type: phraseData.phrase_type,
+        priority: phraseData.priority
+      });
+
+      console.log(`✅ DATABASE: Found ${phraseData.phrase_type} phrase for player: "${phrase.content}"`);
+      return phrase;
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting next phrase:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Mark phrase as completed for a player
+   */
+  static async completePhrase(playerId, phraseId, score = 0, completionTime = 0) {
+    try {
+      const result = await query(`
+        SELECT complete_phrase_for_player($1, $2, $3, $4) as success
+      `, [playerId, phraseId, score, completionTime]);
+
+      const success = result.rows[0].success;
+      if (success) {
+        console.log(`✅ DATABASE: Phrase ${phraseId} completed by player ${playerId}`);
+      } else {
+        console.log(`❌ DATABASE: Failed to mark phrase ${phraseId} as completed for player ${playerId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('❌ DATABASE: Error completing phrase:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Skip phrase for a player
+   */
+  static async skipPhrase(playerId, phraseId) {
+    try {
+      const result = await query(`
+        SELECT skip_phrase_for_player($1, $2) as success
+      `, [playerId, phraseId]);
+
+      const success = result.rows[0].success;
+      if (success) {
+        console.log(`⏭️ DATABASE: Phrase ${phraseId} skipped by player ${playerId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('❌ DATABASE: Error skipping phrase:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Assign phrase to specific players (targeting)
+   */
+  static async assignPhraseToPlayers(phraseId, targetPlayerIds, priority = 1) {
+    try {
+      await transaction(async (client) => {
+        for (const playerId of targetPlayerIds) {
+          await client.query(`
+            INSERT INTO player_phrases (phrase_id, target_player_id, priority)
+            VALUES ($1, $2, $3)
+            ON CONFLICT DO NOTHING
+          `, [phraseId, playerId, priority]);
+        }
+      });
+
+      console.log(`🎯 DATABASE: Phrase ${phraseId} assigned to ${targetPlayerIds.length} players`);
+      return true;
+    } catch (error) {
+      console.error('❌ DATABASE: Error assigning phrase:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Get phrase statistics
+   */
+  static async getStats() {
+    try {
+      const result = await query(`
+        SELECT 
+          COUNT(*) as total_phrases,
+          COUNT(*) FILTER (WHERE is_global = true AND is_approved = true) as global_phrases,
+          COUNT(*) FILTER (WHERE is_global = false) as targeted_phrases,
+          AVG(usage_count) as avg_usage,
+          MAX(usage_count) as max_usage
+        FROM phrases
+      `);
+
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting phrase stats:', error.message);
+      return {
+        total_phrases: 0,
+        global_phrases: 0,
+        targeted_phrases: 0,
+        avg_usage: 0,
+        max_usage: 0
+      };
+    }
+  }
+
+  /**
+   * Get all global phrases for admin review
+   */
+  static async getGlobalPhrases(limit = 50, offset = 0) {
+    try {
+      const result = await query(`
+        SELECT p.*, pl.name as created_by_name
+        FROM phrases p
+        LEFT JOIN players pl ON p.created_by_player_id = pl.id
+        WHERE p.is_global = true
+        ORDER BY p.created_at DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset]);
+
+      return result.rows.map(row => new DatabasePhrase(row));
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting global phrases:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Approve a global phrase
+   */
+  static async approvePhrase(phraseId) {
+    try {
+      const result = await query(`
+        UPDATE phrases 
+        SET is_approved = true 
+        WHERE id = $1 AND is_global = true
+        RETURNING *
+      `, [phraseId]);
+
+      if (result.rows.length > 0) {
+        console.log(`✅ DATABASE: Phrase ${phraseId} approved for global use`);
+        return true;
+      } else {
+        console.log(`❌ DATABASE: Phrase ${phraseId} not found or not global`);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ DATABASE: Error approving phrase:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Get offline phrases for a player (for mobile offline mode)
+   */
+  static async getOfflinePhrases(playerId, count = 10) {
+    try {
+      const result = await query(`
+        SELECT p.*
+        FROM phrases p
+        WHERE p.is_global = true 
+          AND p.is_approved = true
+          AND p.created_by_player_id != $1
+          AND p.id NOT IN (SELECT phrase_id FROM completed_phrases WHERE player_id = $1)
+          AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
+          AND p.id NOT IN (SELECT phrase_id FROM offline_phrases WHERE player_id = $1)
+        ORDER BY RANDOM()
+        LIMIT $2
+      `, [playerId, count]);
+
+      const phrases = result.rows.map(row => new DatabasePhrase(row));
+
+      // Record the download
+      if (phrases.length > 0) {
+        await transaction(async (client) => {
+          for (const phrase of phrases) {
+            await client.query(`
+              INSERT INTO offline_phrases (player_id, phrase_id)
+              VALUES ($1, $2)
+              ON CONFLICT DO NOTHING
+            `, [playerId, phrase.id]);
+          }
+        });
+
+        console.log(`📱 DATABASE: ${phrases.length} offline phrases downloaded for player ${playerId}`);
+      }
+
+      return phrases;
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting offline phrases:', error.message);
+      return [];
+    }
+  }
+}
+
+module.exports = DatabasePhrase;
