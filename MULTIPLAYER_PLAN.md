@@ -84,104 +84,15 @@ Adding multiplayer to the iOS Anagram Game with incremental, testable steps. Eac
 
 ---
 
-## Step 3: Basic Custom Phrase Feature (60 mins)
-
-### Server Phrase System (30 mins)
-**3.1 Phrase Storage (10 mins)**
-- [ ] Create in-memory phrases array with model: {id, content, senderId, targetId, createdAt}
-- [ ] Add phrase validation (2-6 words, no special chars)
-- [ ] Implement phrase ID generation
-
-**3.2 Phrase API Endpoints (15 mins)**
-- [ ] POST /api/phrases - create new phrase
-- [ ] Validate: content (required), targetId (valid player)
-- [ ] GET /api/phrases/for/:playerId - get phrases for specific player
-- [ ] Add phrase consumption (mark as delivered)
-
-**3.3 Real-time Notifications (5 mins)**
-- [ ] WebSocket event 'new-phrase' to target player
-- [ ] Include phrase content and sender name
-- [ ] Handle offline players (store for later delivery)
-
-### iOS Phrase Creation & Integration (30 mins)
-**3.4 Phrase Creation UI (15 mins)**
-- [ ] Create PhraseCreationView as modal sheet
-- [ ] Add text input with word count validation (2-6 words)
-- [ ] Add target player picker (dropdown of online players)
-- [ ] Send button with loading state and success feedback
-
-**3.5 GameModel Integration (10 mins)**
-- [ ] Add checkForCustomPhrases() method to GameModel
-- [ ] Call API on game start to get pending phrases
-- [ ] If custom phrase exists, use it instead of random selection
-- [ ] Mark phrase as consumed after use
-
-**3.6 Phrase Notifications (5 mins)**
-- [ ] Add WebSocket listener for 'new-phrase' events
-- [ ] Show toast notification: "New phrase from [PlayerName]!"
-- [ ] Update phrase availability indicator
-
-**Testing Checkpoint**: Player A sends "hello world" to Player B, Player B gets it in next game
+## Step 3: Basic Custom Phrase Feature (60 mins - DONE)
 
 ---
 
-## Step 4: Add Hints to Phrase System (30 mins)
-
-### Server Hint Support (10 mins)
-**4.1 Extend Phrase Model (5 mins)**
-- [ ] Add hint field to phrase model
-- [ ] Update POST /api/phrases to accept hint parameter
-- [ ] Validate hint (optional, max 100 chars)
-
-**4.2 API Response Updates (5 mins)**
-- [ ] Include hint in GET /api/phrases/for/:playerId response
-- [ ] Update WebSocket 'new-phrase' event to include hint
-
-### iOS Hint Integration (20 mins)
-**4.3 Hint Creation UI (8 mins)**
-- [ ] Add hint text input to PhraseCreationView
-- [ ] Add hint character counter (0/100)
-- [ ] Make hint optional with placeholder text
-
-**4.4 Hint Display in Game (7 mins)**
-- [ ] Modify GameModel to store custom hint
-- [ ] Update hint display in PhysicsGameView
-- [ ] Show "(Custom hint from [PlayerName])" attribution
-
-**4.5 Hint Validation (5 mins)**
-- [ ] Add client-side hint validation
-- [ ] Ensure hint doesn't contain the answer words
-- [ ] Add hint quality feedback (too obvious, too vague)
-
-**Testing Checkpoint**: Send phrase "cat dog" with hint "two animals", confirm hint shows correctly
+## Step 4: Add Hints to Phrase System (30 mins - Handled by another plan)
 
 ---
 
-## Step 5: "Available to All" Phrase Pool (30 mins)
-
-### Server Community Phrases (15 mins)
-**5.1 Extend Phrase Model (5 mins)**
-- [ ] Add availableToAll boolean field
-- [ ] Separate community phrases from targeted phrases
-- [ ] Add community phrase filtering
-
-**5.2 Community Phrase API (10 mins)**
-- [ ] GET /api/phrases/random endpoint for community pool
-- [ ] Exclude sender's own phrases from their random selection
-- [ ] Add phrase popularity tracking (usage count)
-
-### iOS Community Integration (15 mins)
-**5.3 UI Updates (8 mins)**
-- [ ] Add "Available to all players" checkbox to PhraseCreationView
-- [ ] Show community contribution count to encourage sharing
-- [ ] Add visual distinction for community vs targeted phrases
-
-**5.4 Random Selection Logic (7 mins)**
-- [ ] Update GameModel phrase loading to include community phrases
-- [ ] Implement weighted selection (mix of original + community)
-- [ ] Add "Community phrase by [PlayerName]" attribution
-
-**Testing Checkpoint**: Mark phrase as community, confirm other players can get it randomly
+## Step 5: "Available to All" Phrase Pool (30 mins - Handled by another plan)
 
 ---
 
@@ -289,8 +200,7 @@ Adding multiplayer to the iOS Anagram Game with incremental, testable steps. Eac
 ## Critical Decision Points
 
 ### Database Choice
-**Development**: In-memory storage (faster iteration)
-**Production**: SQLite file (persistence) or PostgreSQL (scalability)
+**Production**: SQLite file (persistence) or PostgreSQL (scalability) RE-EVALUATE if this is the right choice.
 
 ### Authentication
 **MVP**: Simple player names (no passwords)
@@ -307,16 +217,5 @@ Each step has a clear testing checkpoint that validates the feature works end-to
 
 ## Integration with Existing Code
 
-### Preserved Single-Player Functionality
-- All current game mechanics remain unchanged
-- Existing physics simulation stays completely local
-- Original phrase loading from anagrams.txt continues to work
-- No breaking changes to current save/load systems
-
 ### Extension Points
-- GameModel extended for multiplayer state (backward compatible)
-- PhysicsGameView enhanced with multiplayer UI overlays
-- NetworkManager added as new singleton (no conflicts)
 - Existing earthquake system reused for remote quakes
-
-Ready to start with Step 1?
