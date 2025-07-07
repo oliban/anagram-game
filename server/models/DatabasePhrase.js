@@ -369,23 +369,85 @@ class DatabasePhrase {
   }
 
   /**
-   * Get all global phrases for admin review
+   * Get all global phrases with optional filtering (Phase 4.2)
    */
-  static async getGlobalPhrases(limit = 50, offset = 0) {
+  static async getGlobalPhrases(limit = 50, offset = 0, difficulty = null, approved = true) {
     try {
+      let whereClause = 'WHERE p.is_global = true';
+      const params = [];
+      let paramIndex = 1;
+
+      // Add difficulty filter if specified
+      if (difficulty !== null && difficulty >= 1 && difficulty <= 5) {
+        whereClause += ` AND p.difficulty_level = $${paramIndex}`;
+        params.push(difficulty);
+        paramIndex++;
+      }
+
+      // Add approval filter
+      if (approved !== null) {
+        whereClause += ` AND p.is_approved = $${paramIndex}`;
+        params.push(approved);
+        paramIndex++;
+      }
+
+      // Add limit and offset
+      params.push(limit);
+      params.push(offset);
+
       const result = await query(`
         SELECT p.*, pl.name as created_by_name
         FROM phrases p
         LEFT JOIN players pl ON p.created_by_player_id = pl.id
-        WHERE p.is_global = true
+        ${whereClause}
         ORDER BY p.created_at DESC
-        LIMIT $1 OFFSET $2
-      `, [limit, offset]);
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `, params);
 
-      return result.rows.map(row => new DatabasePhrase(row));
+      return result.rows.map(row => {
+        const phrase = new DatabasePhrase(row);
+        phrase.createdByName = row.created_by_name;
+        return phrase;
+      });
     } catch (error) {
       console.error('❌ DATABASE: Error getting global phrases:', error.message);
       return [];
+    }
+  }
+
+  /**
+   * Get count of global phrases with optional filtering (Phase 4.2)
+   */
+  static async getGlobalPhrasesCount(difficulty = null, approved = true) {
+    try {
+      let whereClause = 'WHERE is_global = true';
+      const params = [];
+      let paramIndex = 1;
+
+      // Add difficulty filter if specified
+      if (difficulty !== null && difficulty >= 1 && difficulty <= 5) {
+        whereClause += ` AND difficulty_level = $${paramIndex}`;
+        params.push(difficulty);
+        paramIndex++;
+      }
+
+      // Add approval filter
+      if (approved !== null) {
+        whereClause += ` AND is_approved = $${paramIndex}`;
+        params.push(approved);
+        paramIndex++;
+      }
+
+      const result = await query(`
+        SELECT COUNT(*) as total
+        FROM phrases
+        ${whereClause}
+      `, params);
+
+      return parseInt(result.rows[0].total) || 0;
+    } catch (error) {
+      console.error('❌ DATABASE: Error counting global phrases:', error.message);
+      return 0;
     }
   }
 

@@ -11,12 +11,16 @@
 
 const APITestSuite = require('./test_api_suite');
 const ComprehensiveTestSuite = require('./test_comprehensive_suite');
+const Phase4EnhancedCreationTests = require('./test_phase4_enhanced_creation');
+const Phase4GlobalPhrasesTests = require('./test_phase4_global_phrases');
 
 class TestRunner {
   constructor() {
     this.results = {
       basic: null,
       comprehensive: null,
+      phase4Enhanced: null,
+      phase4Global: null,
       combined: {
         passed: 0,
         failed: 0,
@@ -101,6 +105,54 @@ class TestRunner {
     }
   }
 
+  async runPhase4EnhancedTests() {
+    this.log('\n🎯 Running Phase 4.1 Enhanced Creation Tests...');
+    this.log('================================================');
+    
+    const phase4Suite = new Phase4EnhancedCreationTests();
+    try {
+      const success = await phase4Suite.runAllTests();
+      this.results.phase4Enhanced = {
+        success,
+        passed: phase4Suite.results.passed,
+        failed: phase4Suite.results.failed,
+        skipped: phase4Suite.results.skipped,
+        total: phase4Suite.results.passed + phase4Suite.results.failed + phase4Suite.results.skipped
+      };
+      
+      await phase4Suite.cleanup();
+      return success;
+    } catch (error) {
+      this.log(`❌ Phase 4.1 enhanced creation tests failed: ${error.message}`, 'error');
+      this.results.phase4Enhanced = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
+  async runPhase4GlobalTests() {
+    this.log('\n🌍 Running Phase 4.2 Global Phrase Bank Tests...');
+    this.log('================================================');
+    
+    const globalSuite = new Phase4GlobalPhrasesTests();
+    try {
+      const success = await globalSuite.runAllTests();
+      this.results.phase4Global = {
+        success,
+        passed: globalSuite.results.passed,
+        failed: globalSuite.results.failed,
+        skipped: globalSuite.results.skipped,
+        total: globalSuite.results.passed + globalSuite.results.failed + globalSuite.results.skipped
+      };
+      
+      await globalSuite.cleanup();
+      return success;
+    } catch (error) {
+      this.log(`❌ Phase 4.2 global phrase tests failed: ${error.message}`, 'error');
+      this.results.phase4Global = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
   generateReport() {
     this.log('\n📊 COMPLETE TEST REPORT');
     this.log('========================');
@@ -120,6 +172,20 @@ class TestRunner {
       this.results.combined.total += this.results.comprehensive.total;
     }
 
+    if (this.results.phase4Enhanced) {
+      this.results.combined.passed += this.results.phase4Enhanced.passed;
+      this.results.combined.failed += this.results.phase4Enhanced.failed;
+      this.results.combined.skipped += this.results.phase4Enhanced.skipped;
+      this.results.combined.total += this.results.phase4Enhanced.total;
+    }
+
+    if (this.results.phase4Global) {
+      this.results.combined.passed += this.results.phase4Global.passed;
+      this.results.combined.failed += this.results.phase4Global.failed;
+      this.results.combined.skipped += this.results.phase4Global.skipped;
+      this.results.combined.total += this.results.phase4Global.total;
+    }
+
     // Test suite summaries
     if (this.results.basic) {
       this.log(`\n📋 Basic API Tests:`);
@@ -137,6 +203,24 @@ class TestRunner {
       this.log(`   ⏭️ Skipped: ${this.results.comprehensive.skipped}`);
       this.log(`   🎯 Total: ${this.results.comprehensive.total}`);
       this.log(`   📈 Success Rate: ${Math.round((this.results.comprehensive.passed / this.results.comprehensive.total) * 100)}%`);
+    }
+
+    if (this.results.phase4Enhanced) {
+      this.log(`\n🎯 Phase 4.1 Enhanced Creation Tests:`);
+      this.log(`   ✅ Passed: ${this.results.phase4Enhanced.passed}`);
+      this.log(`   ❌ Failed: ${this.results.phase4Enhanced.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.phase4Enhanced.skipped}`);
+      this.log(`   🎯 Total: ${this.results.phase4Enhanced.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.phase4Enhanced.passed / this.results.phase4Enhanced.total) * 100)}%`);
+    }
+
+    if (this.results.phase4Global) {
+      this.log(`\n🌍 Phase 4.2 Global Phrase Bank Tests:`);
+      this.log(`   ✅ Passed: ${this.results.phase4Global.passed}`);
+      this.log(`   ❌ Failed: ${this.results.phase4Global.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.phase4Global.skipped}`);
+      this.log(`   🎯 Total: ${this.results.phase4Global.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.phase4Global.passed / this.results.phase4Global.total) * 100)}%`);
     }
 
     // Combined summary
@@ -249,6 +333,15 @@ class TestRunner {
     if (!basicOnly) {
       const comprehensiveSuccess = await this.runComprehensiveTests();
       overallSuccess = overallSuccess && comprehensiveSuccess;
+    }
+
+    // Run Phase 4 tests (always run unless basic-only)
+    if (!basicOnly) {
+      const phase4EnhancedSuccess = await this.runPhase4EnhancedTests();
+      overallSuccess = overallSuccess && phase4EnhancedSuccess;
+      
+      const phase4GlobalSuccess = await this.runPhase4GlobalTests();
+      overallSuccess = overallSuccess && phase4GlobalSuccess;
     }
 
     // Generate final report
