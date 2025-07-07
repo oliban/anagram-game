@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const PhraseStore = require('./models/PhraseStore');
 
 // Database modules
 const { testConnection, getStats: getDbStats, shutdown: shutdownDb, pool } = require('./database/connection');
@@ -28,8 +27,6 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 3000;
 
-// Phrase store (to be migrated to database)
-const phraseStore = new PhraseStore();
 
 // Database initialization flag
 let isDatabaseConnected = false;
@@ -207,8 +204,13 @@ app.post('/api/phrases', async (req, res) => {
       });
     }
     
-    // Create phrase
-    const phrase = phraseStore.createPhrase(content, senderId, targetId);
+    // Create phrase in database
+    const phrase = await DatabasePhrase.createPhrase({
+      content,
+      senderId,
+      targetId,
+      hint: req.body.hint || null // Optional hint support
+    });
     
     console.log(`📝 Phrase created: "${content}" from ${sender.name} to ${target.name}`);
     
@@ -267,8 +269,8 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
       });
     }
     
-    // Get phrases for player (legacy system for now - Phase 3 will migrate)
-    const phrases = phraseStore.getPhrasesForPlayer(playerId, null);
+    // Get phrases for player from database
+    const phrases = await DatabasePhrase.getPhrasesForPlayer(playerId);
     
     res.json({
       phrases: phrases.map(p => p.getPublicInfo()),
@@ -284,11 +286,11 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
   }
 });
 
-app.post('/api/phrases/:phraseId/consume', (req, res) => {
+app.post('/api/phrases/:phraseId/consume', async (req, res) => {
   try {
     const { phraseId } = req.params;
     
-    const success = phraseStore.consumePhrase(phraseId);
+    const success = await DatabasePhrase.consumePhrase(phraseId);
     
     if (success) {
       console.log(`✅ Phrase consumed: ${phraseId}`);
@@ -298,7 +300,7 @@ app.post('/api/phrases/:phraseId/consume', (req, res) => {
       });
     } else {
       res.status(404).json({ 
-        error: 'Phrase not found' 
+        error: 'Phrase not found or already consumed' 
       });
     }
     
@@ -330,20 +332,14 @@ app.post('/api/phrases/:phraseId/skip', async (req, res) => {
       });
     }
     
-    // Try to validate phrase exists (legacy system)
-    const phrase = phraseStore.getPhrase(phraseId);
-    if (phrase) {
-      // Validate phrase belongs to player if phrase exists
-      if (phrase.targetId !== playerId) {
-        return res.status(403).json({ 
-          error: 'Phrase does not belong to this player' 
-        });
-      }
-    }
+    // Skip the phrase in database
+    const success = await DatabasePhrase.skipPhrase(playerId, phraseId);
     
-    // Skip the phrase (legacy system for now - Phase 3 will migrate)
-    // For now, just mark as successful since we can't modify legacy player objects
-    // If phrase doesn't exist, we'll still return success for testing purposes
+    if (!success) {
+      return res.status(404).json({ 
+        error: 'Phrase not found or already processed' 
+      });
+    }
     
     console.log(`⏭️ Phrase skipped: ${phraseId} by player ${player.name} (${playerId})`);
     
