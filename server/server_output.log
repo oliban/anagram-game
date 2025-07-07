@@ -45,3 +45,11 @@
 ✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
 2025-07-07T06:18:55.784Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
 ✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
+👤 Player disconnected: Player_955 (player_1751869017966_kp9enpslc)
+👤 Player disconnected: Player_273 (player_1751869022676_m4xt771ci)
+🧹 Cleaned up 2 inactive players
+🧹 Cleaned up 2 inactive players
+2025-07-07T06:26:46.211Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
+✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
+2025-07-07T06:26:46.212Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
+✅ Phrase consumed: phrase_1751869033500_88i28v55h
