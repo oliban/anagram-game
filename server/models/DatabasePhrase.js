@@ -21,6 +21,7 @@ class DatabasePhrase {
 
   /**
    * Get public info (safe to send to clients)
+   * Includes backward compatibility fields
    */
   getPublicInfo() {
     return {
@@ -31,7 +32,11 @@ class DatabasePhrase {
       isGlobal: this.isGlobal,
       phraseType: this.phraseType,
       priority: this.priority,
-      usageCount: this.usageCount
+      usageCount: this.usageCount,
+      // Legacy fields for backward compatibility
+      senderId: this.senderId || this.createdByPlayerId,
+      targetId: this.targetId,
+      isConsumed: this.isConsumed || false
     };
   }
 
@@ -103,17 +108,50 @@ class DatabasePhrase {
 
   /**
    * Create a new phrase in the database
+   * Compatible with both old signature (content, senderId, targetId) and new signature with options
    */
-  static async createPhrase(content, hint, options = {}) {
-    const validation = this.validatePhrase(content, hint);
-    if (!validation.valid) {
-      throw new Error(validation.errors.join(', '));
+  static async createPhrase(contentOrOptions, senderId = null, targetId = null) {
+    let content, hint, options = {};
+    
+    // Handle both old signature and new signature
+    if (typeof contentOrOptions === 'object' && contentOrOptions.content) {
+      // New signature: createPhrase({ content, senderId, targetId, hint })
+      ({ content, hint, ...options } = contentOrOptions);
+      senderId = contentOrOptions.senderId;
+      targetId = contentOrOptions.targetId;
+    } else {
+      // Old signature: createPhrase(content, senderId, targetId)
+      content = contentOrOptions;
+      hint = options.hint || `Unscramble these words: ${content}`;
+    }
+
+    // For targeted phrases (old API), we don't validate hint requirement
+    const isTargeted = senderId && targetId;
+    if (!isTargeted) {
+      const validation = this.validatePhrase(content, hint);
+      if (!validation.valid) {
+        throw new Error(validation.errors.join(', '));
+      }
+      content = validation.content;
+      hint = validation.hint;
+    } else {
+      // Basic validation for targeted phrases
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        throw new Error('Content must be a non-empty string');
+      }
+      content = content.trim();
+      
+      // Generate automatic hint if none provided
+      if (!hint) {
+        const words = content.split(/\s+/);
+        hint = words.length > 1 ? `Unscramble these ${words.length} words` : 'Unscramble this word';
+      }
     }
 
     const {
       difficultyLevel = 1,
       isGlobal = false,
-      createdByPlayerId = null,
+      createdByPlayerId = senderId,
       isApproved = isGlobal ? false : true // Global phrases need approval
     } = options;
 
@@ -122,15 +160,76 @@ class DatabasePhrase {
         INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
-      `, [validation.content, validation.hint, difficultyLevel, isGlobal, createdByPlayerId, isApproved]);
+      `, [content, hint, difficultyLevel, isGlobal, createdByPlayerId, isApproved]);
 
       const phraseData = result.rows[0];
       console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
       
-      return new DatabasePhrase(phraseData);
+      const phrase = new DatabasePhrase(phraseData);
+      
+      // If this is a targeted phrase, assign it to the target player
+      if (targetId) {
+        await this.assignPhraseToPlayers(phrase.id, [targetId], 1);
+      }
+      
+      return phrase;
     } catch (error) {
       console.error('❌ DATABASE: Error creating phrase:', error.message);
       throw new Error('Failed to create phrase');
+    }
+  }
+
+  /**
+   * Get phrases for a player (backward compatible with old PhraseStore API)
+   */
+  static async getPhrasesForPlayer(playerId) {
+    try {
+      // Get all available phrases for the player using the smart selection function
+      const result = await query(`
+        SELECT 
+          p.id,
+          p.content,
+          p.hint,
+          p.difficulty_level,
+          p.is_global,
+          p.created_by_player_id as "senderId",
+          pp.target_player_id as "targetId",
+          false as "isConsumed",
+          pp.priority,
+          'targeted' as phrase_type
+        FROM phrases p
+        JOIN player_phrases pp ON p.id = pp.phrase_id
+        WHERE pp.target_player_id = $1 
+          AND pp.is_delivered = false
+        ORDER BY pp.priority DESC, p.created_at ASC
+        LIMIT 10
+      `, [playerId]);
+
+      const phrases = result.rows.map(row => {
+        const phrase = new DatabasePhrase({
+          id: row.id,
+          content: row.content,
+          hint: row.hint,
+          difficulty_level: row.difficulty_level,
+          is_global: row.is_global,
+          created_by_player_id: row.senderId,
+          phrase_type: row.phrase_type,
+          priority: row.priority
+        });
+        
+        // Add legacy properties for backward compatibility
+        phrase.senderId = row.senderId;
+        phrase.targetId = row.targetId;
+        phrase.isConsumed = row.isConsumed;
+        
+        return phrase;
+      });
+
+      console.log(`📋 DATABASE: Found ${phrases.length} phrases for player ${playerId}`);
+      return phrases;
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting phrases for player:', error.message);
+      return [];
     }
   }
 
@@ -163,6 +262,32 @@ class DatabasePhrase {
     } catch (error) {
       console.error('❌ DATABASE: Error getting next phrase:', error.message);
       return null;
+    }
+  }
+
+  /**
+   * Consume/complete a phrase (backward compatible with old PhraseStore API)
+   */
+  static async consumePhrase(phraseId) {
+    try {
+      // Mark the phrase as delivered/consumed in player_phrases
+      const result = await query(`
+        UPDATE player_phrases 
+        SET is_delivered = true, delivered_at = CURRENT_TIMESTAMP
+        WHERE phrase_id = $1 AND is_delivered = false
+        RETURNING *
+      `, [phraseId]);
+
+      if (result.rows.length > 0) {
+        console.log(`✅ DATABASE: Phrase ${phraseId} marked as consumed`);
+        return true;
+      } else {
+        console.log(`❌ DATABASE: Phrase ${phraseId} not found or already consumed`);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ DATABASE: Error consuming phrase:', error.message);
+      return false;
     }
   }
 
