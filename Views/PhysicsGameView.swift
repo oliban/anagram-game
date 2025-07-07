@@ -21,7 +21,6 @@ struct PhysicsGameView: View {
     @State private var gameModel = GameModel()
     @State private var motionManager = CMMotionManager()
     @State private var gameScene: PhysicsGameScene?
-    @State private var tiltText = "Loading tilt..."
     @State private var celebrationMessage = ""
     @State private var phraseNotificationMessage = ""
     @State private var isSkipping = false
@@ -69,13 +68,6 @@ struct PhysicsGameView: View {
                                         scene.triggerQuake()
                                     }
                                 }
-                            
-                            Text(tiltText)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(4)
-                                .padding(.horizontal, 4)
                             
                             // Debug: Show solution words
                             Text("SOLUTION:")
@@ -288,7 +280,6 @@ struct PhysicsGameView: View {
         
         guard motionManager.isDeviceMotionAvailable else { 
             print("❌ Device motion not available")
-            tiltText = "Motion not available"
             return 
         }
         
@@ -299,9 +290,6 @@ struct PhysicsGameView: View {
                 print("❌ Motion error: \(error?.localizedDescription ?? "Unknown")")
                 return 
             }
-            
-            // Update the tiltText state variable to display gravity on screen
-            self.tiltText = String(format: "Tilt Y: %.2f, Z: %.2f", motion.gravity.y, motion.gravity.z)
             
             // NO SwiftUI state updates here - everything handled in scene
             PhysicsGameView.sharedScene?.updateGravity(from: motion.gravity)
@@ -1413,48 +1401,17 @@ class PhysicsGameScene: SKScene {
         // Create fireworks effect
         createFireworks()
         
-        // Show "Play Again?" dialog after fireworks finish
-        let playAgainAction = SKAction.sequence([
-            SKAction.wait(forDuration: 3.0), // Shorter wait - just let fireworks finish
+        // Automatically start the next game after a delay
+        let startNewGameAction = SKAction.sequence([
+            SKAction.wait(forDuration: 4.0), // Allow time for celebration
             SKAction.run { [weak self] in
-                self?.showPlayAgainDialog()
+                self?.startNewGame()
             }
         ])
-        run(playAgainAction)
+        run(startNewGameAction)
         
         // Play celebration sound effect (if we had audio)
         // AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) // Haptic feedback
-    }
-    
-    private func showPlayAgainDialog() {
-        // Clear celebration text
-        celebrationText = ""
-        
-        // Create and present UIAlert from the main thread
-        DispatchQueue.main.async { [weak self] in
-            guard let scene = self else { return }
-            
-            // Find the view controller to present the alert
-            if let viewController = scene.view?.next as? UIViewController ??
-               scene.view?.window?.rootViewController {
-                
-                let alert = UIAlertController(
-                    title: "🎉 Congratulations!",
-                    message: "You solved the puzzle! Play again with a new phrase?",
-                    preferredStyle: .alert
-                )
-                
-                alert.addAction(UIAlertAction(title: "Yes", style: .default) { _ in
-                    scene.startNewGame()
-                })
-                
-                alert.addAction(UIAlertAction(title: "No", style: .cancel) { _ in
-                    // Keep current game state
-                })
-                
-                viewController.present(alert, animated: true)
-            }
-        }
     }
     
     private func startNewGame() {
