@@ -166,7 +166,7 @@ struct PlayerRowView: View {
                     }
                     
                     // Connection Time
-                    Text("Connected \(timeAgoString(from: player.connectedAt))")
+                    Text("Last seen \(timeAgoString(from: player.lastSeen))")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }

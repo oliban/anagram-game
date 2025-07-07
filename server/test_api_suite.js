@@ -344,10 +344,16 @@ class APITestSuite {
       return false;
     }
 
+    if (this.testPhrases.length === 0) {
+      this.logResult('POST /api/phrases/:phraseId/skip - Skipped', false, 'No test phrases available');
+      return false;
+    }
+
     let allPassed = true;
 
-    // Test valid phrase skip
-    const result = await this.makeRequest('POST', '/api/phrases/test-phrase-id/skip', {
+    // Test valid phrase skip - use a real phrase ID
+    const testPhrase = this.testPhrases[this.testPhrases.length - 1]; // Use last phrase to avoid conflicts with consumed phrase
+    const result = await this.makeRequest('POST', `/api/phrases/${testPhrase.id}/skip`, {
       playerId: this.testPlayers[0].id
     });
     
@@ -358,8 +364,8 @@ class APITestSuite {
     
     allPassed = allPassed && passed;
 
-    // Test invalid player ID
-    const invalidResult = await this.makeRequest('POST', '/api/phrases/test-phrase-id/skip', {
+    // Test invalid player ID - use a real phrase ID but invalid player
+    const invalidResult = await this.makeRequest('POST', `/api/phrases/${testPhrase.id}/skip`, {
       playerId: 'invalid-player-id'
     }, 404);
     
