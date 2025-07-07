@@ -138,4 +138,9 @@ class GameModel {
     func completeGame() {
         gameState = .completed
     }
+    
+    func skipCurrentGame() async {
+        print("🚀 Skip button pressed - starting new game")
+        await startNewGame()
+    }
 }

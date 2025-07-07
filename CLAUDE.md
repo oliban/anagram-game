@@ -203,6 +203,35 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
   - `./setup_sims.sh` - Boot simulators only
 - After deployment, automatically monitor server logs and iOS device logs to analyze connection patterns and debug issues before proceeding with next tasks
 
+## CRITICAL: Proven Multi-Simulator Deployment Flow
+**When deploying new app versions, ALWAYS follow this exact sequence:**
+
+### Phase 1: Server Setup and Versioning
+1. **Kill existing server**: `pkill -f "node server.js"`
+2. **Start fresh server**: `node server/server.js > server/server_output.log 2>&1 &`
+3. **Monitor logs**: `tail -f server/server_output.log &`
+4. **Increment version**: Update both `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
+
+### Phase 2: Build Process
+1. **Clean build**: `xcodebuild clean -project "Anagram Game.xcodeproj" -scheme "Anagram Game"`
+2. **Build with timeout**: Use 5-minute timeout and local derived data:
+   ```
+   xcodebuild -project "Anagram Game.xcodeproj" -scheme "Anagram Game" \
+   -destination "id=AF307F12-A657-4D6A-8123-240CBBEC5B31" \
+   -derivedDataPath ./build build
+   ```
+
+### Phase 3: Deployment to Both Simulators
+1. **Install on iPhone 15**: `xcrun simctl install AF307F12-A657-4D6A-8123-240CBBEC5B31 "./build/Build/Products/Debug-iphonesimulator/Anagram Game.app"`
+2. **Install on iPhone 15 Pro**: `xcrun simctl install 86355D8A-560E-465D-8FDC-3D037BCA482B "./build/Build/Products/Debug-iphonesimulator/Anagram Game.app"`
+3. **Launch iPhone 15**: `xcrun simctl launch AF307F12-A657-4D6A-8123-240CBBEC5B31 com.fredrik.anagramgame`
+4. **Launch iPhone 15 Pro**: `xcrun simctl launch 86355D8A-560E-465D-8FDC-3D037BCA482B com.fredrik.anagramgame`
+
+### Phase 4: Verification
+- **Monitor server logs** for player connections and WebSocket activity
+- **Verify both devices** show successful registration and connection
+- **Check API calls** are flowing (status, players/online, phrases/for endpoints)
+
 ## Post-Deployment Workflow
 - **Always do this after deploying a fix**:
   - Verify full functionality across both test simulators

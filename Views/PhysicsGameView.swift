@@ -24,6 +24,7 @@ struct PhysicsGameView: View {
     @State private var tiltText = "Loading tilt..."
     @State private var celebrationMessage = ""
     @State private var phraseNotificationMessage = ""
+    @State private var isSkipping = false
     @StateObject private var networkManager = NetworkManager.shared
     
     // Static reference to avoid SwiftUI state issues
@@ -55,7 +56,7 @@ struct PhysicsGameView: View {
                         Spacer()
                         
                         VStack {
-                            Text("v2.0.0 NEW")
+                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0") NEW")
                                 .font(.caption)
                                 .foregroundColor(.red)
                                 .fontWeight(.bold)
@@ -118,6 +119,49 @@ struct PhysicsGameView: View {
                     
                     
                     Spacer()
+                    
+                    // Skip button - Bottom left
+                    HStack {
+                        VStack {
+                            Spacer()
+                            Button(action: {
+                                Task {
+                                    isSkipping = true
+                                    await gameModel.skipCurrentGame()
+                                    // CRITICAL: Reset the scene after model updates
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.resetGame()
+                                    }
+                                    // Brief delay to show loading completed
+                                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                                    isSkipping = false
+                                }
+                            }) {
+                                HStack {
+                                    if isSkipping {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Text("Loading...")
+                                    } else {
+                                        Image(systemName: "forward.fill")
+                                        Text("Skip")
+                                    }
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.orange.opacity(0.8))
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
+                            }
+                            .disabled(isSkipping)
+                            .opacity(isSkipping ? 0.6 : 1.0)
+                            .padding(.bottom, 50)
+                            .padding(.leading, 20)
+                        }
+                        Spacer()
+                    }
                     
                     // Celebration text - Large and visible
                     if !celebrationMessage.isEmpty {
@@ -920,15 +964,36 @@ class PhysicsGameScene: SKScene {
     }
     
     func resetGame() {
-        clearAllHints()  // Clear hint effects when starting new game
+        print("🔄 Scene resetGame() called")
         
-        // Start a new game with the GameModel (this will check for custom phrases)
-        Task {
-            await gameModel.startNewGame()
-            createTiles()
-        }
-        
+        // Clear any existing celebration or game state
+        celebrationText = ""
         debugText = ""
+        
+        // Clear hint effects when starting new game
+        clearAllHints()
+        
+        // CRITICAL: Clear all existing tiles immediately
+        print("🗑️ Clearing \(tiles.count) existing tiles")
+        for tile in tiles {
+            tile.removeFromParent()
+        }
+        tiles.removeAll()
+        
+        // Stop any ongoing physics effects
+        removeAction(forKey: "quakeForces")
+        isQuakeActive = false
+        
+        // Reset bookshelf position and rotation in case quake was active
+        bookshelf.removeAllActions()
+        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
+        bookshelf.position = originalPosition
+        bookshelf.zRotation = 0
+        
+        // Create new tiles with current game model data (don't call startNewGame again)
+        createTiles()
+        
+        print("✅ Scene reset complete - \(tiles.count) new tiles created")
     }
     
     
@@ -1326,14 +1391,9 @@ class PhysicsGameScene: SKScene {
         Task {
             await gameModel.startNewGame()
             
-            // Reset scene state
-            celebrationText = ""
-            debugText = ""
-            
-            // Recreate tiles with new letters
-            createTiles()
+            // Reset scene using the improved resetGame method
+            resetGame()
         }
-        
     }
     
     private func createFireworks() {
