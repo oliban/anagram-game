@@ -69,8 +69,12 @@ class NetworkManager: ObservableObject {
     @Published var isConnected: Bool = false
     @Published var currentPlayer: Player? = nil
     @Published var onlinePlayers: [Player] = []
-    @Published var pendingPhrases: [CustomPhrase] = []
+    // REMOVED: Local phrase caching to fix race conditions
+    // @Published var pendingPhrases: [CustomPhrase] = []
     @Published var lastReceivedPhrase: CustomPhrase? = nil
+    
+    // Push-based phrase delivery
+    @Published var hasNewPhrase: Bool = false
     
     private let baseURL = "http://192.168.1.133:3000"
     private var urlSession: URLSession
@@ -418,15 +422,11 @@ class NetworkManager: ObservableObject {
             
             
             DispatchQueue.main.async {
-                
-                // Force update the published array
-                var updatedPhrases = self.pendingPhrases
-                updatedPhrases.append(phrase)
-                self.pendingPhrases = updatedPhrases
-                
+                // Store the latest received phrase for immediate preview
                 self.lastReceivedPhrase = phrase
+                self.hasNewPhrase = true
                 
-                print("🎯 NEXT WORD PREVIEW: Your next game will be: '\(phrase.content)' (when you complete current game)")
+                print("🚀 INSTANT PHRASE PREVIEW: '\(phrase.content)' from \(senderName) - shows in NEXT section immediately")
             }
         } catch {
             print("❌ SOCKET: Failed to decode new phrase: \(error.localizedDescription)")

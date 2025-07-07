@@ -43,7 +43,7 @@ class GameModel {
         }
     }
     
-    func startNewGame() async {
+    func startNewGame(isUserInitiated: Bool = false) async {
         
         // Prevent multiple concurrent calls
         guard !isStartingNewGame else {
@@ -53,7 +53,7 @@ class GameModel {
         isStartingNewGame = true
         
         // First check for custom phrases
-        await checkForCustomPhrases()
+        await checkForCustomPhrases(isUserInitiated: isUserInitiated)
         
         // Reset flag on main thread
         await MainActor.run {
@@ -62,45 +62,61 @@ class GameModel {
     }
     
     @MainActor
-    private func checkForCustomPhrases() async {
+    private func checkForCustomPhrases(isUserInitiated: Bool = false) async {
         gameState = .loading
         
-        // Check if there are any pending custom phrases (use local cache first, then API)
         let networkManager = NetworkManager.shared
-        var customPhrases = networkManager.pendingPhrases
         
-        
-        // If no local phrases, fetch from server as fallback
-        if customPhrases.isEmpty {
-            customPhrases = await networkManager.fetchPhrasesForCurrentPlayer()
-        }
-        
-        
-        if let firstPhrase = customPhrases.first {
+        // PRIORITY 1: Check for push-delivered phrase (instant delivery) - ONLY for user-initiated actions
+        if isUserInitiated && networkManager.hasNewPhrase, let pushedPhrase = networkManager.lastReceivedPhrase {
+            print("⚡ GAME: Using push-delivered phrase: '\(pushedPhrase.content)' (user-initiated)")
             
-            // Use the first custom phrase
-            currentCustomPhrase = firstPhrase
-            currentSentence = firstPhrase.content
-            customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
+            currentCustomPhrase = pushedPhrase
+            currentSentence = pushedPhrase.content
+            customPhraseInfo = "Custom phrase from \(pushedPhrase.senderName)"
             
+            // Mark as consumed and clear the push flag
+            let consumeSuccess = await networkManager.consumePhrase(phraseId: pushedPhrase.id)
+            networkManager.hasNewPhrase = false
             
-            // TEMPORARILY DISABLED: Remove from local cache immediately
-            // if let index = networkManager.pendingPhrases.firstIndex(where: { $0.id == firstPhrase.id }) {
-            //     networkManager.pendingPhrases.remove(at: index)
-            // }
-            
-            // Mark the phrase as consumed on server
-            let consumeSuccess = await networkManager.consumePhrase(phraseId: firstPhrase.id)
-        } else {
-            // Use a random sentence from the default collection
-            guard !sentences.isEmpty else {
-                gameState = .error
-                return
+            if consumeSuccess {
+                print("✅ GAME: Successfully consumed push-delivered phrase \(pushedPhrase.id)")
+            } else {
+                print("❌ GAME: Failed to consume push-delivered phrase \(pushedPhrase.id)")
             }
-            currentCustomPhrase = nil
-            let selectedSentence = sentences.randomElement() ?? ""
-            currentSentence = selectedSentence
-            customPhraseInfo = ""
+        } else {
+            // FALLBACK: Fetch from server if no push-delivered phrase
+            print("🔍 GAME: No push-delivered phrase, fetching from server")
+            let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer()
+            
+            if let firstPhrase = customPhrases.first {
+                print("✅ GAME: Got phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
+                
+                currentCustomPhrase = firstPhrase
+                currentSentence = firstPhrase.content
+                customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
+                
+                // Mark the phrase as consumed on server IMMEDIATELY
+                let consumeSuccess = await networkManager.consumePhrase(phraseId: firstPhrase.id)
+                
+                if consumeSuccess {
+                    print("✅ GAME: Successfully consumed server phrase \(firstPhrase.id)")
+                } else {
+                    print("❌ GAME: Failed to consume server phrase \(firstPhrase.id)")
+                }
+            } else {
+                print("🎯 GAME: No custom phrases available, using default sentence")
+                
+                // Use a random sentence from the default collection
+                guard !sentences.isEmpty else {
+                    gameState = .error
+                    return
+                }
+                
+                currentCustomPhrase = nil
+                currentSentence = sentences.randomElement() ?? "The cat sat on the mat"
+                customPhraseInfo = ""
+            }
         }
         
         scrambleLetters()
@@ -157,6 +173,6 @@ class GameModel {
         
         // Start a new game regardless of skip result
         print("🚀 Starting new game after skip")
-        await startNewGame()
+        await startNewGame(isUserInitiated: true)
     }
 }

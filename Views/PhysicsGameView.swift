@@ -69,20 +69,6 @@ struct PhysicsGameView: View {
                                     }
                                 }
                             
-                            // Debug: Show solution words
-                            Text("SOLUTION:")
-                                .font(.caption2)
-                                .foregroundColor(.yellow)
-                                .fontWeight(.bold)
-                            
-                            Text(gameModel.currentSentence)
-                                .font(.caption2)
-                                .foregroundColor(.yellow)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(4)
-                                .padding(.horizontal, 4)
-                            
-                            
                             if let lastPhrase = networkManager.lastReceivedPhrase {
                                 Text("LAST RECEIVED:")
                                     .font(.caption2)
@@ -307,7 +293,6 @@ class PhysicsGameScene: SKScene {
     private var floor: SKNode!
     private var tiles: [LetterTile] = []
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
-    var debugText: String = ""
     var celebrationText: String = ""
 
     private enum QuakeState { case none, normal, superQuake }
@@ -317,9 +302,6 @@ class PhysicsGameScene: SKScene {
     init(gameModel: GameModel, size: CGSize) {
         self.gameModel = gameModel
         super.init(size: size)
-        
-        // Initialize debug text with default values
-        debugText = "Connecting motion..."
         
         setupPhysicsWorld()
         setupEnvironment()
@@ -653,18 +635,6 @@ class PhysicsGameScene: SKScene {
         // Always maintain normal gravity
         physicsWorld.gravity = CGVector(dx: 0, dy: -9.8)
 
-        // Update debug text within the scene (no SwiftUI state changes)
-        let status: String
-        switch self.quakeState {
-        case .none:
-            status = ""
-        case .normal:
-            status = " QUAKE!"
-        case .superQuake:
-            status = " SUPER QUAKE!"
-        }
-        debugText = "Tilt: y=\(String(format: "%.2f", gravity.y)), z=\(String(format: "%.2f", gravity.z))\(status)"
-        
         // ALWAYS show tile positions for debugging (not just when falling)
         let floorY = size.height * 0.25
         
@@ -1030,7 +1000,6 @@ class PhysicsGameScene: SKScene {
         
         // Clear any existing celebration or game state
         celebrationText = ""
-        debugText = ""
         
         // Clear hint effects when starting new game
         clearAllHints()
@@ -1197,19 +1166,19 @@ class PhysicsGameScene: SKScene {
         
         if isComplete {
             print("🎉 VICTORY TRIGGERED!")
-            if !debugText.contains("🎉") { // Only celebrate once
+            if !celebrationText.contains("🎉") { // Only celebrate once
                 triggerCelebration()
                 gameModel.completeGame() // Mark game as completed
             }
-            debugText = "🎉 VICTORY! All words complete: \(allFoundWords.joined(separator: " + "))"
+            celebrationText = "🎉 VICTORY! All words complete: \(allFoundWords.joined(separator: " + "))"
         } else {
             print("❌ NO VICTORY - Requirements not met")
             let expectedWords = targetWords.joined(separator: ", ")
             let currentWords = allFoundWords.isEmpty ? "None" : allFoundWords.joined(separator: ", ")
-            debugText = "Words: \(allFoundWords.count)/\(targetWords.count) complete\nExpected: \(expectedWords)\nFound: \(currentWords)"
+            celebrationText = "Words: \(allFoundWords.count)/\(targetWords.count) complete\nExpected: \(expectedWords)\nFound: \(currentWords)"
         }
         
-        print("Debug: \(debugText)")
+        print("Celebration: \(celebrationText)")
     }
     
     private func groupTilesByLevel(tiles: [LetterTile]) -> [(String, [LetterTile])] {
@@ -1394,7 +1363,7 @@ class PhysicsGameScene: SKScene {
         // Trigger SwiftUI celebration display
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.onCelebration?("🎉 \(randomMessage)")
+            self.onCelebration?(randomMessage)
             print("🎊 TRIGGERED SWIFTUI CELEBRATION: '\(randomMessage)'")
         }
         
@@ -1420,7 +1389,7 @@ class PhysicsGameScene: SKScene {
         
         // Reset game model to get new sentence
         Task {
-            await gameModel.startNewGame()
+            await gameModel.startNewGame(isUserInitiated: true)
             
             // Reset scene using the improved resetGame method
             resetGame()
