@@ -1,38 +1,47 @@
 🚀 Anagram Game Server running on port 3000
 📡 Status endpoint: http://localhost:3000/api/status
 🔌 WebSocket server ready for connections
-2025-07-06T12:19:06.314Z - GET /api/status
-🔌 SERVER: Client connected: 4ZQhghcvZFaLjvucAAAB (Total: 1) at 2025-07-06T12:19:06.337Z
+🔌 SERVER: Client connected: s0_KLiA6nxI1oReBAAAB (Total: 1) at 2025-07-07T06:16:46.398Z
 🔌 SERVER: Client remote address: 192.168.1.133
-🔌 SERVER: Client user agent: Anagram Game/1
-2025-07-06T12:19:07.403Z - POST /api/players/register
-👤 Player registered: asdsasds (player_1751804347403_f7859bwri)
-2025-07-06T12:19:07.428Z - GET /api/players/online
-📨 SERVER: Received event 'player-connect' from 4ZQhghcvZFaLjvucAAAB: [ { playerId: 'player_1751804347403_f7859bwri' } ]
-👤 SERVER: Player-connect event received at 2025-07-06T12:19:09.461Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751804347403_f7859bwri' }
-👤 SERVER: Player connected via socket: asdsasds (4ZQhghcvZFaLjvucAAAB) at 2025-07-06T12:19:09.461Z
-🔌 SERVER: Client disconnected: 4ZQhghcvZFaLjvucAAAB (Total: 0) at 2025-07-06T12:19:22.429Z
-🔌 SERVER: Disconnect reason: transport error
-👤 SERVER: Player socket disconnected: asdsasds (4ZQhghcvZFaLjvucAAAB) at 2025-07-06T12:19:22.429Z
-👤 SERVER: Player disconnect reason: transport error
-👤 Player disconnected: asdsasds (player_1751804347403_f7859bwri)
-2025-07-06T12:19:24.460Z - GET /api/status
-2025-07-06T12:26:49.874Z - GET /api/status
-🔌 SERVER: Client connected: cqRJOdO_KWSjN4fOAAAD (Total: 1) at 2025-07-06T12:26:49.880Z
+🔌 SERVER: Client user agent: Unknown
+🔌 SERVER: Client connected: hjTryfzjzyFYnZvmAAAD (Total: 2) at 2025-07-07T06:16:47.197Z
 🔌 SERVER: Client remote address: 192.168.1.133
-🔌 SERVER: Client user agent: Anagram Game/1
-2025-07-06T12:26:50.904Z - POST /api/players/register
-👤 Player registered: Asdsaadfssdfdfsa (player_1751804810904_uub6yzx8w)
-2025-07-06T12:26:50.906Z - GET /api/players/online
-📨 SERVER: Received event 'player-connect' from cqRJOdO_KWSjN4fOAAAD: [ { playerId: 'player_1751804810904_uub6yzx8w' } ]
-👤 SERVER: Player-connect event received at 2025-07-06T12:26:53.060Z
-👤 SERVER: Player-connect data: { playerId: 'player_1751804810904_uub6yzx8w' }
-👤 SERVER: Player connected via socket: Asdsaadfssdfdfsa (cqRJOdO_KWSjN4fOAAAD) at 2025-07-06T12:26:53.060Z
-🔌 SERVER: Client disconnected: cqRJOdO_KWSjN4fOAAAD (Total: 0) at 2025-07-06T12:27:05.926Z
-🔌 SERVER: Disconnect reason: transport error
-👤 SERVER: Player socket disconnected: Asdsaadfssdfdfsa (cqRJOdO_KWSjN4fOAAAD) at 2025-07-06T12:27:05.926Z
-👤 SERVER: Player disconnect reason: transport error
-👤 Player disconnected: Asdsaadfssdfdfsa (player_1751804810904_uub6yzx8w)
-2025-07-06T12:27:36.317Z - GET /api/status
-2025-07-06T12:27:36.616Z - GET /api/status
+🔌 SERVER: Client user agent: Unknown
+🔌 SERVER: Client connected: hNq7LDdaAsrPSGs_AAAF (Total: 3) at 2025-07-07T06:16:47.463Z
+🔌 SERVER: Client remote address: 192.168.1.133
+🔌 SERVER: Client user agent: Unknown
+2025-07-07T06:16:57.953Z - GET /api/status
+2025-07-07T06:16:57.966Z - POST /api/players/register
+👤 Player registered: Player_955 (player_1751869017966_kp9enpslc)
+📨 SERVER: Received event 'player-connect' from s0_KLiA6nxI1oReBAAAB: [ { playerId: 'player_1751869017966_kp9enpslc' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:16:57.974Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751869017966_kp9enpslc' }
+👤 SERVER: Player connected via socket: Player_955 (s0_KLiA6nxI1oReBAAAB) at 2025-07-07T06:16:57.974Z
+2025-07-07T06:16:58.045Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
+2025-07-07T06:16:58.055Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
+2025-07-07T06:16:58.060Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
+2025-07-07T06:17:02.670Z - GET /api/status
+2025-07-07T06:17:02.676Z - POST /api/players/register
+👤 Player registered: Player_273 (player_1751869022676_m4xt771ci)
+📨 SERVER: Received event 'player-connect' from hjTryfzjzyFYnZvmAAAD: [ { playerId: 'player_1751869022676_m4xt771ci' } ]
+👤 SERVER: Player-connect event received at 2025-07-07T06:17:02.678Z
+👤 SERVER: Player-connect data: { playerId: 'player_1751869022676_m4xt771ci' }
+👤 SERVER: Player connected via socket: Player_273 (hjTryfzjzyFYnZvmAAAD) at 2025-07-07T06:17:02.678Z
+2025-07-07T06:17:02.693Z - GET /api/phrases/for/player_1751869022676_m4xt771ci
+2025-07-07T06:17:02.693Z - GET /api/phrases/for/player_1751869017966_kp9enpslc
+2025-07-07T06:17:02.695Z - GET /api/phrases/for/player_1751869022676_m4xt771ci
+2025-07-07T06:17:02.696Z - GET /api/phrases/for/player_1751869022676_m4xt771ci
+2025-07-07T06:17:13.500Z - POST /api/phrases
+📝 Phrase created: "fdsadf Dfasd" from Player_955 to Player_273
+📨 Sent new-phrase notification to Player_273 (hjTryfzjzyFYnZvmAAAD)
+2025-07-07T06:17:13.527Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
+✅ Phrase consumed: phrase_1751869033500_88i28v55h
+2025-07-07T06:17:33.840Z - POST /api/phrases/phrase_1751869033500_88i28v55h/consume
+✅ Phrase consumed: phrase_1751869033500_88i28v55h
+2025-07-07T06:18:26.745Z - POST /api/phrases
+📝 Phrase created: "Fet Apa" from Player_273 to Player_955
+📨 Sent new-phrase notification to Player_955 (s0_KLiA6nxI1oReBAAAB)
+2025-07-07T06:18:26.798Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
+✅ Phrase consumed: phrase_1751869106746_uxkt8uecu
+2025-07-07T06:18:55.784Z - POST /api/phrases/phrase_1751869106746_uxkt8uecu/consume
+✅ Phrase consumed: phrase_1751869106746_uxkt8uecu

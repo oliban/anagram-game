@@ -3,6 +3,7 @@ const cors = require('cors');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const PlayerStore = require('./models/PlayerStore');
+const PhraseStore = require('./models/PhraseStore');
 
 const app = express();
 const server = createServer(app);
@@ -20,8 +21,9 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 3000;
 
-// Initialize player store
+// Initialize stores
 const playerStore = new PlayerStore();
+const phraseStore = new PhraseStore();
 
 // Middleware
 app.use(cors({
@@ -43,7 +45,8 @@ app.get('/api/status', (req, res) => {
     status: 'online',
     timestamp: new Date().toISOString(),
     server: 'Anagram Game Multiplayer Server',
-    players: playerStore.getPlayerCount()
+    players: playerStore.getPlayerCount(),
+    phrases: phraseStore.getStats()
   });
 });
 
@@ -118,6 +121,136 @@ app.get('/api/players/online', (req, res) => {
     console.error('Error getting online players:', error);
     res.status(500).json({ 
       error: 'Failed to get online players' 
+    });
+  }
+});
+
+// Phrase API endpoints
+app.post('/api/phrases', (req, res) => {
+  try {
+    const { content, senderId, targetId } = req.body;
+    
+    // Validate required fields
+    if (!content || !senderId || !targetId) {
+      return res.status(400).json({ 
+        error: 'Content, senderId, and targetId are required' 
+      });
+    }
+    
+    // Validate that sender and target are different
+    if (senderId === targetId) {
+      return res.status(400).json({ 
+        error: 'Cannot send phrase to yourself' 
+      });
+    }
+    
+    // Validate that both sender and target exist
+    const sender = playerStore.getPlayer(senderId);
+    const target = playerStore.getPlayer(targetId);
+    
+    if (!sender) {
+      return res.status(404).json({ 
+        error: 'Sender player not found' 
+      });
+    }
+    
+    if (!target) {
+      return res.status(404).json({ 
+        error: 'Target player not found' 
+      });
+    }
+    
+    // Create phrase
+    const phrase = phraseStore.createPhrase(content, senderId, targetId);
+    
+    console.log(`📝 Phrase created: "${content}" from ${sender.name} to ${target.name}`);
+    
+    // Send real-time notification to target player
+    if (target.socketId) {
+      io.to(target.socketId).emit('new-phrase', {
+        phrase: phrase.getPublicInfo(),
+        senderName: sender.name,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`📨 Sent new-phrase notification to ${target.name} (${target.socketId})`);
+    } else {
+      console.log(`📨 Target player ${target.name} not connected - phrase queued`);
+    }
+    
+    res.status(201).json({
+      success: true,
+      phrase: phrase.getPublicInfo(),
+      message: 'Phrase created successfully'
+    });
+    
+  } catch (error) {
+    console.error('Error creating phrase:', error);
+    res.status(400).json({ 
+      error: error.message || 'Failed to create phrase' 
+    });
+  }
+});
+
+app.get('/api/phrases/for/:playerId', (req, res) => {
+  try {
+    const { playerId } = req.params;
+    
+    // Validate that player exists
+    const player = playerStore.getPlayer(playerId);
+    if (!player) {
+      return res.status(404).json({ 
+        error: 'Player not found' 
+      });
+    }
+    
+    // Get phrases for player
+    const phrases = phraseStore.getPhrasesForPlayer(playerId);
+    
+    // Get sender names for each phrase
+    const phrasesWithSenders = phrases.map(phrase => {
+      const sender = playerStore.getPlayer(phrase.senderId);
+      return {
+        ...phrase.getPublicInfo(),
+        senderName: sender ? sender.name : 'Unknown'
+      };
+    });
+    
+    res.json({
+      phrases: phrasesWithSenders,
+      count: phrasesWithSenders.length,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error getting phrases for player:', error);
+    res.status(500).json({ 
+      error: 'Failed to get phrases' 
+    });
+  }
+});
+
+app.post('/api/phrases/:phraseId/consume', (req, res) => {
+  try {
+    const { phraseId } = req.params;
+    
+    const success = phraseStore.consumePhrase(phraseId);
+    
+    if (success) {
+      console.log(`✅ Phrase consumed: ${phraseId}`);
+      res.json({
+        success: true,
+        message: 'Phrase marked as consumed'
+      });
+    } else {
+      res.status(404).json({ 
+        error: 'Phrase not found' 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error consuming phrase:', error);
+    res.status(500).json({ 
+      error: 'Failed to consume phrase' 
     });
   }
 });
@@ -244,15 +377,22 @@ io.on('connection', (socket) => {
   });
 });
 
-// Cleanup inactive players every 5 minutes
+// Cleanup inactive players and old phrases every 5 minutes
 setInterval(() => {
-  const cleanedCount = playerStore.cleanupInactivePlayers();
-  if (cleanedCount > 0) {
+  const cleanedPlayersCount = playerStore.cleanupInactivePlayers();
+  const cleanedPhrasesCount = phraseStore.cleanupOldPhrases();
+  
+  if (cleanedPlayersCount > 0) {
+    console.log(`🧹 Cleaned up ${cleanedPlayersCount} inactive players`);
     // Broadcast updated player list after cleanup
     io.emit('player-list-updated', {
       players: playerStore.getOnlinePlayers(),
       timestamp: new Date().toISOString()
     });
+  }
+  
+  if (cleanedPhrasesCount > 0) {
+    console.log(`🧹 Cleaned up ${cleanedPhrasesCount} old phrases`);
   }
 }, 5 * 60 * 1000); // 5 minutes
 
