@@ -309,6 +309,7 @@ struct PhysicsGameView: View {
     @State private var gameScene: PhysicsGameScene?
     @State private var celebrationMessage = ""
     @State private var isSkipping = false
+    @State private var showingPhraseCreation = false
     @StateObject private var networkManager = NetworkManager.shared
     
     // Static reference to avoid SwiftUI state issues
@@ -425,6 +426,25 @@ struct PhysicsGameView: View {
                         VStack {
                             Spacer()
                             
+                            // Send Phrase button - Above Skip button
+                            Button(action: {
+                                showingPhraseCreation = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.pencil")
+                                    Text("Send Phrase")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.blue.opacity(0.8))
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
+                            }
+                            .padding(.bottom, 10)
+                            .padding(.leading, 20)
+                            
                             // Skip button - Bottom left
                             Button(action: {
                                 Task {
@@ -496,6 +516,9 @@ struct PhysicsGameView: View {
                     
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showingPhraseCreation) {
+            PhraseCreationView(isPresented: $showingPhraseCreation)
         }
         .onAppear {
             print("🎬 PhysicsGameView appeared")
