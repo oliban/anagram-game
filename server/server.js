@@ -804,17 +804,54 @@ app.get('/api/phrases/global', async (req, res) => {
     const rawLimit = parseInt(req.query.limit) || 50;
     const limit = Math.min(Math.max(rawLimit, 1), 100); // Ensure positive and max 100 phrases per request
     const offset = Math.max(parseInt(req.query.offset) || 0, 0); // Ensure non-negative
+    
+    // Legacy difficulty filter (1-5 range)
     const rawDifficulty = parseInt(req.query.difficulty);
-    const difficulty = (rawDifficulty >= 1 && rawDifficulty <= 5) ? rawDifficulty : null; // Only valid difficulties
+    const difficulty = (rawDifficulty >= 1 && rawDifficulty <= 5) ? rawDifficulty : null;
+    
+    // New difficulty range filters (1+ range, no upper limit)
+    const rawMinDifficulty = parseInt(req.query.minDifficulty);
+    const minDifficulty = (rawMinDifficulty >= 1) ? rawMinDifficulty : null;
+    const rawMaxDifficulty = parseInt(req.query.maxDifficulty);
+    const maxDifficulty = (rawMaxDifficulty >= 1) ? rawMaxDifficulty : null;
+    
     const approved = req.query.approved !== 'false'; // Default to approved only
 
-    console.log(`🌍 REQUEST: Global phrases - limit: ${limit}, offset: ${offset}, difficulty: ${difficulty || 'all'}, approved: ${approved}`);
+    // Check for invalid difficulty values - if provided but invalid, return empty results
+    const hasInvalidMinDifficulty = req.query.minDifficulty && (isNaN(rawMinDifficulty) || rawMinDifficulty < 1);
+    const hasInvalidMaxDifficulty = req.query.maxDifficulty && (isNaN(rawMaxDifficulty) || rawMaxDifficulty < 1);
+    
+    console.log(`🌍 REQUEST: Global phrases - limit: ${limit}, offset: ${offset}, difficulty: ${difficulty || 'all'}, minDifficulty: ${minDifficulty || 'none'}, maxDifficulty: ${maxDifficulty || 'none'}, approved: ${approved}`);
+
+    // If invalid difficulty values were provided, return empty results
+    if (hasInvalidMinDifficulty || hasInvalidMaxDifficulty) {
+      console.log(`⚠️ DATABASE: Invalid difficulty parameters provided, returning empty results`);
+      res.json({
+        success: true,
+        phrases: [],
+        pagination: {
+          limit,
+          offset,
+          total: 0,
+          count: 0,
+          hasMore: false
+        },
+        filters: {
+          difficulty: difficulty || 'all',
+          minDifficulty: minDifficulty || 'none',
+          maxDifficulty: maxDifficulty || 'none',
+          approved
+        },
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
 
     // Get global phrases with optional filtering
-    const phrases = await DatabasePhrase.getGlobalPhrases(limit, offset, difficulty, approved);
+    const phrases = await DatabasePhrase.getGlobalPhrases(limit, offset, difficulty, approved, minDifficulty, maxDifficulty);
     
     // Get total count for pagination
-    const totalCount = await DatabasePhrase.getGlobalPhrasesCount(difficulty, approved);
+    const totalCount = await DatabasePhrase.getGlobalPhrasesCount(difficulty, approved, minDifficulty, maxDifficulty);
 
     // Enhanced response with pagination metadata
     res.json({
@@ -840,6 +877,8 @@ app.get('/api/phrases/global', async (req, res) => {
       },
       filters: {
         difficulty: difficulty || 'all',
+        minDifficulty: minDifficulty || 'none',
+        maxDifficulty: maxDifficulty || 'none',
         approved
       },
       timestamp: new Date().toISOString()
@@ -1110,6 +1149,57 @@ app.post('/api/phrases/:phraseId/skip', async (req, res) => {
     console.error('Error skipping phrase:', error);
     res.status(500).json({ 
       error: 'Failed to skip phrase' 
+    });
+  }
+});
+
+// Phrase difficulty analysis endpoint
+app.post('/api/phrases/analyze-difficulty', async (req, res) => {
+  try {
+    const { phrase, language = 'en' } = req.body;
+    
+    // Validate input
+    if (!phrase || typeof phrase !== 'string') {
+      return res.status(400).json({
+        error: 'Phrase is required and must be a string'
+      });
+    }
+    
+    if (phrase.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Phrase cannot be empty'
+      });
+    }
+    
+    // Validate language
+    const { LANGUAGES, calculateScore, getDifficultyLabel } = require('./services/difficultyScorer');
+    const validLanguages = Object.values(LANGUAGES);
+    
+    if (!validLanguages.includes(language)) {
+      return res.status(400).json({
+        error: `Language must be one of: ${validLanguages.join(', ')}`
+      });
+    }
+    
+    // Calculate difficulty score
+    const score = calculateScore({ phrase: phrase.trim(), language });
+    const difficultyLabel = getDifficultyLabel(score);
+    
+    console.log(`📊 ANALYSIS: "${phrase}" (${language}) -> Score: ${score} (${difficultyLabel})`);
+    
+    res.json({
+      phrase: phrase.trim(),
+      language: language,
+      score: score,
+      difficulty: difficultyLabel,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ ANALYSIS: Error analyzing phrase:', error.message);
+    res.status(500).json({
+      error: 'Failed to analyze phrase difficulty',
+      timestamp: new Date().toISOString()
     });
   }
 });
