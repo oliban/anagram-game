@@ -162,6 +162,7 @@ class NetworkManager: ObservableObject {
     
     // Push-based phrase delivery
     @Published var hasNewPhrase: Bool = false
+    @Published var justReceivedPhrase: CustomPhrase? = nil
     
     
     private let baseURL = "http://192.168.1.133:3000"
@@ -509,7 +510,8 @@ class NetworkManager: ObservableObject {
                 self.lastReceivedPhrase = phrase
                 self.hasNewPhrase = true
                 
-                print("🚀 INSTANT PHRASE PREVIEW: '\(phrase.content)' from \(senderName) - shows in NEXT section immediately")
+                // Trigger immediate notification
+                self.justReceivedPhrase = phrase
             }
         } catch {
             print("❌ SOCKET: Failed to decode new phrase: \(error.localizedDescription)")
