@@ -325,22 +325,6 @@ struct PhysicsGameView: View {
                                     }
                                 }
                             
-                            // WebSocket Debug Info
-                            Text(networkManager.socketConnectionInfo)
-                                .font(.caption2)
-                                .foregroundColor(.blue)
-                                .padding(.top, 2)
-                            
-                            // Recent debug messages
-                            VStack(alignment: .trailing, spacing: 1) {
-                                ForEach(networkManager.debugMessages.suffix(3), id: \.self) { message in
-                                    Text(message)
-                                        .font(.caption2)
-                                        .foregroundColor(.cyan)
-                                        .lineLimit(1)
-                                        .truncationMode(.head)
-                                }
-                            }
                             
                             if let lastPhrase = networkManager.lastReceivedPhrase {
                                 Text("LAST RECEIVED:")
