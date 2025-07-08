@@ -1086,6 +1086,52 @@ class NetworkManager: ObservableObject {
         socket.emit("ping", completion: nil)
     }
     
+    // MARK: - Difficulty Analysis API Method
+    
+    func analyzeDifficulty(phrase: String, language: String = "en") async -> DifficultyAnalysis? {
+        guard let url = URL(string: "\(baseURL)/api/phrases/analyze-difficulty") else {
+            print("❌ DIFFICULTY: Invalid URL for analyzing difficulty")
+            return nil
+        }
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody = [
+                "phrase": phrase.trimmingCharacters(in: .whitespacesAndNewlines),
+                "language": language
+            ]
+            request.httpBody = try JSONEncoder().encode(requestBody)
+            
+            let (data, response) = try await urlSession.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ DIFFICULTY: Failed to analyze difficulty. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+            
+            let analysis = try JSONDecoder().decode(DifficultyAnalysis.self, from: data)
+            print("📊 DIFFICULTY: Analyzed '\(phrase)' -> Score: \(analysis.score) (\(analysis.difficulty))")
+            return analysis
+            
+        } catch {
+            print("❌ DIFFICULTY: Error analyzing difficulty: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+}
+
+// MARK: - Difficulty Analysis Data Models
+
+public struct DifficultyAnalysis: Codable {
+    let phrase: String
+    let language: String
+    let score: Double
+    let difficulty: String
+    let timestamp: String
 }
 
 // MARK: - Lobby Data Models
