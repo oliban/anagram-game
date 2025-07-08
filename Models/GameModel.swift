@@ -149,7 +149,15 @@ class GameModel: ObservableObject {
         currentHints = []
         currentScore = 0
         hintsUsed = 0
-        phraseDifficulty = 0
+        
+        // Set difficulty score based on phrase type
+        if currentCustomPhrase != nil {
+            // For custom phrases, use a default difficulty score or analyze the phrase
+            phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
+        } else {
+            // For default local phrases, use a standard difficulty
+            phraseDifficulty = 100 // Default score for local phrases
+        }
     }
     
     private func scrambleLetters() {
@@ -211,6 +219,18 @@ class GameModel: ObservableObject {
         if hintsUsed >= 3 { score = Int(round(Double(phraseDifficulty) * 0.50)) }
         
         return score
+    }
+    
+    private func calculateDifficultyForPhrase(_ phrase: String) -> Int {
+        // Simple difficulty calculation based on phrase characteristics
+        let words = phrase.components(separatedBy: " ")
+        let totalLetters = phrase.replacingOccurrences(of: " ", with: "").count
+        
+        // Base score: 50 + (15 points per word) + (2 points per letter)
+        let baseScore = 50 + (words.count * 15) + (totalLetters * 2)
+        
+        // Cap between 50-200 points
+        return min(max(baseScore, 50), 200)
     }
     
     func skipCurrentGame() async {

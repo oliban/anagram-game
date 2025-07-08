@@ -9,6 +9,7 @@ struct PhraseCreationView: View {
     @State private var selectedPlayers: [Player] = []
     @State private var playerSearchText = ""
     @State private var showingSuggestions = false
+    @State private var isAvailableToAll = false
     @State private var isLoading = false
     @State private var errorMessage = ""
     @State private var successMessage = ""
@@ -16,6 +17,14 @@ struct PhraseCreationView: View {
     @State private var currentDifficulty: DifficultyAnalysis? = nil
     @State private var isAnalyzingDifficulty = false
     @State private var debounceTimer: Timer?
+    @FocusState private var isSearchFieldFocused: Bool
+    @FocusState private var isPhraseFieldFocused: Bool
+    @FocusState private var isClueFieldFocused: Bool
+    
+    // Computed property to check if any field is focused
+    private var isAnyFieldFocused: Bool {
+        return isSearchFieldFocused || isPhraseFieldFocused || isClueFieldFocused
+    }
     
     private var wordCount: Int {
         phraseText.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: .whitespaces).filter { !$0.isEmpty }.count
@@ -23,7 +32,15 @@ struct PhraseCreationView: View {
     
     private var isValidPhrase: Bool {
         let words = wordCount
-        return words >= 2 && words <= 6 && !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return words >= 2 && words <= 6 && hasPhrase && hasClue
+    }
+    
+    private var isValidPhraseForDifficulty: Bool {
+        let words = wordCount
+        let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return words >= 2 && words <= 6 && hasPhrase
     }
     
     private var availableTargets: [Player] {
@@ -50,10 +67,11 @@ struct PhraseCreationView: View {
                     Text("Send Custom Phrase")
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(.primary)
                     
-                    Text("Create an anagram puzzle for another player")
+                    Text("Create an anagram puzzle for one or more players")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top)
@@ -62,6 +80,7 @@ struct PhraseCreationView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Phrase (2-6 words)")
                         .font(.headline)
+                        .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
                         TextField("Enter your phrase...", text: $phraseText, axis: .vertical)
@@ -70,11 +89,14 @@ struct PhraseCreationView: View {
                             .frame(minHeight: 44)
                             .autocapitalization(.words)
                             .disableAutocorrection(true)
+                            .focused($isPhraseFieldFocused)
+                            .foregroundColor(.primary)
+                            .accentColor(.blue)
                         
                         HStack {
                             Text("\(wordCount) words")
                                 .font(.caption)
-                                .foregroundColor(isValidPhrase ? .green : .secondary)
+                                .foregroundColor(isValidPhrase ? .green : .primary)
                             
                             Spacer()
                             
@@ -90,19 +112,19 @@ struct PhraseCreationView: View {
                         }
                         
                         // Real-time difficulty display
-                        if isValidPhrase {
+                        if isValidPhraseForDifficulty {
                             HStack {
                                 if isAnalyzingDifficulty {
                                     ProgressView()
                                         .scaleEffect(0.8)
                                     Text("Analyzing difficulty...")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.primary)
                                 } else if let difficulty = currentDifficulty {
                                     HStack {
                                         Text("Difficulty:")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(.primary)
                                         
                                         Text(difficulty.difficulty)
                                             .font(.caption)
@@ -111,7 +133,7 @@ struct PhraseCreationView: View {
                                         
                                         Text("(\(String(format: "%.1f", difficulty.score)))")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(.primary)
                                     }
                                 }
                                 
@@ -124,8 +146,9 @@ struct PhraseCreationView: View {
                 
                 // Clue input section
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Clue (Optional)")
+                    Text("Clue")
                         .font(.headline)
+                        .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
                         TextField("Enter a helpful clue...", text: $clueText, axis: .vertical)
@@ -133,26 +156,63 @@ struct PhraseCreationView: View {
                             .lineLimit(1...3)
                             .frame(minHeight: 44)
                             .autocapitalization(.sentences)
+                            .focused($isClueFieldFocused)
+                            .foregroundColor(.primary)
+                            .accentColor(.blue)
                         
-                        Text("This clue will be revealed when the player uses Hint 3")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack {
+                            Text("This clue will be revealed when the player uses Hint 3")
+                                .font(.caption)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            if !clueText.isEmpty {
+                                Text("✓")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        }
                     }
                 }
                 
-                // Player search and selection
+                // Player availability section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Send to Players")
                         .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    // Available to all players checkbox
+                    Button(action: {
+                        isAvailableToAll.toggle()
+                        if isAvailableToAll {
+                            selectedPlayers.removeAll()
+                            playerSearchText = ""
+                            showingSuggestions = false
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: isAvailableToAll ? "checkmark.square.fill" : "square")
+                                .foregroundColor(isAvailableToAll ? .blue : .gray)
+                            Text("Available to all players")
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(isAvailableToAll ? Color.blue.opacity(0.2) : Color(.systemGray4))
+                    .cornerRadius(8)
                     
                     if availableTargets.isEmpty {
                         Text("No other players online")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.primary)
                             .padding()
-                            .background(Color.gray.opacity(0.1))
+                            .background(Color(.systemGray4))
                             .cornerRadius(8)
-                    } else {
+                    } else if !isAvailableToAll {
                         VStack(alignment: .leading, spacing: 8) {
                             // Search field
                             HStack {
@@ -163,6 +223,9 @@ struct PhraseCreationView: View {
                                     .textFieldStyle(PlainTextFieldStyle())
                                     .autocapitalization(.none)
                                     .disableAutocorrection(true)
+                                    .focused($isSearchFieldFocused)
+                                    .foregroundColor(.primary)
+                                    .accentColor(.blue)
                                     .onTapGesture {
                                         showingSuggestions = true
                                     }
@@ -179,12 +242,12 @@ struct PhraseCreationView: View {
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Color.gray.opacity(0.1))
+                            .background(Color(.systemGray4))
                             .cornerRadius(8)
                             
                             // Suggestions dropdown
                             if shouldShowSuggestions {
-                                VStack(alignment: .leading, spacing: 1) {
+                                VStack(alignment: .leading, spacing: 4) {
                                     ForEach(filteredPlayers, id: \.id) { player in
                                         Button(action: {
                                             selectPlayer(player)
@@ -197,31 +260,28 @@ struct PhraseCreationView: View {
                                                     .foregroundColor(.primary)
                                                     .font(.system(size: 16))
                                                 Spacer()
-                                                Image(systemName: "plus.circle.fill")
-                                                    .foregroundColor(.blue)
-                                                    .font(.system(size: 14))
+                                                Text("Tap to select")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
                                             }
                                             .padding(.horizontal, 12)
-                                            .padding(.vertical, 10)
+                                            .padding(.vertical, 12)
                                             .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(Color(.systemGray5))
+                                            .cornerRadius(8)
                                         }
                                         .buttonStyle(PlainButtonStyle())
-                                        .background(Color(.systemBackground))
-                                        .overlay(
-                                            Rectangle()
-                                                .fill(Color.gray.opacity(0.2))
-                                                .frame(height: 0.5)
-                                                .offset(y: 10), alignment: .bottom
-                                        )
                                     }
                                 }
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
                                 .background(Color(.systemBackground))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                                 )
-                                .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
-                                .cornerRadius(8)
+                                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                .cornerRadius(12)
                             }
                             
                             // Selected players
@@ -231,7 +291,7 @@ struct PhraseCreationView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     
-                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 6) {
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], alignment: .leading, spacing: 6) {
                                         ForEach(selectedPlayers, id: \.id) { player in
                                             HStack(spacing: 4) {
                                                 Text(player.name)
@@ -260,7 +320,7 @@ struct PhraseCreationView: View {
                             // Hint text
                             Text("Type at least 2 characters to search for players")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.primary)
                                 .padding(.top, 4)
                         }
                     }
@@ -268,10 +328,32 @@ struct PhraseCreationView: View {
                 
                 Spacer()
                 
+                // Keyboard dismiss button (only show when keyboard is visible)
+                if isAnyFieldFocused {
+                    Button(action: {
+                        dismissKeyboard()
+                    }) {
+                        HStack {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                            Text("Dismiss Keyboard")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
                 // Action buttons
                 VStack(spacing: 12) {
                     // Send button
-                    Button(action: sendPhrase) {
+                    Button(action: {
+                        dismissKeyboard()
+                        sendPhrase()
+                    }) {
                         HStack {
                             if isLoading {
                                 ProgressView()
@@ -293,6 +375,7 @@ struct PhraseCreationView: View {
                     
                     // Cancel button
                     Button("Cancel") {
+                        dismissKeyboard()
                         isPresented = false
                     }
                     .font(.subheadline)
@@ -302,6 +385,12 @@ struct PhraseCreationView: View {
             }
             .padding()
             .navigationBarHidden(true)
+            .background(Color(.systemBackground))
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside
+                dismissKeyboard()
+                showingSuggestions = false
+            }
             .alert(isPresented: $showingAlert) {
                 Alert(
                     title: Text(successMessage.isEmpty ? "Error" : "Success"),
@@ -329,7 +418,7 @@ struct PhraseCreationView: View {
             debounceTimer?.invalidate()
             
             // Clear state if phrase is invalid
-            if !isValidPhrase {
+            if !isValidPhraseForDifficulty {
                 currentDifficulty = nil
                 isAnalyzingDifficulty = false
                 return
@@ -349,7 +438,11 @@ struct PhraseCreationView: View {
     }
     
     private var canSendPhrase: Bool {
-        return isValidPhrase && !selectedPlayers.isEmpty && !availableTargets.isEmpty
+        if isAvailableToAll {
+            return isValidPhrase && !availableTargets.isEmpty
+        } else {
+            return isValidPhrase && !selectedPlayers.isEmpty && !availableTargets.isEmpty
+        }
     }
     
     private func sendPhrase() {
@@ -361,7 +454,7 @@ struct PhraseCreationView: View {
         
         Task {
             var allSuccessful = true
-            let targetIds = selectedPlayers.map { $0.id }
+            let targetIds = isAvailableToAll ? availableTargets.map { $0.id } : selectedPlayers.map { $0.id }
             
             // Ensure we have current difficulty analysis before sending
             let finalPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -377,7 +470,7 @@ struct PhraseCreationView: View {
                 let success = await networkManager.sendPhrase(
                     content: finalPhrase,
                     targetId: targetId,
-                    clue: clueText.isEmpty ? nil : clueText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    clue: clueText.trimmingCharacters(in: .whitespacesAndNewlines) // Now required, never nil
                 )
                 
                 if !success {
@@ -442,6 +535,13 @@ struct PhraseCreationView: View {
         }
         playerSearchText = ""
         showingSuggestions = false
+        dismissKeyboard()
+    }
+    
+    private func dismissKeyboard() {
+        isSearchFieldFocused = false
+        isPhraseFieldFocused = false
+        isClueFieldFocused = false
     }
     
     private func removePlayer(_ player: Player) {

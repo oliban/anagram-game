@@ -93,9 +93,13 @@ struct HintButtonView: View {
         }
         
         let nextLevel = hintStatus.nextHintLevel ?? 1
+        let currentScore = hintStatus.currentScore
         let nextScore = hintStatus.nextHintScore ?? 0
         
-        return "Hint \(nextLevel) (\(nextScore) points)"
+        // Calculate point cost (difference between current and next score)
+        let pointCost = currentScore - nextScore
+        
+        return "Hint \(nextLevel) (-\(pointCost) pts)"
     }
     
     private var canUseHint: Bool {
@@ -182,6 +186,12 @@ struct HintButtonView: View {
                         canUseNextHint: nextLevel < 3
                     )
                     self.hintStatus = updatedStatus
+                    
+                    // Update score tile when hint is used
+                    if let scene = gameScene {
+                        scene.updateScoreTile()
+                    }
+                    
                     isLoading = false
                 }
             } else {
@@ -226,6 +236,11 @@ struct HintButtonView: View {
                             canUseNextHint: response.hint.canUseNextHint
                         )
                         self.hintStatus = updatedStatus
+                        
+                        // Update score tile when hint is used
+                        if let scene = gameScene {
+                            scene.updateScoreTile()
+                        }
                     } else {
                         errorMessage = "Failed to get hint"
                     }
@@ -322,38 +337,39 @@ struct PhysicsGameView: View {
                 SpriteKitView(scene: getOrCreateScene(size: geometry.size))
                     .ignoresSafeArea()
                 
-                // SwiftUI overlay for UI elements
+                // SwiftUI overlay for UI elements (keep inside ZStack for proper overlaying)
                 VStack {
-                    // Top navigation bar
-                    HStack {
-                        // Back to Lobby button (top left)
-                        Button(action: {
-                            Task {
-                                await gameModel.skipCurrentGame()
-                                showingGame = false
+                        // Top navigation bar
+                        HStack {
+                            // Back to Lobby button (top left)
+                            Button(action: {
+                                Task {
+                                    await gameModel.skipCurrentGame()
+                                    showingGame = false
+                                }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.left")
+                                    Text("Lobby")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
                             }
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.left")
-                                Text("Lobby")
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
-                        }
-                        .padding(.leading, 20)
-                        .padding(.top, 10)
+                            .padding(.leading, 20)
+                            .padding(.top, 10)
                         
-                        Spacer()
-                    }
-                    
-                    // Custom phrase attribution (top center)
-                    if !gameModel.customPhraseInfo.isEmpty {
-                        if gameModel.isShowingPhraseNotification {
+                            Spacer()
+                        }
+                        
+                        
+                        // Custom phrase attribution (top center)
+                        if !gameModel.customPhraseInfo.isEmpty {
+                            if gameModel.isShowingPhraseNotification {
                             // Notification styling: white text on black background with yellow border
                             Text(gameModel.customPhraseInfo)
                                 .font(.caption)
@@ -382,120 +398,7 @@ struct PhysicsGameView: View {
                         }
                     }
                     
-                    HStack {
-                        Spacer()
-                        
-                        VStack {
-                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                                .onAppear {
-                                    print("📱 INFO DICT DEBUG: \(Bundle.main.infoDictionary ?? [:])")
-                                    print("📱 VERSION DEBUG: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "NOT FOUND")")
-                                }
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .fontWeight(.bold)
-                                .onTapGesture {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.triggerQuake()
-                                    }
-                                }
-                            
-                            
-                            Text("NEXT:")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                                .fontWeight(.bold)
-                                .padding(.top, 4)
-                            
-                            Text("(server phrase)")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(4)
-                                .padding(.horizontal, 4)
-                            
-                        }
-                        .padding()
-                    }
                     
-                    
-                    Spacer()
-                    
-                    // Bottom controls - Skip button and Hint button
-                    HStack {
-                        VStack {
-                            Spacer()
-                            
-                            // Send Phrase button - Above Skip button
-                            Button(action: {
-                                showingPhraseCreation = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "square.and.pencil")
-                                    Text("Send Phrase")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color.blue.opacity(0.8))
-                                .cornerRadius(20)
-                                .shadow(radius: 4)
-                            }
-                            .padding(.bottom, 10)
-                            .padding(.leading, 20)
-                            
-                            // Skip button - Bottom left
-                            Button(action: {
-                                Task {
-                                    isSkipping = true
-                                    await gameModel.skipCurrentGame()
-                                    // CRITICAL: Reset the scene after model updates
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.resetGame()
-                                    }
-                                    // Brief delay to show loading completed
-                                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-                                    isSkipping = false
-                                }
-                            }) {
-                                HStack {
-                                    if isSkipping {
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                        Text("Loading...")
-                                    } else {
-                                        Image(systemName: "forward.fill")
-                                        Text("Skip")
-                                    }
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color.orange.opacity(0.8))
-                                .cornerRadius(20)
-                                .shadow(radius: 4)
-                            }
-                            .disabled(isSkipping)
-                            .opacity(isSkipping ? 0.6 : 1.0)
-                            .padding(.bottom, 20)
-                            .padding(.leading, 20)
-                        }
-                        
-                        Spacer()
-                        
-                        VStack {
-                            Spacer()
-                            
-                            // Hint button - Bottom right (always visible)
-                            HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
-                                // No longer used - clue is now displayed persistently
-                            }
-                            .padding(.bottom, 20)
-                            .padding(.trailing, 20)
-                        }
-                    }
                     
                     // Celebration text - Large and visible
                     if !celebrationMessage.isEmpty {
@@ -513,8 +416,168 @@ struct PhysicsGameView: View {
                             .zIndex(3000)
                     }
                     
-                    
+                    }
                 }
+                
+                // Bottom controls - OUTSIDE ZStack, at bottom of screen
+                HStack {
+                    VStack(alignment: .leading, spacing: 10) {
+                        // Skip button - Top position
+                        Button(action: {
+                            Task {
+                                isSkipping = true
+                                await gameModel.skipCurrentGame()
+                                // CRITICAL: Reset the scene after model updates
+                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                    scene.resetGame()
+                                }
+                                // Brief delay to show loading completed
+                                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                                isSkipping = false
+                            }
+                        }) {
+                            HStack {
+                                if isSkipping {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Loading...")
+                                } else {
+                                    Image(systemName: "forward.fill")
+                                    Text("Skip")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.orange.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                        .disabled(isSkipping)
+                        .opacity(isSkipping ? 0.6 : 1.0)
+                        
+                        // Send Phrase button - Bottom position
+                        Button(action: {
+                            showingPhraseCreation = true
+                        }) {
+                            HStack {
+                                Image(systemName: "square.and.pencil")
+                                Text("Send Phrase")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                    }
+                    .padding(.leading, 20)
+                    
+                    Spacer()
+                    
+                    // Hint button - Aligned with Send Phrase button
+                    VStack {
+                        Spacer() // Push hint button down to align with Send Phrase
+                        HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
+                            // No longer used - clue is now displayed persistently
+                        }
+                        .padding(.trailing, 20)
+                    }
+                
+                // Version number overlay - Top Right  
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .fontWeight(.bold)
+                            .onTapGesture {
+                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                    scene.triggerQuake()
+                                }
+                            }
+                            .padding(.trailing, 20)
+                            .padding(.top, 20)
+                    }
+                    Spacer()
+                }
+            }
+            
+            // Bottom controls - positioned at bottom of screen, outside main ZStack
+            VStack {
+                Spacer() // Push buttons to bottom
+                HStack {
+                    VStack(alignment: .leading, spacing: 10) {
+                        // Skip button - Top position
+                        Button(action: {
+                            Task {
+                                isSkipping = true
+                                await gameModel.skipCurrentGame()
+                                // CRITICAL: Reset the scene after model updates
+                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                    scene.resetGame()
+                                }
+                                // Brief delay to show loading completed
+                                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                                isSkipping = false
+                            }
+                        }) {
+                            HStack {
+                                if isSkipping {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Loading...")
+                                } else {
+                                    Image(systemName: "forward.fill")
+                                    Text("Skip")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.orange.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                        .disabled(isSkipping)
+                        .opacity(isSkipping ? 0.6 : 1.0)
+                        
+                        // Send Phrase button - Bottom position
+                        Button(action: {
+                            showingPhraseCreation = true
+                        }) {
+                            HStack {
+                                Image(systemName: "square.and.pencil")
+                                Text("Send Phrase")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                    }
+                    .padding(.leading, 20)
+                    
+                    Spacer()
+                    
+                    // Hint button - Aligned with Send Phrase button
+                    VStack {
+                        Spacer() // Push hint button down to align with Send Phrase
+                        HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
+                            // No longer used - clue is now displayed persistently
+                        }
+                        .padding(.trailing, 20)
+                    }
+                }
+                .padding(.bottom, 20)
             }
         }
         .fullScreenCover(isPresented: $showingPhraseCreation) {
@@ -531,6 +594,18 @@ struct PhysicsGameView: View {
         .onDisappear {
             motionManager.stopDeviceMotionUpdates()
         }
+    }
+    
+    private func calculateCurrentScore() -> Int {
+        guard gameModel.phraseDifficulty > 0 else { return 0 }
+        
+        var score = gameModel.phraseDifficulty
+        
+        if gameModel.hintsUsed >= 1 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.90)) }
+        if gameModel.hintsUsed >= 2 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.70)) }
+        if gameModel.hintsUsed >= 3 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.50)) }
+        
+        return score
     }
     
     private func getOrCreateScene(size: CGSize) -> PhysicsGameScene {
@@ -615,6 +690,7 @@ class PhysicsGameScene: SKScene {
     private var bookshelf: SKNode!
     private var floor: SKNode!
     private var tiles: [LetterTile] = []
+    private var scoreTile: ScoreTile?
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var celebrationText: String = ""
 
@@ -667,27 +743,11 @@ class PhysicsGameScene: SKScene {
         
         // Create isometric floor with depth
         floor = SKNode()
-        floor.position = CGPoint(x: size.width / 2, y: size.height * 0.15)
+        floor.position = CGPoint(x: size.width / 2, y: size.height * 0.15 + 50)
         addChild(floor)
         
-        // Floor with isometric perspective
-        let floorShape = SKShapeNode()
-        let floorPath = CGMutablePath()
+        // Floor shape removed - keeping only physics body for collision detection
         let floorWidth: CGFloat = size.width * 0.9
-        let floorDepth: CGFloat = 200
-        
-        // Create diamond-shaped floor for isometric view
-        floorPath.move(to: CGPoint(x: 0, y: floorDepth / 2))
-        floorPath.addLine(to: CGPoint(x: floorWidth / 2, y: 0))
-        floorPath.addLine(to: CGPoint(x: 0, y: -floorDepth / 2))
-        floorPath.addLine(to: CGPoint(x: -floorWidth / 2, y: 0))
-        floorPath.closeSubpath()
-        
-        floorShape.path = floorPath
-        floorShape.fillColor = .darkGray
-        floorShape.strokeColor = .black
-        floorShape.lineWidth = 2
-        floor.addChild(floorShape)
         
         // Physics body for floor (invisible rectangle for physics)
         let floorPhysics = SKSpriteNode(color: .clear, size: CGSize(width: floorWidth, height: 20))
@@ -701,10 +761,10 @@ class PhysicsGameScene: SKScene {
         
         // Create realistic bookshelf
         bookshelf = SKNode()
-        bookshelf.position = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
+        bookshelf.position = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
         addChild(bookshelf)
         
-        let shelfWidth: CGFloat = size.width * 0.75  // Reduced from 0.85 to 0.75 (10% less wide)
+        let shelfWidth: CGFloat = size.width * 0.675  // Reduced by 10% from 0.75 to 0.675
         let shelfHeight: CGFloat = 374  // Increased by 56% total (240 * 1.3 * 1.2)
         let shelfDepth: CGFloat = 50
         
@@ -716,7 +776,7 @@ class PhysicsGameScene: SKScene {
         
         // Create multiple shelves with proper wood grain appearance
         for i in 0..<4 {
-            let shelfY = CGFloat(-140 + (i * 94))  // Increased spacing by 56% total (-90*1.56, 60*1.56)
+            let shelfY = CGFloat(-140 + (i * 103))  // Increased spacing by 10% from 94 to 103
             let shelf = createRealisticShelf(width: shelfWidth - 20, y: shelfY, depth: shelfDepth)  // Reduced inset from 30 to 20
             shelf.name = "shelf_\(i)"  // Add identifier for hint system
             bookshelf.addChild(shelf)
@@ -891,6 +951,10 @@ class PhysicsGameScene: SKScene {
         tiles.forEach { $0.removeFromParent() }
         tiles.removeAll()
         
+        // Clear existing score tile
+        scoreTile?.removeFromParent()
+        scoreTile = nil
+        
         // Create tiles for current sentence
         let letters = gameModel.scrambledLetters
         let tileSize = CGSize(width: 40, height: 40)
@@ -930,6 +994,48 @@ class PhysicsGameScene: SKScene {
             
             run(sequence)
         }
+        
+        // Create score tile - rectangular and falls down like other tiles
+        let scoreTileSize = CGSize(width: 100, height: 40)  // Wider to fit 3-digit numbers + " pts"
+        scoreTile = ScoreTile(size: scoreTileSize)
+        
+        // Position score tile to fall from the right side
+        let scoreSpawnX = size.width * 0.8  // Right side
+        let scoreSpawnY = size.height * 0.95  // Near top
+        scoreTile?.position = CGPoint(x: scoreSpawnX, y: scoreSpawnY)
+        
+        // Add slight rotation for visual interest
+        scoreTile?.zRotation = CGFloat.random(in: -0.2...0.2)
+        
+        // Update score and add to scene with delay
+        if let scoreTile = scoreTile {
+            scoreTile.updateScore(calculateCurrentScore())
+            
+            let delayAction = SKAction.wait(forDuration: 1.0)  // Wait 1 second after tiles
+            let addAction = SKAction.run { [weak self] in
+                self?.addChild(scoreTile)
+                print("Score tile spawned with score: \(self?.calculateCurrentScore() ?? 0)")
+            }
+            
+            run(SKAction.sequence([delayAction, addAction]))
+        }
+    }
+    
+    private func calculateCurrentScore() -> Int {
+        guard gameModel.phraseDifficulty > 0 else { return 0 }
+        
+        var score = gameModel.phraseDifficulty
+        
+        if gameModel.hintsUsed >= 1 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.90)) }
+        if gameModel.hintsUsed >= 2 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.70)) }
+        if gameModel.hintsUsed >= 3 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.50)) }
+        
+        return score
+    }
+    
+    func updateScoreTile() {
+        scoreTile?.updateScore(calculateCurrentScore())
+        print("Score tile updated to: \(calculateCurrentScore())")
     }
     
     func updateGravity(from gravity: CMAcceleration) {
@@ -1046,7 +1152,7 @@ class PhysicsGameScene: SKScene {
         // Get shelf dimensions that match the actual shelf creation
         let wallThickness: CGFloat = 12
         let wallOverlap: CGFloat = 8
-        let shelfWidth: CGFloat = size.width * 0.75 - 20  // Match actual shelf width
+        let shelfWidth: CGFloat = size.width * 0.675 - 20  // Match actual shelf width
         let shelfThickness: CGFloat = 8
         let depthOffset: CGFloat = 15
         
@@ -1334,7 +1440,7 @@ class PhysicsGameScene: SKScene {
         removeAction(forKey: "quakeForces")
         
         // Smoothly return bookshelf to original position and rotation
-        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
+        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
         let returnToOriginalPosition = SKAction.move(to: originalPosition, duration: 0.3)
         let returnToOriginalRotation = SKAction.rotate(toAngle: 0, duration: 0.3)
         
@@ -1428,7 +1534,7 @@ class PhysicsGameScene: SKScene {
         
         // Reset bookshelf position and rotation in case quake was active
         bookshelf.removeAllActions()
-        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 50)
+        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
         bookshelf.position = originalPosition
         bookshelf.zRotation = 0
         
@@ -1889,6 +1995,11 @@ class PhysicsGameScene: SKScene {
                 tile.physicsBody?.isDynamic = false
                 print("Started dragging tile: \(tile.letter)")
                 break
+            } else if let scoreTile = node as? ScoreTile {
+                scoreTile.isBeingDragged = true
+                scoreTile.physicsBody?.isDynamic = false
+                print("Started dragging score tile")
+                break
             } else if let tile = tiles.first(where: { $0.contains(node) }) {
                 tile.isBeingDragged = true
                 tile.physicsBody?.isDynamic = false
@@ -1907,6 +2018,16 @@ class PhysicsGameScene: SKScene {
                 break
             }
         }
+        
+        // Check direct distance to score tile
+        if let scoreTile = scoreTile {
+            let distance = sqrt(pow(location.x - scoreTile.position.x, 2) + pow(location.y - scoreTile.position.y, 2))
+            if distance < 30 { // Within 30 points of score tile center
+                scoreTile.isBeingDragged = true
+                scoreTile.physicsBody?.isDynamic = false
+                print("Started dragging score tile (by distance)")
+            }
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1916,6 +2037,11 @@ class PhysicsGameScene: SKScene {
         // Move dragged tile
         if let tile = tiles.first(where: { $0.isBeingDragged }) {
             tile.position = location
+        }
+        
+        // Move dragged score tile
+        if let scoreTile = scoreTile, scoreTile.isBeingDragged {
+            scoreTile.position = location
         }
     }
     
@@ -1937,6 +2063,18 @@ class PhysicsGameScene: SKScene {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.checkSolution()
             }
+        }
+        
+        // Release dragged score tile
+        if let scoreTile = scoreTile, scoreTile.isBeingDragged {
+            scoreTile.isBeingDragged = false
+            scoreTile.physicsBody?.isDynamic = true
+            
+            // Stop all movement immediately - no sliding
+            scoreTile.physicsBody?.velocity = CGVector.zero
+            scoreTile.physicsBody?.angularVelocity = 0
+            
+            print("Released score tile - stopped immediately")
         }
     }
 }
@@ -2084,6 +2222,108 @@ class LetterTile: SKSpriteNode {
 extension PhysicsGameScene: SKPhysicsContactDelegate {
     func didBegin(_ contact: SKPhysicsContact) {
         // Handle tile collisions and word formation
+    }
+}
+
+class ScoreTile: SKSpriteNode {
+    private var frontFace: SKShapeNode?
+    private var scoreLabel: SKLabelNode?
+    var isBeingDragged = false
+    
+    init(size: CGSize) {
+        super.init(texture: nil, color: .clear, size: size)
+        
+        let tileWidth = size.width
+        let tileHeight = size.height
+        let depth: CGFloat = 6
+        
+        // Create the main tile body (top surface) - lighter gold for top lighting (like LetterTile)
+        let topFace = SKShapeNode()
+        let topPath = CGMutablePath()
+        topPath.move(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
+        topPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        topPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        topPath.addLine(to: CGPoint(x: -tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        topPath.closeSubpath()
+        topFace.path = topPath
+        topFace.fillColor = UIColor(red: 1.0, green: 0.9, blue: 0.2, alpha: 1.0)  // Very bright gold
+        topFace.strokeColor = .black
+        topFace.lineWidth = 2
+        topFace.zPosition = -0.1  // Put tile roofs in background
+        addChild(topFace)
+        
+        // Create the front face (main visible surface) - like LetterTile
+        let frontFaceShape = SKShapeNode()
+        let frontPath = CGMutablePath()
+        frontPath.move(to: CGPoint(x: -tileWidth / 2, y: -tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
+        frontPath.closeSubpath()
+        frontFaceShape.path = frontPath
+        frontFaceShape.fillColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0)  // Gold color
+        frontFaceShape.strokeColor = .black
+        frontFaceShape.lineWidth = 2
+        frontFaceShape.zPosition = 0.1
+        frontFace = frontFaceShape  // Store reference
+        addChild(frontFaceShape)
+        
+        // Create the right face (shadow side - darker) - like LetterTile
+        let rightFace = SKShapeNode()
+        let rightPath = CGMutablePath()
+        rightPath.move(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: -tileHeight / 2 + depth))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        rightPath.closeSubpath()
+        rightFace.path = rightPath
+        rightFace.fillColor = UIColor(red: 0.6, green: 0.5, blue: 0.0, alpha: 1.0)  // Dark gold shadow side
+        rightFace.strokeColor = UIColor(red: 0.4, green: 0.3, blue: 0.0, alpha: 1.0)
+        rightFace.lineWidth = 2
+        rightFace.zPosition = 0.0
+        addChild(rightFace)
+        
+        // Create score label
+        scoreLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        scoreLabel?.fontSize = 24
+        scoreLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)  // Dark text like letter tiles
+        scoreLabel?.verticalAlignmentMode = .center
+        scoreLabel?.horizontalAlignmentMode = .center
+        scoreLabel?.zPosition = 10.0  // Same as letter tiles
+        addChild(scoreLabel!)
+        
+        // Set z-position to match letter tiles
+        zPosition = 50
+        
+        setupPhysics()
+    }
+    
+    func updateScore(_ score: Int) {
+        scoreLabel?.text = "\(score) pts"
+    }
+    
+    private func setupPhysics() {
+        // Create physics body
+        physicsBody = SKPhysicsBody(rectangleOf: size)
+        physicsBody?.isDynamic = true
+        physicsBody?.mass = 0.1  // Lighter than letter tiles
+        physicsBody?.friction = 0.6
+        physicsBody?.restitution = 0.3  // Bouncy
+        physicsBody?.linearDamping = 0.95
+        physicsBody?.angularDamping = 0.99
+        physicsBody?.affectedByGravity = true
+        
+        // Collision detection
+        physicsBody?.categoryBitMask = PhysicsCategories.tile
+        physicsBody?.contactTestBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        
+        physicsBody?.allowsRotation = true
+        physicsBody?.density = 0.8  // Lighter than letter tiles
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 }
 
