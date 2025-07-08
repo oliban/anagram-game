@@ -17,6 +17,7 @@ struct PhraseCreationView: View {
     @State private var currentDifficulty: DifficultyAnalysis? = nil
     @State private var isAnalyzingDifficulty = false
     @State private var debounceTimer: Timer?
+    @State private var selectedLanguage: String = "en" // Default to English
     @FocusState private var isSearchFieldFocused: Bool
     @FocusState private var isPhraseFieldFocused: Bool
     @FocusState private var isClueFieldFocused: Bool
@@ -174,6 +175,84 @@ struct PhraseCreationView: View {
                             }
                         }
                     }
+                }
+                
+                // Language selection section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Language")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    HStack(spacing: 12) {
+                        // English option
+                        Button(action: {
+                            selectedLanguage = "en"
+                        }) {
+                            HStack(spacing: 8) {
+                                Image("flag_england")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 24, height: 16)
+                                
+                                Text("English")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                if selectedLanguage == "en" {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(selectedLanguage == "en" ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(selectedLanguage == "en" ? Color.blue : Color.clear, lineWidth: 2)
+                            )
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Swedish option
+                        Button(action: {
+                            selectedLanguage = "sv"
+                        }) {
+                            HStack(spacing: 8) {
+                                Image("flag_sweden")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 24, height: 16)
+                                
+                                Text("Svenska")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                if selectedLanguage == "sv" {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(selectedLanguage == "sv" ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(selectedLanguage == "sv" ? Color.blue : Color.clear, lineWidth: 2)
+                            )
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    Text("Select the language for this phrase. This will be displayed as a flag icon during gameplay.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
                 }
                 
                 // Player availability section
@@ -414,6 +493,9 @@ struct PhraseCreationView: View {
             debounceTimer?.invalidate()
         }
         .onChange(of: phraseText) { _, newValue in
+            // Auto-detect language based on Swedish characters
+            detectLanguage(from: newValue)
+            
             // Cancel existing timer
             debounceTimer?.invalidate()
             
@@ -470,7 +552,8 @@ struct PhraseCreationView: View {
                 let success = await networkManager.sendPhrase(
                     content: finalPhrase,
                     targetId: targetId,
-                    clue: clueText.trimmingCharacters(in: .whitespacesAndNewlines) // Now required, never nil
+                    clue: clueText.trimmingCharacters(in: .whitespacesAndNewlines), // Now required, never nil
+                    language: selectedLanguage
                 )
                 
                 if !success {
@@ -546,6 +629,20 @@ struct PhraseCreationView: View {
     
     private func removePlayer(_ player: Player) {
         selectedPlayers.removeAll { $0.id == player.id }
+    }
+    
+    private func detectLanguage(from text: String) {
+        let cleanText = text.lowercased()
+        
+        // Detect Swedish characters (å, ä, ö)
+        if cleanText.range(of: "[åäö]", options: .regularExpression) != nil {
+            if selectedLanguage != "sv" {
+                selectedLanguage = "sv"
+            }
+        } else if !cleanText.isEmpty && selectedLanguage == "sv" {
+            // If text doesn't contain Swedish characters but language was Swedish, reset to English
+            selectedLanguage = "en"
+        }
     }
 }
 

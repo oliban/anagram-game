@@ -16,8 +16,8 @@ class DatabasePhrase {
     this.createdAt = data.created_at;
     this.isApproved = data.is_approved || false;
     this.usageCount = data.usage_count || 0;
-    this.phraseType = data.phrase_type || 'other';
-    this.priority = data.priority || 1;
+    this.phraseType = data.phrase_type || 'custom';
+    this.language = data.language || LANGUAGES.ENGLISH;
   }
 
   /**
@@ -32,7 +32,6 @@ class DatabasePhrase {
       difficultyLevel: this.difficultyLevel,
       isGlobal: this.isGlobal,
       phraseType: this.phraseType,
-      priority: this.priority,
       usageCount: this.usageCount,
       createdAt: this.createdAt,
       // Legacy fields for backward compatibility
@@ -140,7 +139,8 @@ class DatabasePhrase {
       content,
       senderId,
       targetId,
-      hint
+      hint,
+      language = LANGUAGES.ENGLISH
     } = options;
 
     // Basic validation
@@ -161,10 +161,10 @@ class DatabasePhrase {
 
     try {
       const result = await query(`
-        INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
-      `, [cleanContent, cleanHint, difficultyScore, false, senderId, true]);
+      `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language]);
 
       const phraseData = result.rows[0];
       console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
@@ -173,7 +173,7 @@ class DatabasePhrase {
       
       // If this is a targeted phrase, assign it to the target player
       if (targetId) {
-        await this.assignPhraseToPlayers(phrase.id, [targetId], 1);
+        await this.assignPhraseToPlayers(phrase.id, [targetId]);
       }
       
       return phrase;
@@ -199,13 +199,12 @@ class DatabasePhrase {
           p.created_by_player_id as "senderId",
           pp.target_player_id as "targetId",
           false as "isConsumed",
-          pp.priority,
           'targeted' as phrase_type
         FROM phrases p
         JOIN player_phrases pp ON p.id = pp.phrase_id
         WHERE pp.target_player_id = $1 
           AND pp.is_delivered = false
-        ORDER BY pp.priority DESC, p.created_at ASC
+        ORDER BY p.created_at ASC
         LIMIT 10
       `, [playerId]);
 
@@ -217,8 +216,7 @@ class DatabasePhrase {
           difficulty_level: row.difficulty_level,
           is_global: row.is_global,
           created_by_player_id: row.senderId,
-          phrase_type: row.phrase_type,
-          priority: row.priority
+          phrase_type: row.phrase_type
         });
         
         // Add legacy properties for backward compatibility
@@ -257,8 +255,7 @@ class DatabasePhrase {
         content: phraseData.content,
         hint: phraseData.hint,
         difficulty_level: phraseData.difficulty_level,
-        phrase_type: phraseData.phrase_type,
-        priority: phraseData.priority
+        phrase_type: phraseData.phrase_type
       });
 
       console.log(`✅ DATABASE: Found ${phraseData.phrase_type} phrase for player: "${phrase.content}"`);
@@ -342,15 +339,15 @@ class DatabasePhrase {
   /**
    * Assign phrase to specific players (targeting)
    */
-  static async assignPhraseToPlayers(phraseId, targetPlayerIds, priority = 1) {
+  static async assignPhraseToPlayers(phraseId, targetPlayerIds) {
     try {
       await transaction(async (client) => {
         for (const playerId of targetPlayerIds) {
           await client.query(`
-            INSERT INTO player_phrases (phrase_id, target_player_id, priority)
-            VALUES ($1, $2, $3)
+            INSERT INTO player_phrases (phrase_id, target_player_id)
+            VALUES ($1, $2)
             ON CONFLICT DO NOTHING
-          `, [phraseId, playerId, priority]);
+          `, [phraseId, playerId]);
         }
       });
 
@@ -578,8 +575,7 @@ class DatabasePhrase {
       targetIds = [], // Array for multi-player targeting
       isGlobal = false,
       phraseType = 'custom',
-      priority = 1,
-      language = LANGUAGES.ENGLISH // Optional language parameter for difficulty calculation
+      language = LANGUAGES.ENGLISH // Language parameter for LanguageTile feature
     } = options;
 
     // Comprehensive validation
@@ -604,10 +600,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const phraseResult = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, priority)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, priority]);
+        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 

@@ -12,6 +12,7 @@ const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const { HintSystem, HintValidationError } = require('./services/hintSystem');
 const ScoringSystem = require('./services/scoringSystem');
+const { detectLanguage } = require('./services/difficultyScorer');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -382,7 +383,7 @@ app.get('/api/players/online', async (req, res) => {
  */
 app.post('/api/phrases', async (req, res) => {
   try {
-    const { content, senderId, targetId } = req.body;
+    const { content, senderId, targetId, language } = req.body;
     
     // Validate required fields
     if (!content || !senderId || !targetId) {
@@ -414,12 +415,16 @@ app.post('/api/phrases', async (req, res) => {
       });
     }
     
+    // Auto-detect language if not provided
+    const detectedLanguage = language || detectLanguage(content);
+
     // Create phrase in database
     const phrase = await DatabasePhrase.createPhrase({
       content,
       senderId,
       targetId,
-      hint: req.body.hint || null // Optional hint support
+      hint: req.body.hint || null, // Optional hint support
+      language: detectedLanguage
     });
     
     console.log(`📝 Phrase created: "${content}" from ${sender.name} to ${target.name}`);
@@ -590,7 +595,7 @@ app.post('/api/phrases/create', async (req, res) => {
       isGlobal = false,
       difficultyLevel = 1,
       phraseType = 'custom',
-      priority = 1
+      language // Optional - will be auto-detected if not provided
     } = req.body;
 
     // Validate required fields
@@ -633,6 +638,9 @@ app.post('/api/phrases/create', async (req, res) => {
       }
     }
 
+    // Auto-detect language if not provided
+    const detectedLanguage = language || detectLanguage(content);
+
     // Create enhanced phrase
     const result = await DatabasePhrase.createEnhancedPhrase({
       content,
@@ -640,9 +648,8 @@ app.post('/api/phrases/create', async (req, res) => {
       senderId,
       targetIds,
       isGlobal,
-      difficultyLevel,
       phraseType,
-      priority
+      language: detectedLanguage
     });
 
     const { phrase, targetCount, isGlobal: phraseIsGlobal } = result;

@@ -97,7 +97,7 @@ class Phase4EnhancedCreationTests {
       targetIds: [this.testPlayers[1].id],
       difficultyLevel: 2,
       phraseType: 'custom',
-      priority: 1
+      language: 'en'
     }, 201);
 
     const passed = result.success && 
@@ -105,7 +105,7 @@ class Phase4EnhancedCreationTests {
       result.data.phrase &&
       result.data.phrase.difficultyLevel === 2 &&
       result.data.phrase.phraseType === 'custom' &&
-      result.data.phrase.priority === 1 &&
+      result.data.phrase.language === 'en' &&
       result.data.phrase.senderInfo &&
       result.data.targeting;
 
@@ -136,7 +136,7 @@ class Phase4EnhancedCreationTests {
       isGlobal: true,
       difficultyLevel: 3,
       phraseType: 'community',
-      priority: 2
+      language: 'en'
     }, 201);
 
     const passed = result.success && 
@@ -171,7 +171,7 @@ class Phase4EnhancedCreationTests {
       targetIds: targetIds,
       difficultyLevel: 4,
       phraseType: 'challenge',
-      priority: 3
+      language: 'sv'
     }, 201);
 
     const passed = result.success && 
@@ -374,7 +374,7 @@ class Phase4EnhancedCreationTests {
       targetIds: [this.testPlayers[1].id],
       difficultyLevel: 3,
       phraseType: 'custom',
-      priority: 2
+      language: 'en'
     }, 201);
 
 
@@ -386,7 +386,7 @@ class Phase4EnhancedCreationTests {
       result.data.phrase.hint &&
       result.data.phrase.difficultyLevel &&
       result.data.phrase.phraseType &&
-      result.data.phrase.priority &&
+      result.data.phrase.language &&
       result.data.phrase.senderInfo &&
       result.data.phrase.senderInfo.id &&
       result.data.phrase.senderInfo.name &&

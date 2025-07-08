@@ -38,9 +38,10 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     let createdAt: Date
     let isConsumed: Bool
     let senderName: String
+    let language: String // Language code for LanguageTile feature
     
     private enum CodingKeys: String, CodingKey {
-        case id, content, senderId, targetId, createdAt, isConsumed, senderName
+        case id, content, senderId, targetId, createdAt, isConsumed, senderName, language
     }
     
     init(from decoder: Decoder) throws {
@@ -51,6 +52,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
         targetId = try container.decode(String.self, forKey: .targetId)
         isConsumed = try container.decode(Bool.self, forKey: .isConsumed)
         senderName = try container.decode(String.self, forKey: .senderName)
+        language = try container.decodeIfPresent(String.self, forKey: .language) ?? "en" // Default to English
         
         // Handle date parsing
         let dateString = try container.decode(String.self, forKey: .createdAt)
@@ -600,7 +602,7 @@ class NetworkManager: ObservableObject {
         }
     }
     
-    func sendPhrase(content: String, targetId: String, clue: String? = nil) async -> Bool {
+    func sendPhrase(content: String, targetId: String, clue: String? = nil, language: String = "en") async -> Bool {
         guard let url = URL(string: "\(baseURL)/api/phrases") else {
             print("❌ PHRASE: Invalid URL for sending phrase")
             return false
@@ -619,7 +621,8 @@ class NetworkManager: ObservableObject {
             var requestBody: [String: Any] = [
                 "content": content,
                 "senderId": currentPlayer.id,
-                "targetId": targetId
+                "targetId": targetId,
+                "language": language
             ]
             
             // Add clue if provided (sent as "hint" to server for compatibility)
