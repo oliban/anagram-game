@@ -208,8 +208,7 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
 ### Phase 1: Server Setup and Versioning
 1. **Kill existing server**: `pkill -f "node server.js"`
 2. **Start fresh server**: `node server/server.js > server/server_output.log 2>&1 &`
-3. **Monitor logs**: `tail -f server/server_output.log &`
-4. **Increment version**: Update both `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
+3. **Increment version**: Update both `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
 
 ### Phase 2: Build Process
 1. **Clean build**: `xcodebuild clean -project "Anagram Game.xcodeproj" -scheme "Anagram Game"`
@@ -226,10 +225,10 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
 3. **Launch iPhone 15**: `xcrun simctl launch AF307F12-A657-4D6A-8123-240CBBEC5B31 com.fredrik.anagramgame`
 4. **Launch iPhone 15 Pro**: `xcrun simctl launch 86355D8A-560E-465D-8FDC-3D037BCA482B com.fredrik.anagramgame`
 
-### Phase 4: Verification
-- **Monitor server logs** for player connections and WebSocket activity
-- **Verify both devices** show successful registration and connection
-- **Check API calls** are flowing (status, players/online, phrases/for endpoints)
+### Phase 4: Verification and Log Monitoring
+1. **Monitor server logs**: `tail -f server/server_output.log` (ONLY AFTER apps are launched)
+2. **Verify both devices** show successful registration and connection
+3. **Check API calls** are flowing (status, players/online, phrases/for endpoints)
 
 ## Post-Deployment Workflow
 - **Always do this after deploying a fix**:

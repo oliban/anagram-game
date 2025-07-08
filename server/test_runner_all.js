@@ -15,6 +15,11 @@ const Phase4EnhancedCreationTests = require('./test_phase4_enhanced_creation');
 const Phase4GlobalPhrasesTests = require('./test_phase4_global_phrases');
 const PhraseApprovalTests = require('./test_phrase_approval');
 const Phase4ValidationTests = require('./test_phase4_validation_suite');
+const WebSocketDataStructureTest = require('./test_websocket_data_structure');
+const DatabasePhraseStructureTest = require('./test_database_phrase_structure');
+const HintSystemTester = require('./test_hint_system');
+const EnhancedCoverageTestRunner = require('./test_enhanced_coverage');
+const ScoringSystemTester = require('./test_scoring_system');
 
 class TestRunner {
   constructor() {
@@ -25,6 +30,11 @@ class TestRunner {
       phase4Global: null,
       phase4Approval: null,
       phase4Validation: null,
+      websocketData: null,
+      databasePhrase: null,
+      hintSystem: null,
+      enhancedCoverage: null,
+      scoringSystem: null,
       combined: {
         passed: 0,
         failed: 0,
@@ -205,6 +215,151 @@ class TestRunner {
     }
   }
 
+  async runWebSocketDataTests() {
+    this.log('\n📡 Running WebSocket Data Structure Tests...');
+    this.log('================================================');
+    
+    const websocketSuite = new WebSocketDataStructureTest();
+    try {
+      await websocketSuite.run();
+      const passed = websocketSuite.testResults.filter(r => r.status === 'PASSED').length;
+      const failed = websocketSuite.testResults.filter(r => r.status === 'FAILED').length;
+      const total = websocketSuite.testResults.length;
+      
+      this.results.websocketData = {
+        success: failed === 0,
+        passed,
+        failed,
+        skipped: 0,
+        total
+      };
+      
+      return failed === 0;
+    } catch (error) {
+      this.log(`❌ WebSocket data structure tests failed: ${error.message}`, 'error');
+      this.results.websocketData = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
+  async runDatabasePhraseTests() {
+    this.log('\n💾 Running Database Phrase Structure Tests...');
+    this.log('================================================');
+    
+    const databaseSuite = new DatabasePhraseStructureTest();
+    try {
+      await databaseSuite.run();
+      const passed = databaseSuite.testResults.filter(r => r.status === 'PASSED').length;
+      const failed = databaseSuite.testResults.filter(r => r.status === 'FAILED').length;
+      const total = databaseSuite.testResults.length;
+      
+      this.results.databasePhrase = {
+        success: failed === 0,
+        passed,
+        failed,
+        skipped: 0,
+        total
+      };
+      
+      return failed === 0;
+    } catch (error) {
+      this.log(`❌ Database phrase structure tests failed: ${error.message}`, 'error');
+      this.results.databasePhrase = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
+  async runHintSystemTests() {
+    this.log('\n💡 Running Hint System Tests...');
+    this.log('================================================');
+    
+    const hintSuite = new HintSystemTester();
+    try {
+      await hintSuite.run();
+      const passed = hintSuite.testResults.filter(r => r.status === 'PASSED').length;
+      const failed = hintSuite.testResults.filter(r => r.status === 'FAILED').length;
+      const total = hintSuite.testResults.length;
+      
+      this.results.hintSystem = {
+        success: failed === 0,
+        passed,
+        failed,
+        skipped: 0,
+        total
+      };
+      
+      return failed === 0;
+    } catch (error) {
+      this.log(`❌ Hint system tests failed: ${error.message}`, 'error');
+      this.results.hintSystem = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
+  async runEnhancedCoverageTests() {
+    this.log('\n🎯 Running Enhanced Coverage Tests...');
+    this.log('================================================');
+    
+    const enhancedSuite = new EnhancedCoverageTestRunner();
+    try {
+      await enhancedSuite.run();
+      
+      // Calculate total results from enhanced coverage suite
+      let totalPassed = 0;
+      let totalFailed = 0;
+      let totalTests = 0;
+      
+      for (const result of Object.values(enhancedSuite.results)) {
+        if (result) {
+          totalPassed += result.passed;
+          totalFailed += result.failed;
+          totalTests += result.total;
+        }
+      }
+      
+      this.results.enhancedCoverage = {
+        success: totalFailed === 0,
+        passed: totalPassed,
+        failed: totalFailed,
+        skipped: 0,
+        total: totalTests
+      };
+      
+      return totalFailed === 0;
+    } catch (error) {
+      this.log(`❌ Enhanced coverage tests failed: ${error.message}`, 'error');
+      this.results.enhancedCoverage = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
+  async runScoringSystemTests() {
+    this.log('\n📊 Running Scoring System Tests...');
+    this.log('================================================');
+    
+    const scoringSuite = new ScoringSystemTester();
+    try {
+      await scoringSuite.run();
+      const passed = scoringSuite.testResults.filter(r => r.status === 'PASSED').length;
+      const failed = scoringSuite.testResults.filter(r => r.status === 'FAILED').length;
+      const total = scoringSuite.testResults.length;
+      
+      this.results.scoringSystem = {
+        success: failed === 0,
+        passed,
+        failed,
+        skipped: 0,
+        total
+      };
+      
+      return failed === 0;
+    } catch (error) {
+      this.log(`❌ Scoring system tests failed: ${error.message}`, 'error');
+      this.results.scoringSystem = { success: false, passed: 0, failed: 1, skipped: 0, total: 1 };
+      return false;
+    }
+  }
+
   generateReport() {
     this.log('\n📊 COMPLETE TEST REPORT');
     this.log('========================');
@@ -250,6 +405,41 @@ class TestRunner {
       this.results.combined.failed += this.results.phase4Validation.failed;
       this.results.combined.skipped += this.results.phase4Validation.skipped;
       this.results.combined.total += this.results.phase4Validation.total;
+    }
+
+    if (this.results.websocketData) {
+      this.results.combined.passed += this.results.websocketData.passed;
+      this.results.combined.failed += this.results.websocketData.failed;
+      this.results.combined.skipped += this.results.websocketData.skipped;
+      this.results.combined.total += this.results.websocketData.total;
+    }
+
+    if (this.results.databasePhrase) {
+      this.results.combined.passed += this.results.databasePhrase.passed;
+      this.results.combined.failed += this.results.databasePhrase.failed;
+      this.results.combined.skipped += this.results.databasePhrase.skipped;
+      this.results.combined.total += this.results.databasePhrase.total;
+    }
+
+    if (this.results.hintSystem) {
+      this.results.combined.passed += this.results.hintSystem.passed;
+      this.results.combined.failed += this.results.hintSystem.failed;
+      this.results.combined.skipped += this.results.hintSystem.skipped;
+      this.results.combined.total += this.results.hintSystem.total;
+    }
+
+    if (this.results.enhancedCoverage) {
+      this.results.combined.passed += this.results.enhancedCoverage.passed;
+      this.results.combined.failed += this.results.enhancedCoverage.failed;
+      this.results.combined.skipped += this.results.enhancedCoverage.skipped;
+      this.results.combined.total += this.results.enhancedCoverage.total;
+    }
+
+    if (this.results.scoringSystem) {
+      this.results.combined.passed += this.results.scoringSystem.passed;
+      this.results.combined.failed += this.results.scoringSystem.failed;
+      this.results.combined.skipped += this.results.scoringSystem.skipped;
+      this.results.combined.total += this.results.scoringSystem.total;
     }
 
     // Test suite summaries
@@ -305,6 +495,51 @@ class TestRunner {
       this.log(`   ⏭️ Skipped: ${this.results.phase4Validation.skipped}`);
       this.log(`   🎯 Total: ${this.results.phase4Validation.total}`);
       this.log(`   📈 Success Rate: ${Math.round((this.results.phase4Validation.passed / this.results.phase4Validation.total) * 100)}%`);
+    }
+
+    if (this.results.websocketData) {
+      this.log(`\n📡 WebSocket Data Structure Tests:`);
+      this.log(`   ✅ Passed: ${this.results.websocketData.passed}`);
+      this.log(`   ❌ Failed: ${this.results.websocketData.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.websocketData.skipped}`);
+      this.log(`   🎯 Total: ${this.results.websocketData.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.websocketData.passed / this.results.websocketData.total) * 100)}%`);
+    }
+
+    if (this.results.databasePhrase) {
+      this.log(`\n💾 Database Phrase Structure Tests:`);
+      this.log(`   ✅ Passed: ${this.results.databasePhrase.passed}`);
+      this.log(`   ❌ Failed: ${this.results.databasePhrase.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.databasePhrase.skipped}`);
+      this.log(`   🎯 Total: ${this.results.databasePhrase.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.databasePhrase.passed / this.results.databasePhrase.total) * 100)}%`);
+    }
+
+    if (this.results.hintSystem) {
+      this.log(`\n💡 Hint System Tests:`);
+      this.log(`   ✅ Passed: ${this.results.hintSystem.passed}`);
+      this.log(`   ❌ Failed: ${this.results.hintSystem.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.hintSystem.skipped}`);
+      this.log(`   🎯 Total: ${this.results.hintSystem.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.hintSystem.passed / this.results.hintSystem.total) * 100)}%`);
+    }
+
+    if (this.results.enhancedCoverage) {
+      this.log(`\n🎯 Enhanced Coverage Tests:`);
+      this.log(`   ✅ Passed: ${this.results.enhancedCoverage.passed}`);
+      this.log(`   ❌ Failed: ${this.results.enhancedCoverage.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.enhancedCoverage.skipped}`);
+      this.log(`   🎯 Total: ${this.results.enhancedCoverage.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.enhancedCoverage.passed / this.results.enhancedCoverage.total) * 100)}%`);
+    }
+
+    if (this.results.scoringSystem) {
+      this.log(`\n📊 Scoring System Tests:`);
+      this.log(`   ✅ Passed: ${this.results.scoringSystem.passed}`);
+      this.log(`   ❌ Failed: ${this.results.scoringSystem.failed}`);
+      this.log(`   ⏭️ Skipped: ${this.results.scoringSystem.skipped}`);
+      this.log(`   🎯 Total: ${this.results.scoringSystem.total}`);
+      this.log(`   📈 Success Rate: ${Math.round((this.results.scoringSystem.passed / this.results.scoringSystem.total) * 100)}%`);
     }
 
     // Combined summary
@@ -432,6 +667,22 @@ class TestRunner {
       
       const phase4ValidationSuccess = await this.runPhase4ValidationTests();
       overallSuccess = overallSuccess && phase4ValidationSuccess;
+      
+      // Run enhanced coverage tests for recent commits
+      const websocketDataSuccess = await this.runWebSocketDataTests();
+      overallSuccess = overallSuccess && websocketDataSuccess;
+      
+      const databasePhraseSuccess = await this.runDatabasePhraseTests();
+      overallSuccess = overallSuccess && databasePhraseSuccess;
+      
+      const hintSystemSuccess = await this.runHintSystemTests();
+      overallSuccess = overallSuccess && hintSystemSuccess;
+      
+      const enhancedCoverageSuccess = await this.runEnhancedCoverageTests();
+      overallSuccess = overallSuccess && enhancedCoverageSuccess;
+      
+      const scoringSystemSuccess = await this.runScoringSystemTests();
+      overallSuccess = overallSuccess && scoringSystemSuccess;
     }
 
     // Generate final report

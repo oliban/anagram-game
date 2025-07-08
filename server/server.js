@@ -11,6 +11,7 @@ const { testConnection, getStats: getDbStats, shutdown: shutdownDb, pool } = req
 const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const { HintSystem, HintValidationError } = require('./services/hintSystem');
+const ScoringSystem = require('./services/scoringSystem');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -1458,6 +1459,387 @@ app.get('/api/phrases/:phraseId/preview', async (req, res) => {
 
     res.status(500).json({
       error: 'Failed to get phrase preview'
+    });
+  }
+});
+
+// ============================================
+// SCORING SYSTEM ENDPOINTS (Phase 4.9)
+// ============================================
+
+/**
+ * @swagger
+ * /api/scores/player/{playerId}:
+ *   get:
+ *     summary: Get player score summary
+ *     description: Returns comprehensive scoring information for a player including daily, weekly, and total scores with rankings
+ *     tags: [Scoring System]
+ *     parameters:
+ *       - in: path
+ *         name: playerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID of the player
+ *     responses:
+ *       200:
+ *         description: Player score summary retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 scores:
+ *                   type: object
+ *                   properties:
+ *                     dailyScore:
+ *                       type: integer
+ *                       example: 150
+ *                     dailyRank:
+ *                       type: integer
+ *                       example: 5
+ *                     weeklyScore:
+ *                       type: integer
+ *                       example: 890
+ *                     weeklyRank:
+ *                       type: integer
+ *                       example: 12
+ *                     totalScore:
+ *                       type: integer
+ *                       example: 2340
+ *                     totalRank:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPhrases:
+ *                       type: integer
+ *                       example: 47
+ *       400:
+ *         description: Invalid player ID format
+ *       404:
+ *         description: Player not found
+ *       503:
+ *         description: Database connection required
+ */
+app.get('/api/scores/player/:playerId', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for scoring system'
+      });
+    }
+
+    const { playerId } = req.params;
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(playerId)) {
+      return res.status(400).json({
+        error: 'Invalid player ID format'
+      });
+    }
+
+    // Verify player exists
+    const player = await DatabasePlayer.getPlayerById(playerId);
+    if (!player) {
+      return res.status(404).json({
+        error: 'Player not found'
+      });
+    }
+
+    // Get player score summary
+    const scores = await ScoringSystem.getPlayerScoreSummary(playerId);
+
+    res.json({
+      success: true,
+      playerId,
+      playerName: player.name,
+      scores,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ SCORES: Error getting player scores:', error.message);
+    res.status(500).json({
+      error: 'Failed to get player scores'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/leaderboards/{period}:
+ *   get:
+ *     summary: Get leaderboard for specific period
+ *     description: Returns leaderboard rankings for daily, weekly, or total scores
+ *     tags: [Scoring System]
+ *     parameters:
+ *       - in: path
+ *         name: period
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [daily, weekly, total]
+ *         description: Leaderboard period
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of top players to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: Number of players to skip (for pagination)
+ *     responses:
+ *       200:
+ *         description: Leaderboard retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 leaderboard:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       rank:
+ *                         type: integer
+ *                         example: 1
+ *                       playerName:
+ *                         type: string
+ *                         example: "TopPlayer"
+ *                       totalScore:
+ *                         type: integer
+ *                         example: 2340
+ *                       phrasesCompleted:
+ *                         type: integer
+ *                         example: 47
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 150
+ *                     limit:
+ *                       type: integer
+ *                       example: 50
+ *                     offset:
+ *                       type: integer
+ *                       example: 0
+ *                     hasMore:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: Invalid period or parameters
+ *       503:
+ *         description: Database connection required
+ */
+app.get('/api/leaderboards/:period', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for leaderboards'
+      });
+    }
+
+    const { period } = req.params;
+    const limit = req.query.limit !== undefined ? Math.min(parseInt(req.query.limit), 100) : 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    // Validate period
+    if (!['daily', 'weekly', 'total'].includes(period)) {
+      return res.status(400).json({
+        error: 'Invalid period. Must be daily, weekly, or total'
+      });
+    }
+
+    // Validate pagination parameters
+    if (limit < 1 || offset < 0) {
+      return res.status(400).json({
+        error: 'Invalid pagination parameters'
+      });
+    }
+
+    // Get leaderboard
+    const leaderboardData = await ScoringSystem.getLeaderboard(period, limit, offset);
+
+    res.json({
+      success: true,
+      ...leaderboardData,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ LEADERBOARD: Error getting leaderboard:', error.message);
+    res.status(500).json({
+      error: 'Failed to get leaderboard'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/stats/global:
+ *   get:
+ *     summary: Get global scoring statistics
+ *     description: Returns comprehensive statistics about the scoring system including total players, scores, and activity
+ *     tags: [Scoring System]
+ *     responses:
+ *       200:
+ *         description: Global statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     overall:
+ *                       type: object
+ *                       properties:
+ *                         activePlayers:
+ *                           type: integer
+ *                           example: 150
+ *                         totalCompletions:
+ *                           type: integer
+ *                           example: 2340
+ *                         averageScore:
+ *                           type: string
+ *                           example: "45.6"
+ *                         highestScore:
+ *                           type: integer
+ *                           example: 100
+ *                         totalPointsAwarded:
+ *                           type: integer
+ *                           example: 156780
+ *                     today:
+ *                       type: object
+ *                       properties:
+ *                         completions:
+ *                           type: integer
+ *                           example: 67
+ *                         activePlayers:
+ *                           type: integer
+ *                           example: 23
+ *                         pointsAwarded:
+ *                           type: integer
+ *                           example: 3450
+ *                     leaderboards:
+ *                       type: object
+ *                       properties:
+ *                         daily:
+ *                           type: integer
+ *                           example: 23
+ *                         weekly:
+ *                           type: integer
+ *                           example: 89
+ *                         total:
+ *                           type: integer
+ *                           example: 150
+ *       503:
+ *         description: Database connection required
+ */
+app.get('/api/stats/global', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for global statistics'
+      });
+    }
+
+    // Get global statistics
+    const globalStats = await ScoringSystem.getGlobalStats();
+
+    res.json({
+      success: true,
+      stats: globalStats,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ STATS: Error getting global statistics:', error.message);
+    res.status(500).json({
+      error: 'Failed to get global statistics'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/scores/refresh:
+ *   post:
+ *     summary: Refresh all leaderboards (admin endpoint)
+ *     description: Manually refresh all leaderboard rankings and score aggregations
+ *     tags: [Scoring System]
+ *     responses:
+ *       200:
+ *         description: Leaderboards refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 updated:
+ *                   type: object
+ *                   properties:
+ *                     dailyUpdated:
+ *                       type: integer
+ *                       example: 23
+ *                     weeklyUpdated:
+ *                       type: integer
+ *                       example: 89
+ *                     totalUpdated:
+ *                       type: integer
+ *                       example: 150
+ *       503:
+ *         description: Database connection required
+ */
+app.post('/api/scores/refresh', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for leaderboard refresh'
+      });
+    }
+
+    // Refresh all leaderboards
+    const refreshResult = await ScoringSystem.refreshAllLeaderboards();
+
+    res.json({
+      success: true,
+      message: 'All leaderboards refreshed successfully',
+      updated: {
+        dailyUpdated: refreshResult.dailyUpdated,
+        weeklyUpdated: refreshResult.weeklyUpdated,
+        totalUpdated: refreshResult.totalUpdated
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ REFRESH: Error refreshing leaderboards:', error.message);
+    res.status(500).json({
+      error: 'Failed to refresh leaderboards'
     });
   }
 });
