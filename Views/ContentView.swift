@@ -33,120 +33,84 @@ struct TimeoutError: Error {}
 
 struct ContentView: View {
     @StateObject private var networkManager = NetworkManager.shared
+    @StateObject private var gameModel = GameModel()
     @State private var showingConnectionTest = false
     @State private var showingRegistration = false
-    @State private var showingPlayersList = false
-    @State private var showingPhraseCreation = false
     @State private var isPlayerRegistered = false
     
     var body: some View {
-        ZStack {
-            PhysicsGameView()
-            
-            // Connection Status Indicator
-            VStack {
-                HStack {
-                    Spacer()
+        Group {
+            if isPlayerRegistered {
+                // Show lobby as main interface after registration
+                LobbyView(gameModel: gameModel)
+            } else {
+                // Show registration/connection flow
+                ZStack {
+                    Color(.systemBackground)
+                        .ignoresSafeArea()
                     
-                    VStack(spacing: 4) {
-                        // Connection Status Circle
-                        Circle()
-                            .fill(connectionStatusColor)
-                            .frame(width: 12, height: 12)
-                            .animation(.easeInOut(duration: 0.3), value: networkManager.connectionStatus)
-                        
-                        // Connection Status Text
-                        Text(networkManager.connectionStatus.description)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.trailing, 16)
-                    .padding(.top, 60) // Below notch/status bar
-                }
-                
-                Spacer()
-                
-                // Action Buttons
-                VStack(spacing: 12) {
-                    if isPlayerRegistered {
+                    VStack(spacing: 30) {
+                        // App title
                         VStack(spacing: 8) {
-                            Text("Welcome, \(networkManager.currentPlayer?.name ?? "Player")!")
-                                .font(.headline)
+                            Text("🏆 Anagram Game")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            HStack(spacing: 12) {
-                                Button(action: {
-                                    showingPlayersList = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "person.2.fill")
-                                        Text("\(networkManager.onlinePlayers.count) players online")
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                }
+                            Text("Competitive word puzzles")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Connection status
+                        VStack(spacing: 12) {
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(connectionStatusColor)
+                                    .frame(width: 12, height: 12)
+                                    .animation(.easeInOut(duration: 0.3), value: networkManager.connectionStatus)
                                 
-                                Button(action: {
-                                    showingPhraseCreation = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "plus.message.fill")
-                                        Text("Send Phrase")
-                                    }
+                                Text(networkManager.connectionStatus.description)
                                     .font(.caption)
-                                    .foregroundColor(.green)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            if showingConnectionTest {
+                                VStack(spacing: 4) {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                    
+                                    Text("Setting up multiplayer...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
-                                .disabled(networkManager.onlinePlayers.filter { $0.id != networkManager.currentPlayer?.id }.isEmpty)
                             }
                         }
-                    } else if showingConnectionTest {
-                        VStack(spacing: 4) {
-                            Text("Connecting...")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            
-                            Text("Setting up multiplayer...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    // Manual Registration Button (only show if not registered and not connecting)
-                    if !isPlayerRegistered && !showingConnectionTest && networkManager.connectionStatus != .connecting {
-                        VStack(spacing: 8) {
-                            Button("Connect") {
+                        
+                        Spacer()
+                        
+                        // Registration button
+                        if !showingConnectionTest && networkManager.connectionStatus != .connecting {
+                            Button("Get Started") {
                                 showingRegistration = true
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(8)
-                            .font(.caption)
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(12)
+                            .padding(.horizontal, 40)
                         }
+                        
+                        Spacer()
                     }
+                    .padding()
                 }
-                .padding(.bottom, 100)
             }
         }
         .sheet(isPresented: $showingRegistration) {
             PlayerRegistrationView(isPresented: $showingRegistration)
-        }
-        .sheet(isPresented: $showingPlayersList) {
-            NavigationView {
-                OnlinePlayersView()
-                    .navigationTitle("Online Players")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingPlayersList = false
-                            }
-                        }
-                    }
-            }
-        }
-        .sheet(isPresented: $showingPhraseCreation) {
-            PhraseCreationView(isPresented: $showingPhraseCreation)
         }
         .onAppear {
             print("📱 ContentView appeared - checking for existing player or showing registration")
@@ -167,6 +131,13 @@ struct ContentView: View {
         }
         .onChange(of: networkManager.currentPlayer) { oldValue, newValue in
             isPlayerRegistered = newValue != nil
+            
+            // Update gameModel with player information
+            if let player = newValue {
+                gameModel.playerId = player.id
+                gameModel.playerName = player.name
+                gameModel.networkManager = networkManager
+            }
             
             // Player list updates are handled by NetworkManager's periodic timer
             // No immediate refresh needed - reduces server load

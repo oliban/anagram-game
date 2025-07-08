@@ -303,7 +303,8 @@ struct PhysicsCategories {
 }
 
 struct PhysicsGameView: View {
-    @State private var gameModel = GameModel()
+    @ObservedObject var gameModel: GameModel
+    @Binding var showingGame: Bool
     @State private var motionManager = CMMotionManager()
     @State private var gameScene: PhysicsGameScene?
     @State private var celebrationMessage = ""
@@ -322,6 +323,33 @@ struct PhysicsGameView: View {
                 
                 // SwiftUI overlay for UI elements
                 VStack {
+                    // Top navigation bar
+                    HStack {
+                        // Back to Lobby button (top left)
+                        Button(action: {
+                            Task {
+                                await gameModel.skipCurrentGame()
+                                showingGame = false
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.left")
+                                Text("Lobby")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                        .padding(.leading, 20)
+                        .padding(.top, 10)
+                        
+                        Spacer()
+                    }
+                    
                     // Custom phrase attribution (top center)
                     if !gameModel.customPhraseInfo.isEmpty {
                         if gameModel.isShowingPhraseNotification {
@@ -488,8 +516,15 @@ struct PhysicsGameView: View {
             return existingScene
         }
         
-        print("🚀 Creating SINGLE scene with size: \(size)")
-        let newScene = PhysicsGameScene(gameModel: gameModel, size: size)
+        // Validate size to prevent invalid scene creation
+        // Use reasonable defaults for iPhone screen sizes if geometry is not ready
+        let validSize = CGSize(
+            width: size.width > 0 ? size.width : 393,  // iPhone 14 Pro width
+            height: size.height > 0 ? size.height : 852  // iPhone 14 Pro height
+        )
+        
+        print("🚀 Creating SINGLE scene with size: \(validSize) (original: \(size))")
+        let newScene = PhysicsGameScene(gameModel: gameModel, size: validSize)
         
         PhysicsGameView.sharedScene = newScene
         print("✅ Scene stored")
@@ -567,6 +602,9 @@ class PhysicsGameScene: SKScene {
     init(gameModel: GameModel, size: CGSize) {
         self.gameModel = gameModel
         super.init(size: size)
+        
+        // Set explicit background color to avoid device-specific rendering issues
+        backgroundColor = UIColor.systemBackground
         
         setupPhysicsWorld()
         setupEnvironment()
@@ -1999,9 +2037,11 @@ class LetterTile: SKSpriteNode {
         letterLabel.verticalAlignmentMode = .center
         letterLabel.horizontalAlignmentMode = .center
         letterLabel.position = CGPoint(x: 0, y: 0)
-        letterLabel.zPosition = 0.3 // Above all tile faces but within reasonable range
+        letterLabel.zPosition = 10.0 // Much higher z-position to ensure visibility
         
-        surface.addChild(letterLabel)
+        // Add letter to the main tile node instead of just the surface
+        // This ensures it's always visible regardless of shape rendering issues
+        self.addChild(letterLabel)
     }
     
     // Hint system methods
@@ -2039,4 +2079,8 @@ struct SpriteKitView: UIViewRepresentable {
     func updateUIView(_ uiView: SKView, context: Context) {
         // Update if needed
     }
+}
+
+#Preview {
+    PhysicsGameView(gameModel: GameModel(), showingGame: .constant(true))
 }
