@@ -9,6 +9,12 @@ class GameModel {
     var wordsCompleted: Int = 0
     var customPhraseInfo: String = ""
     
+    // Hint system state
+    var currentPhraseId: String? = nil
+    var currentHints: [String] = []
+    var currentScore: Int = 0
+    var hintsUsed: Int = 0
+    
     private var sentences: [String] = []
     private var currentCustomPhrase: CustomPhrase? = nil
     private var isStartingNewGame = false
@@ -74,6 +80,7 @@ class GameModel {
             currentCustomPhrase = pushedPhrase
             currentSentence = pushedPhrase.content
             customPhraseInfo = "Custom phrase from \(pushedPhrase.senderName)"
+            currentPhraseId = pushedPhrase.id
             
             // Mark as consumed and clear the push flag
             let consumeSuccess = await networkManager.consumePhrase(phraseId: pushedPhrase.id)
@@ -95,6 +102,7 @@ class GameModel {
                 currentCustomPhrase = firstPhrase
                 currentSentence = firstPhrase.content
                 customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
+                currentPhraseId = firstPhrase.id
                 
                 // Mark the phrase as consumed on server IMMEDIATELY
                 let consumeSuccess = await networkManager.consumePhrase(phraseId: firstPhrase.id)
@@ -116,12 +124,19 @@ class GameModel {
                 currentCustomPhrase = nil
                 currentSentence = sentences.randomElement() ?? "The cat sat on the mat"
                 customPhraseInfo = ""
+                // Create a session-based phrase ID for local sentences
+                currentPhraseId = "local-\(UUID().uuidString)"
             }
         }
         
         scrambleLetters()
         gameState = .playing
         wordsCompleted = 0
+        
+        // Reset hint state for new game
+        currentHints = []
+        currentScore = 0
+        hintsUsed = 0
     }
     
     private func scrambleLetters() {
@@ -133,6 +148,11 @@ class GameModel {
         scrambleLetters()
         gameState = .playing
         wordsCompleted = 0
+        
+        // Reset hint state
+        currentHints = []
+        currentScore = 0
+        hintsUsed = 0
     }
     
     func validateWordCompletion(formedWords: [String]) -> Bool {
@@ -153,6 +173,14 @@ class GameModel {
     
     func completeGame() {
         gameState = .completed
+        
+        // Complete phrase on server if we have a phrase ID
+        if let phraseId = currentPhraseId {
+            Task {
+                let networkManager = NetworkManager.shared
+                let _ = await networkManager.completePhrase(phraseId: phraseId)
+            }
+        }
     }
     
     func skipCurrentGame() async {
@@ -174,5 +202,10 @@ class GameModel {
         // Start a new game regardless of skip result
         print("🚀 Starting new game after skip")
         await startNewGame(isUserInitiated: true)
+    }
+    
+    func addHint(_ hint: String) {
+        currentHints.append(hint)
+        hintsUsed += 1
     }
 }

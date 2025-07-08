@@ -59,6 +59,91 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     }
 }
 
+// Hint system models for Phase 4.8 integration
+struct HintStatus: Codable {
+    let hintsUsed: [UsedHint]
+    let nextHintLevel: Int?
+    let hintsRemaining: Int
+    let currentScore: Int
+    let nextHintScore: Int?
+    let canUseNextHint: Bool
+    
+    struct UsedHint: Codable {
+        let level: Int
+        let usedAt: Date
+        
+        init(level: Int, usedAt: Date) {
+            self.level = level
+            self.usedAt = usedAt
+        }
+        
+        private enum CodingKeys: String, CodingKey {
+            case level, usedAt
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            level = try container.decode(Int.self, forKey: .level)
+            
+            // Handle date parsing
+            let dateString = try container.decode(String.self, forKey: .usedAt)
+            let formatter = ISO8601DateFormatter()
+            usedAt = formatter.date(from: dateString) ?? Date()
+        }
+    }
+}
+
+struct ScorePreview: Codable {
+    let noHints: Int
+    let level1: Int
+    let level2: Int
+    let level3: Int
+}
+
+struct HintResponse: Codable {
+    let success: Bool
+    let hint: HintData
+    let scorePreview: ScorePreview
+    let timestamp: String
+    
+    struct HintData: Codable {
+        let level: Int
+        let content: String
+        let currentScore: Int
+        let nextHintScore: Int?
+        let hintsRemaining: Int
+        let canUseNextHint: Bool
+    }
+}
+
+struct PhrasePreview: Codable {
+    let success: Bool
+    let phrase: PhraseData
+    let timestamp: String
+    
+    struct PhraseData: Codable {
+        let id: String
+        let content: String
+        let hint: String
+        let difficultyLevel: Int
+        let isGlobal: Bool
+        let hintStatus: HintStatus
+        let scorePreview: ScorePreview
+    }
+}
+
+struct CompletionResult: Codable {
+    let success: Bool
+    let completion: CompletionData
+    let timestamp: String
+    
+    struct CompletionData: Codable {
+        let finalScore: Int
+        let hintsUsed: Int
+        let completionTime: Int
+    }
+}
+
 private struct RegistrationRequestBody: Encodable {
     let name: String
 }
@@ -650,6 +735,149 @@ class NetworkManager: ObservableObject {
         } catch {
             print("❌ PHRASE: Error skipping phrase: \(error.localizedDescription)")
             return false
+        }
+    }
+    
+    // MARK: - Hint System API Methods (Phase 4.8)
+    
+    func getPhrasePreview(phraseId: String) async -> PhrasePreview? {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ HINT: No current player for phrase preview")
+            return nil
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/preview?playerId=\(currentPlayer.id)") else {
+            print("❌ HINT: Invalid URL for phrase preview")
+            return nil
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ HINT: Failed to get phrase preview. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+            
+            let preview = try JSONDecoder().decode(PhrasePreview.self, from: data)
+            print("🔍 HINT: Got phrase preview for \(phraseId)")
+            return preview
+            
+        } catch {
+            print("❌ HINT: Error getting phrase preview: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    func useHint(phraseId: String, level: Int) async -> HintResponse? {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ HINT: No current player to use hint")
+            return nil
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/hint/\(level)") else {
+            print("❌ HINT: Invalid URL for using hint")
+            return nil
+        }
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody = ["playerId": currentPlayer.id]
+            request.httpBody = try JSONEncoder().encode(requestBody)
+            
+            let (data, response) = try await urlSession.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ HINT: Failed to use hint. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+            
+            let hintResponse = try JSONDecoder().decode(HintResponse.self, from: data)
+            print("🔍 HINT: Successfully used level \(level) hint: \(hintResponse.hint.content)")
+            return hintResponse
+            
+        } catch {
+            print("❌ HINT: Error using hint: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    func getHintStatus(phraseId: String) async -> HintStatus? {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ HINT: No current player for hint status")
+            return nil
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/hints/status?playerId=\(currentPlayer.id)") else {
+            print("❌ HINT: Invalid URL for hint status")
+            return nil
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ HINT: Failed to get hint status. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+            
+            // Parse the response which has hintStatus nested inside
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let hintStatusData = jsonResponse["hintStatus"] {
+                let hintStatusJSON = try JSONSerialization.data(withJSONObject: hintStatusData)
+                let hintStatus = try JSONDecoder().decode(HintStatus.self, from: hintStatusJSON)
+                print("🔍 HINT: Got hint status for \(phraseId)")
+                return hintStatus
+            }
+            
+            print("❌ HINT: Invalid hint status response format")
+            return nil
+            
+        } catch {
+            print("❌ HINT: Error getting hint status: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    func completePhrase(phraseId: String, completionTime: Int = 0) async -> CompletionResult? {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ HINT: No current player to complete phrase")
+            return nil
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/complete") else {
+            print("❌ HINT: Invalid URL for completing phrase")
+            return nil
+        }
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody = [
+                "playerId": currentPlayer.id,
+                "completionTime": completionTime
+            ] as [String : Any]
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (data, response) = try await urlSession.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ HINT: Failed to complete phrase. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+            
+            let completionResult = try JSONDecoder().decode(CompletionResult.self, from: data)
+            print("✅ HINT: Successfully completed phrase with score \(completionResult.completion.finalScore)")
+            return completionResult
+            
+        } catch {
+            print("❌ HINT: Error completing phrase: \(error.localizedDescription)")
+            return nil
         }
     }
     
