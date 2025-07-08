@@ -230,7 +230,7 @@ class Phase4GlobalPhrasesTests {
         phrase.hint &&
         typeof phrase.difficultyLevel === 'number' &&
         phrase.phraseType &&
-        typeof phrase.priority === 'number' &&
+        phrase.language &&
         typeof phrase.usageCount === 'number' &&
         typeof phrase.isApproved === 'boolean' &&
         phrase.createdAt &&

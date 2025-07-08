@@ -187,9 +187,10 @@ struct HintButtonView: View {
                     )
                     self.hintStatus = updatedStatus
                     
-                    // Update score tile when hint is used
+                    // Update score and language tiles when hint is used
                     if let scene = gameScene {
                         scene.updateScoreTile()
+                        scene.updateLanguageTile()
                     }
                     
                     isLoading = false
@@ -237,9 +238,10 @@ struct HintButtonView: View {
                         )
                         self.hintStatus = updatedStatus
                         
-                        // Update score tile when hint is used
+                        // Update score and language tiles when hint is used
                         if let scene = gameScene {
                             scene.updateScoreTile()
+                            scene.updateLanguageTile()
                         }
                     } else {
                         errorMessage = "Failed to get hint"
@@ -519,18 +521,6 @@ struct PhysicsGameView: View {
         }
     }
     
-    private func calculateCurrentScore() -> Int {
-        guard gameModel.phraseDifficulty > 0 else { return 0 }
-        
-        var score = gameModel.phraseDifficulty
-        
-        if gameModel.hintsUsed >= 1 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.90)) }
-        if gameModel.hintsUsed >= 2 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.70)) }
-        if gameModel.hintsUsed >= 3 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.50)) }
-        
-        return score
-    }
-    
     private func getOrCreateScene(size: CGSize) -> PhysicsGameScene {
         if let existingScene = PhysicsGameView.sharedScene {
             print("♻️ Reusing shared scene")
@@ -614,6 +604,7 @@ class PhysicsGameScene: SKScene {
     private var floor: SKNode!
     private var tiles: [LetterTile] = []
     private var scoreTile: ScoreTile?
+    private var languageTile: LanguageTile?
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var celebrationText: String = ""
 
@@ -877,6 +868,8 @@ class PhysicsGameScene: SKScene {
         // Clear existing score tile
         scoreTile?.removeFromParent()
         scoreTile = nil
+        languageTile?.removeFromParent()
+        languageTile = nil
         
         // Create tiles for current sentence
         let letters = gameModel.scrambledLetters
@@ -942,6 +935,30 @@ class PhysicsGameScene: SKScene {
             
             run(SKAction.sequence([delayAction, addAction]))
         }
+        
+        // Create language tile - same size as letter tiles (40x40)
+        let languageTileSize = CGSize(width: 40, height: 40)  // Same as letter tiles
+        let currentLanguage = getCurrentPhraseLanguage()
+        languageTile = LanguageTile(size: languageTileSize, language: currentLanguage)
+        
+        // Position language tile to fall from the left side
+        let languageSpawnX = size.width * 0.2  // Left side
+        let languageSpawnY = size.height * 0.95  // Near top
+        languageTile?.position = CGPoint(x: languageSpawnX, y: languageSpawnY)
+        
+        // Add slight rotation for visual interest
+        languageTile?.zRotation = CGFloat.random(in: -0.2...0.2)
+        
+        // Add language tile to scene with delay
+        if let languageTile = languageTile {
+            let delayAction = SKAction.wait(forDuration: 1.2)  // Wait 1.2 seconds (slightly after score tile)
+            let addAction = SKAction.run { [weak self] in
+                self?.addChild(languageTile)
+                print("Language tile spawned with language: \(currentLanguage)")
+            }
+            
+            run(SKAction.sequence([delayAction, addAction]))
+        }
     }
     
     private func calculateCurrentScore() -> Int {
@@ -956,9 +973,19 @@ class PhysicsGameScene: SKScene {
         return score
     }
     
+    private func getCurrentPhraseLanguage() -> String {
+        return gameModel.currentCustomPhrase?.language ?? "en"
+    }
+    
     func updateScoreTile() {
         scoreTile?.updateScore(calculateCurrentScore())
         print("Score tile updated to: \(calculateCurrentScore())")
+    }
+    
+    func updateLanguageTile() {
+        let newLanguage = getCurrentPhraseLanguage()
+        languageTile?.updateFlag(language: newLanguage)
+        print("Language tile updated to: \(newLanguage)")
     }
     
     func updateGravity(from gravity: CMAcceleration) {
@@ -1923,6 +1950,11 @@ class PhysicsGameScene: SKScene {
                 scoreTile.physicsBody?.isDynamic = false
                 print("Started dragging score tile")
                 break
+            } else if let languageTile = node as? LanguageTile {
+                languageTile.isBeingDragged = true
+                languageTile.physicsBody?.isDynamic = false
+                print("Started dragging language tile")
+                break
             } else if let tile = tiles.first(where: { $0.contains(node) }) {
                 tile.isBeingDragged = true
                 tile.physicsBody?.isDynamic = false
@@ -1951,6 +1983,16 @@ class PhysicsGameScene: SKScene {
                 print("Started dragging score tile (by distance)")
             }
         }
+        
+        // Check direct distance to language tile
+        if let languageTile = languageTile {
+            let distance = sqrt(pow(location.x - languageTile.position.x, 2) + pow(location.y - languageTile.position.y, 2))
+            if distance < 30 { // Within 30 points of language tile center
+                languageTile.isBeingDragged = true
+                languageTile.physicsBody?.isDynamic = false
+                print("Started dragging language tile (by distance)")
+            }
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1965,6 +2007,11 @@ class PhysicsGameScene: SKScene {
         // Move dragged score tile
         if let scoreTile = scoreTile, scoreTile.isBeingDragged {
             scoreTile.position = location
+        }
+        
+        // Move dragged language tile
+        if let languageTile = languageTile, languageTile.isBeingDragged {
+            languageTile.position = location
         }
     }
     
@@ -1998,6 +2045,18 @@ class PhysicsGameScene: SKScene {
             scoreTile.physicsBody?.angularVelocity = 0
             
             print("Released score tile - stopped immediately")
+        }
+        
+        // Release dragged language tile
+        if let languageTile = languageTile, languageTile.isBeingDragged {
+            languageTile.isBeingDragged = false
+            languageTile.physicsBody?.isDynamic = true
+            
+            // Stop all movement immediately - no sliding
+            languageTile.physicsBody?.velocity = CGVector.zero
+            languageTile.physicsBody?.angularVelocity = 0
+            
+            print("Released language tile - stopped immediately")
         }
     }
 }
@@ -2243,6 +2302,140 @@ class ScoreTile: SKSpriteNode {
         
         physicsBody?.allowsRotation = true
         physicsBody?.density = 0.8  // Lighter than letter tiles
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+class LanguageTile: SKSpriteNode {
+    private var frontFace: SKShapeNode?
+    private var flagImageNode: SKSpriteNode?
+    var isBeingDragged = false
+    var currentLanguage: String = "en"
+    
+    init(size: CGSize, language: String = "en") {
+        super.init(texture: nil, color: .clear, size: size)
+        self.currentLanguage = language
+        
+        let tileWidth = size.width
+        let tileHeight = size.height
+        let depth: CGFloat = 6
+        
+        // Create the main tile body (top surface) - blue theme for language
+        let topFace = SKShapeNode()
+        let topPath = CGMutablePath()
+        topPath.move(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
+        topPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        topPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        topPath.addLine(to: CGPoint(x: -tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        topPath.closeSubpath()
+        topFace.path = topPath
+        topFace.fillColor = UIColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)  // Light blue
+        topFace.strokeColor = .black
+        topFace.lineWidth = 2
+        topFace.zPosition = -0.1  // Put tile roofs in background
+        addChild(topFace)
+        
+        // Create the front face (main visible surface) - blue theme
+        let frontFaceShape = SKShapeNode()
+        let frontPath = CGMutablePath()
+        frontPath.move(to: CGPoint(x: -tileWidth / 2, y: -tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
+        frontPath.closeSubpath()
+        frontFaceShape.path = frontPath
+        frontFaceShape.fillColor = UIColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1.0)  // Medium blue
+        frontFaceShape.strokeColor = .black
+        frontFaceShape.lineWidth = 2
+        frontFaceShape.zPosition = 0.1
+        frontFace = frontFaceShape  // Store reference
+        addChild(frontFaceShape)
+        
+        // Create the right face (shadow side - darker blue)
+        let rightFace = SKShapeNode()
+        let rightPath = CGMutablePath()
+        rightPath.move(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: -tileHeight / 2 + depth))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        rightPath.closeSubpath()
+        rightFace.path = rightPath
+        rightFace.fillColor = UIColor(red: 0.1, green: 0.4, blue: 0.7, alpha: 1.0)  // Dark blue shadow
+        rightFace.strokeColor = .black
+        rightFace.lineWidth = 2
+        rightFace.zPosition = 0.0
+        addChild(rightFace)
+        
+        // Add flag image on front face
+        updateFlag(language: language)
+        
+        // Set up physics body (same as letter tiles for consistency)
+        physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: tileWidth, height: tileHeight))
+        physicsBody?.isDynamic = true
+        physicsBody?.affectedByGravity = true
+        physicsBody?.mass = 0.1  // Same as ScoreTile
+        physicsBody?.friction = 0.6
+        physicsBody?.restitution = 0.3
+        physicsBody?.linearDamping = 0.95
+        physicsBody?.angularDamping = 0.99
+        
+        physicsBody?.categoryBitMask = PhysicsCategories.tile
+        physicsBody?.contactTestBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        
+        physicsBody?.allowsRotation = true
+        physicsBody?.density = 0.8  // Same as ScoreTile
+        
+        // Set z-position for proper layering
+        zPosition = 50  // Same as letter tiles
+    }
+    
+    func updateFlag(language: String) {
+        currentLanguage = language
+        
+        // Remove existing flag image
+        flagImageNode?.removeFromParent()
+        
+        // Determine flag image name
+        let flagImageName = language == "sv" ? "flag_sweden" : "flag_england"
+        
+        // Create flag image node
+        let flagTexture = SKTexture(imageNamed: flagImageName)
+        let flagNode = SKSpriteNode(texture: flagTexture)
+        
+        // Scale flag to fit nicely on the tile (about 70% of tile size)
+        let flagSize = CGSize(width: size.width * 0.7, height: size.height * 0.7)
+        flagNode.size = flagSize
+        flagNode.position = CGPoint(x: 0, y: 0)  // Center on front face
+        flagNode.zPosition = 0.2  // Above front face
+        
+        // Add flag to tile
+        flagImageNode = flagNode
+        addChild(flagNode)
+    }
+    
+    // Touch handling for dragging (same pattern as ScoreTile)
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = true
+        physicsBody?.velocity = CGVector.zero
+        physicsBody?.angularVelocity = 0
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard isBeingDragged, let touch = touches.first else { return }
+        let location = touch.location(in: parent!)
+        position = location
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = false
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = false
     }
     
     required init?(coder aDecoder: NSCoder) {

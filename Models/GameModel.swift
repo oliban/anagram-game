@@ -27,8 +27,13 @@ class GameModel: ObservableObject {
     var networkManager: NetworkManager? = nil
     
     private var sentences: [String] = []
-    private var currentCustomPhrase: CustomPhrase? = nil
+    var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
     private var isStartingNewGame = false
+    
+    // Computed property to get current language for LanguageTile display
+    var currentLanguage: String {
+        return currentCustomPhrase?.language ?? "en"
+    }
     
     enum GameState {
         case playing

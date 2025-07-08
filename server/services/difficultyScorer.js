@@ -192,12 +192,34 @@ function getDifficultyLabel(score) {
     return 'Very Hard';
 }
 
+/**
+ * Auto-detect language from phrase content
+ * @param {string} phrase - The phrase to analyze
+ * @returns {string} Language code ('en' or 'sv')
+ */
+function detectLanguage(phrase) {
+    if (!phrase || typeof phrase !== 'string') {
+        return LANGUAGES.ENGLISH;
+    }
+    
+    const text = phrase.toLowerCase();
+    
+    // Check for Swedish-specific characters (å, ä, ö)
+    if (/[åäö]/.test(text)) {
+        return LANGUAGES.SWEDISH;
+    }
+    
+    // If no Swedish characters, default to English
+    return LANGUAGES.ENGLISH;
+}
+
 // Export the module
 module.exports = {
     LANGUAGES,
     calculateScore,
     analyzePhrases,
     getDifficultyLabel,
+    detectLanguage,
     
     // Export for testing purposes
     normalize,
