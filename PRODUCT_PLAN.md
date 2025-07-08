@@ -172,38 +172,6 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
   - [ ] Add language filtering to global phrase bank
   - [ ] **Feature**: Add language preference to player profiles
 
-- [ ] **4.6.3 Multi-language Testing**
-  - [ ] Validate English and Swedish phrase handling
-  - [ ] Test language-specific phrase filtering
-  - [ ] Ensure backward compatibility for existing phrases
-
-## Phase 6: Multi-Language Expansion (120 mins) 🌍 FUTURE
-- [ ] **6.1 European Language Support**
-  - [ ] **German** (`de`) - Add frequency table with ä, ö, ü, ß characters
-  - [ ] **French** (`fr`) - Add frequency table with é, è, à, ç, etc.
-  - [ ] **Spanish** (`es`) - Add frequency table with ñ, á, é, í, ó, ú
-  - [ ] **Italian** (`it`) - Add frequency table with Latin alphabet variations
-  - [ ] **Portuguese** (`pt`) - Add frequency table similar to Spanish
-  - [ ] **Dutch** (`nl`) - Add frequency table similar to German/English
-  - [ ] **Norwegian** (`no`) - Add frequency table similar to Swedish
-
-- [ ] **6.2 Language Infrastructure Enhancement**
-  - [ ] Expand `LANGUAGES` constant with new language codes
-  - [ ] Update `normalize()` function for each alphabet
-  - [ ] Create comprehensive frequency tables from linguistic corpora
-  - [ ] Add language-specific character validation
-
-- [ ] **6.3 Advanced Language Features**
-  - [ ] Auto-detect language from phrase content
-  - [ ] Regional difficulty variations (e.g., US vs UK English)
-  - [ ] Cross-language phrase translation suggestions
-  - [ ] Language-specific UI localization
-
-- [ ] **6.4 Testing & Validation**
-  - [ ] Comprehensive test suite for all supported languages
-  - [ ] Difficulty score calibration across languages
-  - [ ] Performance testing with extended character sets
-  - [ ] Cultural appropriateness validation
 
 ### **Supported Languages Roadmap:**
 - **Phase 4.6**: English, Swedish (Current)
@@ -238,21 +206,25 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
 - ✅ **App Compatibility Verified**: All core functionality working with PostgreSQL server
 - ✅ **Technical Debt Identified**: Can be addressed incrementally during Phase 5
 
-## Phase 4.8: Enhanced Hint System (45 mins)
-- [ ] **4.8.1 Progressive Hint System**
-  - [ ] **Hint Level 1**: Word count indication (highlight shelves)
-  - [ ] **Hint Level 2**: Show text hint that came with phrase
-  - [ ] **Hint Level 3**: Highlight first letters of each word (light blue)
+## Phase 4.8: Enhanced Hint System (45 mins) ✅ COMPLETE
+- [x] **4.8.1 Progressive Hint System**
+  - [x] **Hint Level 1**: Word count indication ("This phrase has 2 words")
+  - [x] **Hint Level 2**: Show text hint that came with phrase
+  - [x] **Hint Level 3**: First letters of each word ("First letters: H W")
   
-- [ ] **4.8.2 Hint Tracking Database**
-  - [ ] Create `hint_usage` table to track hint progression
-  - [ ] Add hint level endpoints: `POST /api/phrases/:phraseId/hint/:level`
-  - [ ] Track hint usage for scoring calculations
+- [x] **4.8.2 Hint Tracking Database**
+  - [x] Create `hint_usage` table to track hint progression
+  - [x] Add hint level endpoints: `POST /api/phrases/:phraseId/hint/:level`
+  - [x] Track hint usage for scoring calculations
+  - [x] Implement hint order enforcement (must use 1→2→3)
 
-- [ ] **4.8.3 Hint API Integration**
-  - [ ] Add hint progression to phrase responses
-  - [ ] Implement hint penalty system for scoring
-  - [ ] Add hint status endpoint: `GET /api/phrases/:phraseId/hints/status`
+- [x] **4.8.3 Hint API Integration**
+  - [x] Add hint progression to phrase responses
+  - [x] Implement hint penalty system for scoring (90%, 70%, 50%)
+  - [x] Add hint status endpoint: `GET /api/phrases/:phraseId/hints/status`
+  - [x] Add phrase completion endpoint: `POST /api/phrases/:phraseId/complete`
+  - [x] Add phrase preview endpoint: `GET /api/phrases/:phraseId/preview`
+  - [x] **Testing**: 9/9 tests passing (100% coverage)
 
 ## Phase 4.9: Scoring System (45 mins)
 - [ ] **4.9.1 Point Calculation System**

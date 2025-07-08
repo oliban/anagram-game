@@ -9,6 +9,262 @@ import SwiftUI
 import SpriteKit
 import CoreMotion
 
+// Hint Button Component embedded in PhysicsGameView
+struct HintButtonView: View {
+    let phraseId: String
+    let gameModel: GameModel
+    let gameScene: PhysicsGameScene?
+    let onHintUsed: (String) -> Void
+    
+    @State private var hintStatus: HintStatus?
+    @State private var scorePreview: ScorePreview?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @StateObject private var networkManager = NetworkManager.shared
+    
+    var body: some View {
+        Button(action: useNextHint) {
+            HStack(spacing: 8) {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundColor(.yellow)
+                
+                Text(buttonText)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.blue, Color.purple]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(20)
+            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+        }
+        .disabled(isLoading || !canUseHint)
+        .opacity(canUseHint ? 1.0 : 0.6)
+        .onAppear {
+            loadHintStatus()
+        }
+        .onChange(of: phraseId) { _, _ in
+            loadHintStatus()
+        }
+    }
+    
+    private var buttonText: String {
+        if isLoading {
+            return "Loading..."
+        }
+        
+        guard let hintStatus = hintStatus else {
+            return "Hint 1"
+        }
+        
+        if !hintStatus.canUseNextHint {
+            return "No more hints"
+        }
+        
+        let nextLevel = hintStatus.nextHintLevel ?? 1
+        let nextScore = hintStatus.nextHintScore ?? 0
+        
+        // If no custom hint is available, show "Hint 3" instead of "Hint 2"
+        let displayLevel = (nextLevel == 2 && nextScore == 0) ? 3 : nextLevel
+        
+        return "Hint \(displayLevel) (\(nextScore) points)"
+    }
+    
+    private var canUseHint: Bool {
+        // Always allow hints - let the server decide availability
+        return !isLoading
+    }
+    
+    private func loadHintStatus() {
+        Task {
+            isLoading = true
+            errorMessage = nil
+            
+            // Handle local phrases differently
+            if phraseId.hasPrefix("local-") {
+                await MainActor.run {
+                    // Create a basic hint status for local phrases with simple scoring
+                    self.hintStatus = HintStatus(
+                        hintsUsed: [],
+                        nextHintLevel: 1,
+                        hintsRemaining: 3,
+                        currentScore: 100, // Default score for local phrases
+                        nextHintScore: 90, // 90% for hint 1
+                        canUseNextHint: true
+                    )
+                    self.isLoading = false
+                }
+            } else {
+                do {
+                    async let statusTask = networkManager.getHintStatus(phraseId: phraseId)
+                    async let previewTask = networkManager.getPhrasePreview(phraseId: phraseId)
+                    
+                    let status = await statusTask
+                    let preview = await previewTask
+                    
+                    await MainActor.run {
+                        self.hintStatus = status
+                        self.scorePreview = preview?.phrase.scorePreview
+                        self.isLoading = false
+                    }
+                }
+            }
+        }
+    }
+    
+    private func useNextHint() {
+        guard let hintStatus = hintStatus,
+              let nextLevel = hintStatus.nextHintLevel else {
+            return
+        }
+        
+        Task {
+            isLoading = true
+            
+            if phraseId.hasPrefix("local-") {
+                // Generate local hints with proper scene interaction
+                let hint = generateLocalHint(level: nextLevel, sentence: gameModel.currentSentence)
+                
+                await MainActor.run {
+                    // For text hints (level 3), show the hint text
+                    // For visual hints (levels 1 & 2), don't show notification
+                    if nextLevel == 3 {
+                        onHintUsed(hint)
+                    } else {
+                        // Don't show notification for visual hints
+                        gameModel.addHint(hint)
+                    }
+                    
+                    // Update hint status for local phrases with proper scoring
+                    let newScore = calculateLocalScore(currentLevel: nextLevel, originalScore: 100)
+                    let nextHintScore = nextLevel < 3 ? calculateLocalScore(currentLevel: nextLevel + 1, originalScore: 100) : nil
+                    
+                    let updatedStatus = HintStatus(
+                        hintsUsed: hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())],
+                        nextHintLevel: nextLevel < 3 ? nextLevel + 1 : nil,
+                        hintsRemaining: hintStatus.hintsRemaining - 1,
+                        currentScore: newScore,
+                        nextHintScore: nextHintScore,
+                        canUseNextHint: nextLevel < 3
+                    )
+                    self.hintStatus = updatedStatus
+                    isLoading = false
+                }
+            } else {
+                // Use server hints for custom phrases
+                let hintResponse = await networkManager.useHint(phraseId: phraseId, level: nextLevel)
+                
+                await MainActor.run {
+                    if let response = hintResponse {
+                        // Call the appropriate scene method based on hint level
+                        if let scene = gameScene {
+                            switch nextLevel {
+                            case 1:
+                                scene.showHint1()
+                            case 2:
+                                scene.showHint2()
+                            case 3:
+                                scene.showHint3()
+                            default:
+                                break
+                            }
+                        }
+                        
+                        // For text hints (level 3), use the server hint content
+                        // For visual hints (levels 1 & 2), don't show text notification
+                        if nextLevel == 3 {
+                            onHintUsed(response.hint.content)
+                        } else {
+                            // Don't show notification for visual hints
+                            gameModel.addHint(response.hint.content)
+                        }
+                        
+                        // Update hint status based on response
+                        let updatedStatus = HintStatus(
+                            hintsUsed: response.hint.hintsRemaining < hintStatus.hintsRemaining ? 
+                                hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())] :
+                                hintStatus.hintsUsed,
+                            nextHintLevel: response.hint.nextHintScore != nil ? nextLevel + 1 : nil,
+                            hintsRemaining: response.hint.hintsRemaining,
+                            currentScore: response.hint.currentScore,
+                            nextHintScore: response.hint.nextHintScore,
+                            canUseNextHint: response.hint.canUseNextHint
+                        )
+                        self.hintStatus = updatedStatus
+                    } else {
+                        errorMessage = "Failed to get hint"
+                    }
+                    
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func calculateLocalScore(currentLevel: Int, originalScore: Int) -> Int {
+        switch currentLevel {
+        case 1:
+            return Int(round(Double(originalScore) * 0.9)) // 90% for hint 1
+        case 2:
+            return Int(round(Double(originalScore) * 0.7)) // 70% for hint 2  
+        case 3:
+            return Int(round(Double(originalScore) * 0.5)) // 50% for hint 3
+        default:
+            return originalScore
+        }
+    }
+    
+    private func generateLocalHint(level: Int, sentence: String) -> String {
+        guard let scene = gameScene else {
+            return "Game scene not ready"
+        }
+        
+        switch level {
+        case 1:
+            // Hint 1: Highlight shelves (visual hint)
+            scene.showHint1()
+            return "Shelves highlighted to show word count"
+        case 2:
+            // Hint 2: Highlight first letter tiles (visual hint)
+            scene.showHint2()
+            return "First letter tiles highlighted in blue"
+        case 3:
+            // Hint 3: Show text hint (generate meaningful hint for local phrases)
+            scene.showHint3()
+            return generateLocalTextHint(sentence: sentence)
+        default:
+            return "No hint available"
+        }
+    }
+    
+    private func generateLocalTextHint(sentence: String) -> String {
+        let words = sentence.components(separatedBy: " ")
+        let wordCount = words.count
+        
+        // Generate meaningful hints based on content analysis
+        let totalLetters = sentence.replacingOccurrences(of: " ", with: "").count
+        
+        if wordCount == 1 {
+            return "A single word with \(totalLetters) letters"
+        } else if wordCount == 2 {
+            let firstWordLength = words[0].count
+            let secondWordLength = words[1].count
+            return "Two words: \(firstWordLength) and \(secondWordLength) letters"
+        } else if wordCount == 3 {
+            let lengths = words.map { $0.count }
+            return "Three words with \(lengths[0]), \(lengths[1]), and \(lengths[2]) letters"
+        } else {
+            return "\(wordCount) words with \(totalLetters) total letters"
+        }
+    }
+}
+
 // Physics collision categories for better collision detection
 struct PhysicsCategories {
     static let tile: UInt32 = 0x1 << 0
@@ -109,10 +365,12 @@ struct PhysicsGameView: View {
                     
                     Spacer()
                     
-                    // Skip button - Bottom left
+                    // Bottom controls - Skip button and Hint button
                     HStack {
                         VStack {
                             Spacer()
+                            
+                            // Skip button - Bottom left
                             Button(action: {
                                 Task {
                                     isSkipping = true
@@ -146,10 +404,29 @@ struct PhysicsGameView: View {
                             }
                             .disabled(isSkipping)
                             .opacity(isSkipping ? 0.6 : 1.0)
-                            .padding(.bottom, 50)
+                            .padding(.bottom, 20)
                             .padding(.leading, 20)
                         }
+                        
                         Spacer()
+                        
+                        VStack {
+                            Spacer()
+                            
+                            // Hint button - Bottom right (always visible)
+                            HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { hint in
+                                // Show hint text notification (only called for level 3 hints)
+                                phraseNotificationMessage = "Hint: \(hint)"
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    // Auto-hide after 3 seconds
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                        phraseNotificationMessage = ""
+                                    }
+                                }
+                            }
+                            .padding(.bottom, 20)
+                            .padding(.trailing, 20)
+                        }
                     }
                     
                     // Celebration text - Large and visible
@@ -811,9 +1088,100 @@ class PhysicsGameScene: SKScene {
     }
     
     private func clearAllHints() {
+        // Clear shelf highlights
         for shelf in shelves {
             // Remove the glow container which contains all glow elements
             shelf.childNode(withName: "hint_glow")?.removeFromParent()
+        }
+        
+        // Clear tile highlights and restore original colors
+        clearTileHints()
+    }
+    
+    private func clearTileHints() {
+        // Clear tile highlights and restore original colors
+        for tile in tiles {
+            // Restore original front face color for LetterTile objects
+            if let letterTile = tile as? LetterTile {
+                letterTile.restoreFrontFace()
+            }
+        }
+    }
+    
+    // Public hint methods callable from HintButtonView
+    func showHint1() {
+        // Hint 1: Highlight all shelves to show word count
+        // Only clear tile hints, not shelf hints
+        clearTileHints()
+        let wordCount = gameModel.getExpectedWords().count
+        for i in 0..<min(wordCount, shelves.count) {
+            lightUpShelf(shelves[i], wordIndex: i)
+        }
+    }
+    
+    func showHint2() {
+        // Hint 2: Highlight first letter tiles
+        // Only clear tile hints, preserve shelf highlights from Hint 1
+        clearTileHints()
+        highlightFirstLetterTiles()
+    }
+    
+    func showHint3() {
+        // Hint 3: Clear tile highlights but preserve shelf highlights
+        clearTileHints()
+    }
+    
+    private func highlightFirstLetterTiles() {
+        let expectedWords = gameModel.getExpectedWords()
+        var firstLettersNeeded: [Character] = []
+        
+        // Collect first letter of each word
+        for word in expectedWords {
+            if let firstChar = word.first {
+                let lowercaseFirst = firstChar.lowercased().first!
+                firstLettersNeeded.append(lowercaseFirst)
+            }
+        }
+        
+        print("🔍 HINT2: Expected words: \(expectedWords)")
+        print("🔍 HINT2: Looking for first letters: \(firstLettersNeeded)")
+        print("🔍 HINT2: Total tiles available: \(tiles.count)")
+        
+        // Find and highlight matching tiles (only highlight one tile per needed first letter)
+        var highlightedCount = 0
+        var remainingLetters = firstLettersNeeded
+        
+        for tile in tiles {
+            // Skip if we've found all needed letters
+            if remainingLetters.isEmpty {
+                break
+            }
+            
+            // Use the LetterTile's letter property directly
+            if let letterTile = tile as? LetterTile {
+                let tileChar = letterTile.letter.lowercased().first!
+                
+                print("🔍 HINT2: Checking tile with letter: '\(tileChar)'")
+                
+                // Check if this tile contains a first letter we still need
+                if let index = remainingLetters.firstIndex(of: tileChar) {
+                    print("✅ HINT2: Highlighting tile with letter: '\(tileChar)'")
+                    highlightTile(tile)
+                    highlightedCount += 1
+                    // Remove this letter from remaining list to avoid highlighting duplicates
+                    remainingLetters.remove(at: index)
+                }
+            }
+        }
+        
+        print("🔍 HINT2: Successfully highlighted \(highlightedCount) tiles")
+        print("🔍 HINT2: Still need letters: \(remainingLetters)")
+    }
+    
+    private func highlightTile(_ tile: SKNode) {
+        // Change the front face color to blue for LetterTile objects
+        if let letterTile = tile as? LetterTile {
+            letterTile.highlightFrontFace()
         }
     }
     
@@ -1531,6 +1899,8 @@ class PhysicsGameScene: SKScene {
 class LetterTile: SKSpriteNode {
     let letter: String
     var isBeingDragged = false
+    private var frontFace: SKShapeNode?
+    private var originalFrontColor: UIColor = .systemYellow
     
     init(letter: String, size: CGSize) {
         self.letter = letter.uppercased()
@@ -1570,6 +1940,7 @@ class LetterTile: SKSpriteNode {
         frontFace.strokeColor = .black
         frontFace.lineWidth = 2
         frontFace.zPosition = 0.1
+        self.frontFace = frontFace  // Store reference for hint system
         addChild(frontFace)
         
         // Create the right face (shadow side - darker)
@@ -1647,6 +2018,15 @@ class LetterTile: SKSpriteNode {
         letterLabel.zPosition = 0.3 // Above all tile faces but within reasonable range
         
         surface.addChild(letterLabel)
+    }
+    
+    // Hint system methods
+    func highlightFrontFace() {
+        frontFace?.fillColor = .systemBlue
+    }
+    
+    func restoreFrontFace() {
+        frontFace?.fillColor = originalFrontColor
     }
     
     required init?(coder aDecoder: NSCoder) {
