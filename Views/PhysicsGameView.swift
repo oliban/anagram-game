@@ -20,36 +20,61 @@ struct HintButtonView: View {
     @State private var scorePreview: ScorePreview?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var level3ClueText: String? = nil
     @StateObject private var networkManager = NetworkManager.shared
     
     var body: some View {
-        Button(action: useNextHint) {
-            HStack(spacing: 8) {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundColor(.yellow)
-                
-                Text(buttonText)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.blue, Color.purple]),
-                    startPoint: .leading,
-                    endPoint: .trailing
+        Group {
+            if let clueText = level3ClueText {
+                // Show persistent clue text after Level 3 is used
+                HStack(spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.yellow)
+                    
+                    Text("Clue: \(clueText)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.black)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.yellow, lineWidth: 2)
                 )
-            )
-            .cornerRadius(20)
-            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                .cornerRadius(20)
+            } else {
+                // Show hint button when Level 3 hasn't been used yet
+                Button(action: useNextHint) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundColor(.yellow)
+                        
+                        Text(buttonText)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.blue, Color.purple]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(20)
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                }
+                .disabled(isLoading || !canUseHint)
+                .opacity(canUseHint ? 1.0 : 0.6)
+            }
         }
-        .disabled(isLoading || !canUseHint)
-        .opacity(canUseHint ? 1.0 : 0.6)
         .onAppear {
             loadHintStatus()
         }
         .onChange(of: phraseId) { _, _ in
+            level3ClueText = nil // Reset clue text for new phrase
             loadHintStatus()
         }
     }
@@ -70,10 +95,7 @@ struct HintButtonView: View {
         let nextLevel = hintStatus.nextHintLevel ?? 1
         let nextScore = hintStatus.nextHintScore ?? 0
         
-        // If no custom hint is available, show "Hint 3" instead of "Hint 2"
-        let displayLevel = (nextLevel == 2 && nextScore == 0) ? 3 : nextLevel
-        
-        return "Hint \(displayLevel) (\(nextScore) points)"
+        return "Hint \(nextLevel) (\(nextScore) points)"
     }
     
     private var canUseHint: Bool {
@@ -111,6 +133,12 @@ struct HintButtonView: View {
                     await MainActor.run {
                         self.hintStatus = status
                         self.scorePreview = preview?.phrase.scorePreview
+                        
+                        // Store difficulty in GameModel for local score calculation
+                        if let difficulty = preview?.phrase.difficultyLevel {
+                            self.gameModel.phraseDifficulty = difficulty
+                        }
+                        
                         self.isLoading = false
                     }
                 }
@@ -132,10 +160,10 @@ struct HintButtonView: View {
                 let hint = generateLocalHint(level: nextLevel, sentence: gameModel.currentSentence)
                 
                 await MainActor.run {
-                    // For text hints (level 3), show the hint text
+                    // For text hints (level 3), store clue text for persistent display
                     // For visual hints (levels 1 & 2), don't show notification
                     if nextLevel == 3 {
-                        onHintUsed(hint)
+                        level3ClueText = hint
                     } else {
                         // Don't show notification for visual hints
                         gameModel.addHint(hint)
@@ -176,10 +204,11 @@ struct HintButtonView: View {
                             }
                         }
                         
-                        // For text hints (level 3), use the server hint content
+                        // For text hints (level 3), store clue text for persistent display
                         // For visual hints (levels 1 & 2), don't show text notification
                         if nextLevel == 3 {
-                            onHintUsed(response.hint.content)
+                            level3ClueText = response.hint.content
+                            gameModel.addHint(response.hint.content) // Also track hint usage for scoring
                         } else {
                             // Don't show notification for visual hints
                             gameModel.addHint(response.hint.content)
@@ -278,7 +307,6 @@ struct PhysicsGameView: View {
     @State private var motionManager = CMMotionManager()
     @State private var gameScene: PhysicsGameScene?
     @State private var celebrationMessage = ""
-    @State private var phraseNotificationMessage = ""
     @State private var isSkipping = false
     @StateObject private var networkManager = NetworkManager.shared
     
@@ -296,15 +324,33 @@ struct PhysicsGameView: View {
                 VStack {
                     // Custom phrase attribution (top center)
                     if !gameModel.customPhraseInfo.isEmpty {
-                        Text(gameModel.customPhraseInfo)
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.blue.opacity(0.8))
-                            .cornerRadius(12)
-                            .shadow(radius: 4)
-                            .padding(.top, 50)
+                        if gameModel.isShowingPhraseNotification {
+                            // Notification styling: white text on black background with yellow border
+                            Text(gameModel.customPhraseInfo)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.black)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.yellow, lineWidth: 2)
+                                )
+                                .cornerRadius(12)
+                                .shadow(radius: 4)
+                                .padding(.top, 50)
+                        } else {
+                            // Normal phrase info styling
+                            Text(gameModel.customPhraseInfo)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue.opacity(0.8))
+                                .cornerRadius(12)
+                                .shadow(radius: 4)
+                                .padding(.top, 50)
+                        }
                     }
                     
                     HStack {
@@ -326,38 +372,18 @@ struct PhysicsGameView: View {
                                 }
                             
                             
-                            if let lastPhrase = networkManager.lastReceivedPhrase {
-                                Text("LAST RECEIVED:")
-                                    .font(.caption2)
-                                    .foregroundColor(.green)
-                                    .fontWeight(.bold)
-                                    .padding(.top, 4)
-                                
-                                Text(lastPhrase.content)
-                                    .font(.caption2)
-                                    .foregroundColor(.green)
-                                    .background(Color.black.opacity(0.7))
-                                    .cornerRadius(4)
-                                    .padding(.horizontal, 4)
-                                
-                                Text("from \(lastPhrase.senderName)")
-                                    .font(.caption2)
-                                    .foregroundColor(.green)
-                                    .italic()
-                            } else {
-                                Text("NEXT:")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                                    .fontWeight(.bold)
-                                    .padding(.top, 4)
-                                
-                                Text("(server phrase)")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                                    .background(Color.black.opacity(0.7))
-                                    .cornerRadius(4)
-                                    .padding(.horizontal, 4)
-                            }
+                            Text("NEXT:")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                                .fontWeight(.bold)
+                                .padding(.top, 4)
+                            
+                            Text("(server phrase)")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(4)
+                                .padding(.horizontal, 4)
                             
                         }
                         .padding()
@@ -415,15 +441,8 @@ struct PhysicsGameView: View {
                             Spacer()
                             
                             // Hint button - Bottom right (always visible)
-                            HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { hint in
-                                // Show hint text notification (only called for level 3 hints)
-                                phraseNotificationMessage = "Hint: \(hint)"
-                                withAnimation(.easeInOut(duration: 0.5)) {
-                                    // Auto-hide after 3 seconds
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        phraseNotificationMessage = ""
-                                    }
-                                }
+                            HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
+                                // No longer used - clue is now displayed persistently
                             }
                             .padding(.bottom, 20)
                             .padding(.trailing, 20)
@@ -446,24 +465,6 @@ struct PhysicsGameView: View {
                             .zIndex(3000)
                     }
                     
-                    // Phrase notification toast
-                    if !phraseNotificationMessage.isEmpty {
-                        VStack {
-                            Text(phraseNotificationMessage)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                                .background(Color.green.opacity(0.9))
-                                .cornerRadius(25)
-                                .shadow(radius: 6)
-                                .transition(.scale.combined(with: .opacity))
-                            
-                            Spacer()
-                        }
-                        .padding(.top, 120)
-                        .zIndex(2000)
-                    }
                     
                 }
             }
@@ -478,20 +479,6 @@ struct PhysicsGameView: View {
         }
         .onDisappear {
             motionManager.stopDeviceMotionUpdates()
-        }
-        .onChange(of: networkManager.lastReceivedPhrase) { oldValue, newValue in
-            if let newPhrase = newValue, newPhrase != oldValue {
-                withAnimation(.spring()) {
-                    phraseNotificationMessage = "New phrase from \(newPhrase.senderName)!"
-                }
-                
-                // Clear notification after 3 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    withAnimation(.easeOut) {
-                        phraseNotificationMessage = ""
-                    }
-                }
-            }
         }
     }
     
@@ -1103,9 +1090,7 @@ class PhysicsGameScene: SKScene {
         // Clear tile highlights and restore original colors
         for tile in tiles {
             // Restore original front face color for LetterTile objects
-            if let letterTile = tile as? LetterTile {
-                letterTile.restoreFrontFace()
-            }
+            tile.restoreFrontFace()
         }
     }
     
@@ -1159,19 +1144,17 @@ class PhysicsGameScene: SKScene {
             }
             
             // Use the LetterTile's letter property directly
-            if let letterTile = tile as? LetterTile {
-                let tileChar = letterTile.letter.lowercased().first!
+            let tileChar = tile.letter.lowercased().first!
                 
                 print("🔍 HINT2: Checking tile with letter: '\(tileChar)'")
                 
-                // Check if this tile contains a first letter we still need
-                if let index = remainingLetters.firstIndex(of: tileChar) {
-                    print("✅ HINT2: Highlighting tile with letter: '\(tileChar)'")
-                    highlightTile(tile)
-                    highlightedCount += 1
-                    // Remove this letter from remaining list to avoid highlighting duplicates
-                    remainingLetters.remove(at: index)
-                }
+            // Check if this tile contains a first letter we still need
+            if let index = remainingLetters.firstIndex(of: tileChar) {
+                print("✅ HINT2: Highlighting tile with letter: '\(tileChar)'")
+                highlightTile(tile)
+                highlightedCount += 1
+                // Remove this letter from remaining list to avoid highlighting duplicates
+                remainingLetters.remove(at: index)
             }
         }
         
@@ -1179,11 +1162,9 @@ class PhysicsGameScene: SKScene {
         print("🔍 HINT2: Still need letters: \(remainingLetters)")
     }
     
-    private func highlightTile(_ tile: SKNode) {
+    private func highlightTile(_ tile: LetterTile) {
         // Change the front face color to blue for LetterTile objects
-        if let letterTile = tile as? LetterTile {
-            letterTile.highlightFrontFace()
-        }
+        tile.highlightFrontFace()
     }
     
     private func triggerQuakeWithDuration(_ duration: TimeInterval) {
@@ -1536,8 +1517,8 @@ class PhysicsGameScene: SKScene {
         if isComplete {
             print("🎉 VICTORY TRIGGERED!")
             if !celebrationText.contains("🎉") { // Only celebrate once
-                triggerCelebration()
-                gameModel.completeGame() // Mark game as completed
+                gameModel.completeGame() // Calculate score immediately
+                triggerCelebration() // Celebrate with score
             }
             celebrationText = "🎉 VICTORY! All words complete: \(allFoundWords.joined(separator: " + "))"
         } else {
@@ -1722,18 +1703,20 @@ class PhysicsGameScene: SKScene {
         ]
         
         let randomMessage = messages.randomElement() ?? "Congratulations!"
-        print("🎉 \(randomMessage)")
+        let scoreText = gameModel.currentScore > 0 ? "\n\(gameModel.currentScore) points!" : ""
+        let fullMessage = "\(randomMessage)\(scoreText)"
+        print("🎉 \(fullMessage)")
         
         // Show celebration message on screen
-        celebrationText = "🎉 \(randomMessage)"
+        celebrationText = "🎉 \(fullMessage)"
         print("🎊 CELEBRATION TEXT SET: '\(celebrationText)'")
         print("🎊 CELEBRATION TEXT EMPTY? \(celebrationText.isEmpty)")
         
         // Trigger SwiftUI celebration display
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.onCelebration?(randomMessage)
-            print("🎊 TRIGGERED SWIFTUI CELEBRATION: '\(randomMessage)'")
+            self.onCelebration?(fullMessage)
+            print("🎊 TRIGGERED SWIFTUI CELEBRATION: '\(fullMessage)'")
         }
         
         // Create fireworks effect

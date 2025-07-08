@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import Combine
 
 @Observable
 class GameModel {
@@ -9,11 +10,16 @@ class GameModel {
     var wordsCompleted: Int = 0
     var customPhraseInfo: String = ""
     
+    // Phrase notification state
+    var isShowingPhraseNotification: Bool = false
+    private var notificationTimer: Timer?
+    
     // Hint system state
     var currentPhraseId: String? = nil
     var currentHints: [String] = []
     var currentScore: Int = 0
     var hintsUsed: Int = 0
+    var phraseDifficulty: Int = 0
     
     private var sentences: [String] = []
     private var currentCustomPhrase: CustomPhrase? = nil
@@ -28,7 +34,8 @@ class GameModel {
     
     init() {
         loadSentences()
-        Task {
+        Task { @MainActor in
+            setupNetworkNotifications()
             await startNewGame()
         }
     }
@@ -137,6 +144,7 @@ class GameModel {
         currentHints = []
         currentScore = 0
         hintsUsed = 0
+        phraseDifficulty = 0
     }
     
     private func scrambleLetters() {
@@ -153,6 +161,7 @@ class GameModel {
         currentHints = []
         currentScore = 0
         hintsUsed = 0
+        phraseDifficulty = 0
     }
     
     func validateWordCompletion(formedWords: [String]) -> Bool {
@@ -174,13 +183,29 @@ class GameModel {
     func completeGame() {
         gameState = .completed
         
-        // Complete phrase on server if we have a phrase ID
+        // Calculate score immediately based on local data
+        currentScore = calculateLocalScore()
+        print("✅ COMPLETION: Calculated local score: \(currentScore) points (difficulty: \(phraseDifficulty), hints: \(hintsUsed))")
+        
+        // Also complete phrase on server (async, no need to wait)
         if let phraseId = currentPhraseId {
             Task {
                 let networkManager = NetworkManager.shared
                 let _ = await networkManager.completePhrase(phraseId: phraseId)
             }
         }
+    }
+    
+    private func calculateLocalScore() -> Int {
+        guard phraseDifficulty > 0 else { return 0 }
+        
+        var score = phraseDifficulty
+        
+        if hintsUsed >= 1 { score = Int(round(Double(phraseDifficulty) * 0.90)) }
+        if hintsUsed >= 2 { score = Int(round(Double(phraseDifficulty) * 0.70)) }
+        if hintsUsed >= 3 { score = Int(round(Double(phraseDifficulty) * 0.50)) }
+        
+        return score
     }
     
     func skipCurrentGame() async {
@@ -207,5 +232,47 @@ class GameModel {
     func addHint(_ hint: String) {
         currentHints.append(hint)
         hintsUsed += 1
+    }
+    
+    // Network notification setup
+    @MainActor
+    private func setupNetworkNotifications() {
+        // Watch for immediately received phrases
+        let networkManager = NetworkManager.shared
+        
+        // Use Combine to observe justReceivedPhrase changes
+        networkManager.$justReceivedPhrase
+            .compactMap { $0 } // Only proceed if phrase is not nil
+            .sink { [weak self] phrase in
+                DispatchQueue.main.async {
+                    self?.showPhraseNotification(senderName: phrase.senderName)
+                    // Clear the trigger so it doesn't fire again
+                    networkManager.justReceivedPhrase = nil
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
+    
+    // Phrase notification system
+    private func showPhraseNotification(senderName: String) {
+        // Clear any existing timer
+        notificationTimer?.invalidate()
+        
+        // Show notification immediately
+        customPhraseInfo = "New phrase from \(senderName) incoming!"
+        isShowingPhraseNotification = true
+        
+        // Switch to normal display after 3 seconds
+        notificationTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isShowingPhraseNotification = false
+                if let currentPhrase = self.currentCustomPhrase {
+                    self.customPhraseInfo = "Custom phrase from \(currentPhrase.senderName)"
+                }
+            }
+        }
     }
 }
