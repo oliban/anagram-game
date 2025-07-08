@@ -163,6 +163,10 @@ class NetworkManager: ObservableObject {
     // Push-based phrase delivery
     @Published var hasNewPhrase: Bool = false
     
+    // Debug info for on-screen display
+    @Published var debugMessages: [String] = []
+    @Published var socketConnectionInfo: String = "Not connected"
+    
     private let baseURL = "http://192.168.1.133:3000"
     private var urlSession: URLSession
     private var playerListTimer: Timer?
@@ -371,6 +375,10 @@ class NetworkManager: ObservableObject {
             self.connectionStatus = .connected
             self.isConnected = true
             
+            print("🔗 SOCKET: Connected! Associating with player ID: \(playerId)")
+            self.addDebugMessage("🔗 Connected! Player: \(playerId)")
+            self.socketConnectionInfo = "Connected as \(playerId)"
+            
             // Emit player-connect event to associate player ID with socket ID
             self.socket?.emit("player-connect", with: [["playerId": playerId]], completion: nil)
 
@@ -448,6 +456,14 @@ class NetworkManager: ObservableObject {
         }
         
         socket.on("new-phrase") { [weak self] data, _ in
+            print("🔔 SOCKET: Received 'new-phrase' event!")
+            print("🔔 SOCKET: Data count: \(data.count)")
+            print("🔔 SOCKET: Data: \(data)")
+            if let firstItem = data.first {
+                print("🔔 SOCKET: First item type: \(type(of: firstItem))")
+                print("🔔 SOCKET: First item: \(firstItem)")
+            }
+            self?.addDebugMessage("🔔 Event! Data count: \(data.count)")
             self?.handleNewPhrase(data: data)
         }
         
@@ -476,25 +492,38 @@ class NetworkManager: ObservableObject {
     }
     
     private func handleNewPhrase(data: [Any]) {
-        
         guard let payload = data.first as? [String: Any] else {
             print("❌ SOCKET: No payload in data or not a dictionary")
             print("❌ SOCKET: Data: \(data)")
+            print("❌ SOCKET: Data count: \(data.count)")
+            if !data.isEmpty {
+                print("❌ SOCKET: First item: \(data.first!)")
+                print("❌ SOCKET: First item type: \(type(of: data.first!))")
+            }
+            addDebugMessage("❌ No payload data")
             return
         }
         
+        
+        addDebugMessage("✅ Got payload dict")
         
         guard let phraseData = payload["phrase"] as? [String: Any] else {
             print("❌ SOCKET: No 'phrase' field in payload or not a dictionary")
             print("❌ SOCKET: Payload: \(payload)")
+            addDebugMessage("❌ No phrase field")
             return
         }
+        
+        addDebugMessage("✅ Got phrase data")
         
         guard let senderName = payload["senderName"] as? String else {
             print("❌ SOCKET: No 'senderName' field in payload or not a string")
             print("❌ SOCKET: Payload: \(payload)")
+            addDebugMessage("❌ No senderName")
             return
         }
+        
+        addDebugMessage("✅ Got senderName: \(senderName)")
         
         
         do {
@@ -513,11 +542,13 @@ class NetworkManager: ObservableObject {
                 self.lastReceivedPhrase = phrase
                 self.hasNewPhrase = true
                 
+                self.addDebugMessage("🚀 Got phrase: '\(phrase.content)' from \(senderName)")
                 print("🚀 INSTANT PHRASE PREVIEW: '\(phrase.content)' from \(senderName) - shows in NEXT section immediately")
             }
         } catch {
             print("❌ SOCKET: Failed to decode new phrase: \(error.localizedDescription)")
             print("❌ SOCKET: Error details: \(error)")
+            addDebugMessage("❌ Decode failed: \(error.localizedDescription)")
         }
     }
     
@@ -603,7 +634,7 @@ class NetworkManager: ObservableObject {
         }
     }
     
-    func sendPhrase(content: String, targetId: String) async -> Bool {
+    func sendPhrase(content: String, targetId: String, clue: String? = nil) async -> Bool {
         guard let url = URL(string: "\(baseURL)/api/phrases") else {
             print("❌ PHRASE: Invalid URL for sending phrase")
             return false
@@ -619,11 +650,16 @@ class NetworkManager: ObservableObject {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
-            let requestBody: [String: Any] = [
+            var requestBody: [String: Any] = [
                 "content": content,
                 "senderId": currentPlayer.id,
                 "targetId": targetId
             ]
+            
+            // Add clue if provided (sent as "hint" to server for compatibility)
+            if let clue = clue, !clue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                requestBody["hint"] = clue.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
             
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
             
@@ -961,6 +997,18 @@ class NetworkManager: ObservableObject {
         print("🔧 MANUAL PING TEST: Sending ping via SocketIO")
         // SocketIO doesn't have a manual ping method, so we send a custom message
         socket.emit("ping", completion: nil)
+    }
+    
+    // Debug helper methods
+    private func addDebugMessage(_ message: String) {
+        let timestamp = DateFormatter().string(from: Date())
+        let timestampedMessage = "[\(timestamp)] \(message)"
+        debugMessages.append(timestampedMessage)
+        
+        // Keep only last 10 messages
+        if debugMessages.count > 10 {
+            debugMessages.removeFirst()
+        }
     }
 }
 
