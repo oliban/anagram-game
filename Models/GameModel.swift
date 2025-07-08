@@ -3,7 +3,7 @@ import SwiftData
 import Combine
 
 @Observable
-class GameModel {
+class GameModel: ObservableObject {
     var currentSentence: String = ""
     var scrambledLetters: [String] = []
     var gameState: GameState = .playing
@@ -20,6 +20,11 @@ class GameModel {
     var currentScore: Int = 0
     var hintsUsed: Int = 0
     var phraseDifficulty: Int = 0
+    
+    // Player information
+    var playerId: String? = nil
+    var playerName: String? = nil
+    var networkManager: NetworkManager? = nil
     
     private var sentences: [String] = []
     private var currentCustomPhrase: CustomPhrase? = nil

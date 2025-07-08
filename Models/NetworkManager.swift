@@ -908,6 +908,127 @@ class NetworkManager: ObservableObject {
         print("⏰ TIMER: Stopped periodic player list fetch")
     }
     
+    // MARK: - Lobby & Scoring API Methods (Phase 4.9)
+    
+    func getPlayerStats(playerId: String) async throws -> PlayerStats {
+        guard let url = URL(string: "\(baseURL)/api/scores/player/\(playerId)") else {
+            throw NetworkError.invalidURL
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ STATS: Failed to get player stats. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                throw NetworkError.serverOffline
+            }
+            
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let scoresData = jsonResponse["scores"] as? [String: Any] {
+                
+                let dailyScore = scoresData["dailyScore"] as? Int ?? 0
+                let dailyRank = scoresData["dailyRank"] as? Int ?? 0
+                let weeklyScore = scoresData["weeklyScore"] as? Int ?? 0
+                let weeklyRank = scoresData["weeklyRank"] as? Int ?? 0
+                let totalScore = scoresData["totalScore"] as? Int ?? 0
+                let totalRank = scoresData["totalRank"] as? Int ?? 0
+                let totalPhrases = scoresData["totalPhrases"] as? Int ?? 0
+                
+                let stats = PlayerStats(
+                    dailyScore: dailyScore,
+                    dailyRank: dailyRank,
+                    weeklyScore: weeklyScore,
+                    weeklyRank: weeklyRank,
+                    totalScore: totalScore,
+                    totalRank: totalRank,
+                    totalPhrases: totalPhrases
+                )
+                
+                print("📊 STATS: Successfully got player stats: \(totalScore) total points")
+                return stats
+            }
+            
+            throw NetworkError.invalidResponse
+            
+        } catch {
+            print("❌ STATS: Error getting player stats: \(error.localizedDescription)")
+            throw NetworkError.connectionFailed
+        }
+    }
+    
+    func getLeaderboard(period: String, limit: Int = 10) async throws -> [LeaderboardEntry] {
+        guard let url = URL(string: "\(baseURL)/api/leaderboards/\(period)?limit=\(limit)") else {
+            throw NetworkError.invalidURL
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ LEADERBOARD: Failed to get leaderboard. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                throw NetworkError.serverOffline
+            }
+            
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let leaderboardData = jsonResponse["leaderboard"] as? [[String: Any]] {
+                
+                let entries = leaderboardData.compactMap { entry -> LeaderboardEntry? in
+                    guard let rank = entry["rank"] as? Int,
+                          let playerName = entry["playerName"] as? String,
+                          let totalScore = entry["totalScore"] as? Int,
+                          let phrasesCompleted = entry["phrasesCompleted"] as? Int else {
+                        return nil
+                    }
+                    
+                    return LeaderboardEntry(
+                        rank: rank,
+                        playerName: playerName,
+                        totalScore: totalScore,
+                        phrasesCompleted: phrasesCompleted
+                    )
+                }
+                
+                print("🏆 LEADERBOARD: Successfully got \(entries.count) leaderboard entries for \(period)")
+                return entries
+            }
+            
+            throw NetworkError.invalidResponse
+            
+        } catch {
+            print("❌ LEADERBOARD: Error getting leaderboard: \(error.localizedDescription)")
+            throw NetworkError.connectionFailed
+        }
+    }
+    
+    func getOnlinePlayersCount() async throws -> Int {
+        guard let url = URL(string: "\(baseURL)/api/players/online") else {
+            throw NetworkError.invalidURL
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ ONLINE COUNT: Failed to get online players count. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                throw NetworkError.serverOffline
+            }
+            
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let playersData = jsonResponse["players"] as? [[String: Any]] {
+                
+                let count = playersData.count
+                print("👥 ONLINE COUNT: Successfully got online players count: \(count)")
+                return count
+            }
+            
+            throw NetworkError.invalidResponse
+            
+        } catch {
+            print("❌ ONLINE COUNT: Error getting online players count: \(error.localizedDescription)")
+            throw NetworkError.connectionFailed
+        }
+    }
+    
     // MARK: - Legacy API for compatibility
     
     func testConnection() async -> Result<Bool, NetworkError> {
@@ -965,6 +1086,25 @@ class NetworkManager: ObservableObject {
         socket.emit("ping", completion: nil)
     }
     
+}
+
+// MARK: - Lobby Data Models
+
+public struct PlayerStats: Codable {
+    let dailyScore: Int
+    let dailyRank: Int
+    let weeklyScore: Int
+    let weeklyRank: Int
+    let totalScore: Int
+    let totalRank: Int
+    let totalPhrases: Int
+}
+
+public struct LeaderboardEntry: Codable {
+    let rank: Int
+    let playerName: String
+    let totalScore: Int
+    let phrasesCompleted: Int
 }
 
 // MARK: - Helper extensions (can be in a separate file)

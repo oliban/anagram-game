@@ -47,8 +47,7 @@ struct HintButton: View {
             return "Loading..."
         }
         
-        guard let hintStatus = hintStatus,
-              let scorePreview = scorePreview else {
+        guard let hintStatus = hintStatus else {
             return "Hint (? points)"
         }
         
