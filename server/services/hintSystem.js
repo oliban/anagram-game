@@ -1,4 +1,5 @@
 const { query } = require('../database/connection');
+const ScoringSystem = require('./scoringSystem');
 
 /**
  * Custom error class for hint validation errors
@@ -28,13 +29,13 @@ class HintSystem {
         return `This phrase has ${words.length} word${words.length > 1 ? 's' : ''}`;
         
       case 2:
-        // Level 2: Show the original hint that came with the phrase
-        return originalHint;
-        
-      case 3:
-        // Level 3: First letters of each word
+        // Level 2: First letters of each word
         const firstLetters = words.map(word => word.charAt(0).toUpperCase()).join(' ');
         return `First letters: ${firstLetters}`;
+        
+      case 3:
+        // Level 3: Show the original clue that came with the phrase
+        return originalHint;
         
       default:
         throw new Error('Invalid hint level. Must be 1, 2, or 3.');
@@ -193,6 +194,14 @@ class HintSystem {
       const completion = result.rows[0];
       
       console.log(`✅ COMPLETION: Player ${playerId} completed phrase with ${completion.hints_used} hints, score: ${completion.final_score}`);
+      
+      // Update player score aggregations and leaderboards
+      try {
+        await ScoringSystem.updatePlayerScores(playerId);
+      } catch (error) {
+        console.error('⚠️ COMPLETION: Failed to update player scores:', error.message);
+        // Don't fail the completion if scoring update fails
+      }
       
       return {
         success: true,
