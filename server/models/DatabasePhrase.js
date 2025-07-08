@@ -1,4 +1,5 @@
 const { query, transaction } = require('../database/connection');
+const { calculateScore, LANGUAGES } = require('../services/difficultyScorer');
 
 /**
  * DatabasePhrase model implementing the new phrase system with hints and targeting
@@ -114,6 +115,23 @@ class DatabasePhrase {
   }
 
   /**
+   * Calculate automatic difficulty score (1-100) from phrase content
+   * Uses statistical analysis via difficultyScorer with full score range
+   */
+  static calculateDifficultyScore(content, language = LANGUAGES.ENGLISH) {
+    try {
+      // Get statistical score (1-100) - use directly
+      const score = calculateScore({ phrase: content, language });
+      
+      console.log(`📊 DIFFICULTY: "${content}" -> Score: ${score}/100`);
+      return score;
+    } catch (error) {
+      console.error('📊 DIFFICULTY: Error calculating difficulty, defaulting to score 1:', error.message);
+      return 1;
+    }
+  }
+
+  /**
    * Create a new phrase in the database (simplified for existing API)
    */
   static async createPhrase(options) {
@@ -137,12 +155,15 @@ class DatabasePhrase {
       return words.length > 1 ? `Unscramble these ${words.length} words` : 'Unscramble this word';
     })();
 
+    // Calculate automatic difficulty score (1-100)
+    const difficultyScore = this.calculateDifficultyScore(cleanContent);
+
     try {
       const result = await query(`
         INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
-      `, [cleanContent, cleanHint, 1, false, senderId, true]);
+      `, [cleanContent, cleanHint, difficultyScore, false, senderId, true]);
 
       const phraseData = result.rows[0];
       console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
@@ -369,18 +390,31 @@ class DatabasePhrase {
   }
 
   /**
-   * Get all global phrases with optional filtering (Phase 4.2)
+   * Get all global phrases with optional filtering (Phase 4.2 + 4.7.3)
    */
-  static async getGlobalPhrases(limit = 50, offset = 0, difficulty = null, approved = true) {
+  static async getGlobalPhrases(limit = 50, offset = 0, difficulty = null, approved = true, minDifficulty = null, maxDifficulty = null) {
     try {
       let whereClause = 'WHERE p.is_global = true';
       const params = [];
       let paramIndex = 1;
 
-      // Add difficulty filter if specified
+      // Legacy difficulty filter (exact match, 1-5 range)
       if (difficulty !== null && difficulty >= 1 && difficulty <= 5) {
         whereClause += ` AND p.difficulty_level = $${paramIndex}`;
         params.push(difficulty);
+        paramIndex++;
+      }
+
+      // New difficulty range filters (1+ range, no upper limit)
+      if (minDifficulty !== null && minDifficulty >= 1) {
+        whereClause += ` AND p.difficulty_level >= $${paramIndex}`;
+        params.push(minDifficulty);
+        paramIndex++;
+      }
+
+      if (maxDifficulty !== null && maxDifficulty >= 1) {
+        whereClause += ` AND p.difficulty_level <= $${paramIndex}`;
+        params.push(maxDifficulty);
         paramIndex++;
       }
 
@@ -416,18 +450,31 @@ class DatabasePhrase {
   }
 
   /**
-   * Get count of global phrases with optional filtering (Phase 4.2)
+   * Get count of global phrases with optional filtering (Phase 4.2 + 4.7.3)
    */
-  static async getGlobalPhrasesCount(difficulty = null, approved = true) {
+  static async getGlobalPhrasesCount(difficulty = null, approved = true, minDifficulty = null, maxDifficulty = null) {
     try {
       let whereClause = 'WHERE is_global = true';
       const params = [];
       let paramIndex = 1;
 
-      // Add difficulty filter if specified
+      // Legacy difficulty filter (exact match, 1-5 range)
       if (difficulty !== null && difficulty >= 1 && difficulty <= 5) {
         whereClause += ` AND difficulty_level = $${paramIndex}`;
         params.push(difficulty);
+        paramIndex++;
+      }
+
+      // New difficulty range filters (1+ range, no upper limit)
+      if (minDifficulty !== null && minDifficulty >= 1) {
+        whereClause += ` AND difficulty_level >= $${paramIndex}`;
+        params.push(minDifficulty);
+        paramIndex++;
+      }
+
+      if (maxDifficulty !== null && maxDifficulty >= 1) {
+        whereClause += ` AND difficulty_level <= $${paramIndex}`;
+        params.push(maxDifficulty);
         paramIndex++;
       }
 
@@ -529,9 +576,9 @@ class DatabasePhrase {
       senderId,
       targetIds = [], // Array for multi-player targeting
       isGlobal = false,
-      difficultyLevel = 1,
       phraseType = 'custom',
-      priority = 1
+      priority = 1,
+      language = LANGUAGES.ENGLISH // Optional language parameter for difficulty calculation
     } = options;
 
     // Comprehensive validation
@@ -543,10 +590,8 @@ class DatabasePhrase {
     const cleanContent = validation.content;
     const cleanHint = validation.hint;
 
-    // Validate difficulty level
-    if (difficultyLevel < 1 || difficultyLevel > 5) {
-      throw new Error('Difficulty level must be between 1 and 5');
-    }
+    // Calculate automatic difficulty score (1-100)
+    const difficultyScore = this.calculateDifficultyScore(cleanContent, language);
 
     // Validate phrase type
     const validTypes = ['custom', 'global', 'community', 'challenge'];
@@ -561,7 +606,7 @@ class DatabasePhrase {
           INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, priority)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyLevel, isGlobal, senderId, phraseType, priority]);
+        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, priority]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 
