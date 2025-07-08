@@ -430,7 +430,6 @@ app.post('/api/phrases', async (req, res) => {
       phraseData.targetId = targetId;
       phraseData.senderName = sender.name;
       
-      console.log(`🔍 DEBUG: Sending phrase data: ${JSON.stringify(phraseData, null, 2)}`);
       io.to(target.socketId).emit('new-phrase', {
         phrase: phraseData,
         senderName: sender.name,
