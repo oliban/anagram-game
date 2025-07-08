@@ -191,8 +191,8 @@ class HintSystemTester {
       throw new Error('Hint level should be 2');
     }
     
-    if (data.hint.content !== 'A greeting to the world') {
-      throw new Error('Hint 2 should be the original hint');
+    if (!data.hint.content.includes('First letters:') || !data.hint.content.includes('H W')) {
+      throw new Error('Hint 2 should show first letters (H W)');
     }
     
     if (data.hint.hintsRemaining !== 1) {
@@ -226,8 +226,8 @@ class HintSystemTester {
       throw new Error('Hint level should be 3');
     }
     
-    if (!data.hint.content.includes('H W')) {
-      throw new Error('Hint 3 should show first letters');
+    if (data.hint.content !== 'A greeting to the world') {
+      throw new Error('Hint 3 should be the original hint');
     }
     
     if (data.hint.hintsRemaining !== 0) {
