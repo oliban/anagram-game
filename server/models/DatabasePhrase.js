@@ -34,6 +34,7 @@ class DatabasePhrase {
       phraseType: this.phraseType,
       priority: this.priority,
       usageCount: this.usageCount,
+      createdAt: this.createdAt,
       // Legacy fields for backward compatibility
       senderId: this.senderId || this.createdByPlayerId,
       targetId: this.targetId,

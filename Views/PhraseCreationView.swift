@@ -5,6 +5,7 @@ struct PhraseCreationView: View {
     @StateObject private var networkManager = NetworkManager.shared
     
     @State private var phraseText = ""
+    @State private var clueText = ""
     @State private var selectedTargetId = ""
     @State private var isLoading = false
     @State private var errorMessage = ""
@@ -69,6 +70,23 @@ struct PhraseCreationView: View {
                                     .foregroundColor(.orange)
                             }
                         }
+                    }
+                }
+                
+                // Clue input section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Clue (Optional)")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Enter a helpful clue...", text: $clueText, axis: .vertical)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .lineLimit(2)
+                            .autocapitalization(.sentences)
+                        
+                        Text("This clue will be revealed when the player uses Hint 3")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
                 
@@ -168,7 +186,8 @@ struct PhraseCreationView: View {
         Task {
             let success = await networkManager.sendPhrase(
                 content: phraseText.trimmingCharacters(in: .whitespacesAndNewlines),
-                targetId: selectedTargetId
+                targetId: selectedTargetId,
+                clue: clueText.isEmpty ? nil : clueText.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             
             await MainActor.run {

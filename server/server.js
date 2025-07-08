@@ -10,6 +10,7 @@ const { Server } = require('socket.io');
 const { testConnection, getStats: getDbStats, shutdown: shutdownDb, pool } = require('./database/connection');
 const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
+const { HintSystem, HintValidationError } = require('./services/hintSystem');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -424,8 +425,14 @@ app.post('/api/phrases', async (req, res) => {
     
     // Send real-time notification to target player
     if (target.socketId) {
+      const phraseData = phrase.getPublicInfo();
+      // Ensure targetId and senderName are included for iOS client compatibility
+      phraseData.targetId = targetId;
+      phraseData.senderName = sender.name;
+      
+      console.log(`🔍 DEBUG: Sending phrase data: ${JSON.stringify(phraseData, null, 2)}`);
       io.to(target.socketId).emit('new-phrase', {
-        phrase: phrase.getPublicInfo(),
+        phrase: phraseData,
         senderName: sender.name,
         timestamp: new Date().toISOString()
       });
@@ -646,8 +653,13 @@ app.post('/api/phrases/create', async (req, res) => {
     const notifications = [];
     for (const target of validTargets) {
       if (target.socketId) {
+        const phraseData = phrase.getPublicInfo();
+        // Ensure targetId and senderName are included for iOS client compatibility
+        phraseData.targetId = target.id;
+        phraseData.senderName = sender.name;
+        
         io.to(target.socketId).emit('new-phrase', {
-          phrase: phrase.getPublicInfo(),
+          phrase: phraseData,
           senderName: sender.name,
           timestamp: new Date().toISOString()
         });
@@ -1200,6 +1212,253 @@ app.post('/api/phrases/analyze-difficulty', async (req, res) => {
     res.status(500).json({
       error: 'Failed to analyze phrase difficulty',
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Phase 4.8: Hint System Endpoints
+
+// Use hint endpoint
+app.post('/api/phrases/:phraseId/hint/:level', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for hint system'
+      });
+    }
+
+    const { phraseId, level } = req.params;
+    const { playerId } = req.body;
+
+    // Validate input
+    if (!playerId) {
+      return res.status(400).json({
+        error: 'Player ID is required'
+      });
+    }
+
+    const hintLevel = parseInt(level);
+    if (isNaN(hintLevel) || hintLevel < 1 || hintLevel > 3) {
+      return res.status(400).json({
+        error: 'Hint level must be 1, 2, or 3'
+      });
+    }
+
+    // Validate UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(phraseId) || !uuidRegex.test(playerId)) {
+      return res.status(400).json({
+        error: 'Invalid phrase ID or player ID format'
+      });
+    }
+
+    // Use hint
+    const result = await HintSystem.useHint(playerId, phraseId, hintLevel);
+
+    res.json({
+      success: true,
+      hint: {
+        level: result.hintLevel,
+        content: result.hintContent,
+        currentScore: result.currentScore,
+        nextHintScore: result.nextHintScore,
+        hintsRemaining: result.hintsRemaining,
+        canUseNextHint: result.canUseNextHint
+      },
+      scorePreview: result.scorePreview,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ HINT: Error using hint:', error.message);
+    
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        error: error.message
+      });
+    }
+    
+    if (error.name === 'HintValidationError' || error.message.includes('Invalid') || error.message.includes('Must use hints in order')) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to use hint'
+    });
+  }
+});
+
+// Get hint status endpoint
+app.get('/api/phrases/:phraseId/hints/status', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for hint system'
+      });
+    }
+
+    const { phraseId } = req.params;
+    const { playerId } = req.query;
+
+    // Validate input
+    if (!playerId) {
+      return res.status(400).json({
+        error: 'Player ID is required'
+      });
+    }
+
+    // Validate UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(phraseId) || !uuidRegex.test(playerId)) {
+      return res.status(400).json({
+        error: 'Invalid phrase ID or player ID format'
+      });
+    }
+
+    // Get hint status
+    const status = await HintSystem.getHintStatus(playerId, phraseId);
+
+    res.json({
+      success: true,
+      hintStatus: {
+        hintsUsed: status.hintsUsed,
+        nextHintLevel: status.nextHintLevel,
+        hintsRemaining: status.hintsRemaining,
+        currentScore: status.currentScore,
+        nextHintScore: status.nextHintScore,
+        canUseNextHint: status.canUseNextHint
+      },
+      scorePreview: status.scorePreview,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ HINT: Error getting hint status:', error.message);
+    
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to get hint status'
+    });
+  }
+});
+
+// Complete phrase with hint-based scoring endpoint
+app.post('/api/phrases/:phraseId/complete', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for phrase completion'
+      });
+    }
+
+    const { phraseId } = req.params;
+    const { playerId, completionTime = 0 } = req.body;
+
+    // Validate input
+    if (!playerId) {
+      return res.status(400).json({
+        error: 'Player ID is required'
+      });
+    }
+
+    // Validate UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(phraseId) || !uuidRegex.test(playerId)) {
+      return res.status(400).json({
+        error: 'Invalid phrase ID or player ID format'
+      });
+    }
+
+    // Complete phrase with hint-based scoring
+    const result = await HintSystem.completePhrase(playerId, phraseId, completionTime);
+
+    res.json({
+      success: true,
+      completion: {
+        finalScore: result.finalScore,
+        hintsUsed: result.hintsUsed,
+        completionTime: result.completionTime
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ COMPLETION: Error completing phrase:', error.message);
+    
+    if (error.message.includes('not found') || error.message.includes('Failed to complete')) {
+      return res.status(404).json({
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to complete phrase'
+    });
+  }
+});
+
+// Get phrase with hint preview endpoint
+app.get('/api/phrases/:phraseId/preview', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for phrase preview'
+      });
+    }
+
+    const { phraseId } = req.params;
+    const { playerId } = req.query;
+
+    // Validate input
+    if (!playerId) {
+      return res.status(400).json({
+        error: 'Player ID is required'
+      });
+    }
+
+    // Validate UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(phraseId) || !uuidRegex.test(playerId)) {
+      return res.status(400).json({
+        error: 'Invalid phrase ID or player ID format'
+      });
+    }
+
+    // Get phrase with hint preview
+    const phraseData = await HintSystem.getPhraseWithHintPreview(phraseId, playerId);
+
+    res.json({
+      success: true,
+      phrase: {
+        id: phraseData.id,
+        content: phraseData.content,
+        hint: phraseData.hint,
+        difficultyLevel: phraseData.difficulty_level,
+        isGlobal: phraseData.is_global,
+        hintStatus: phraseData.hintStatus,
+        scorePreview: phraseData.scorePreview
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ PREVIEW: Error getting phrase preview:', error.message);
+    
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to get phrase preview'
     });
   }
 });
