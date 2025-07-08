@@ -337,11 +337,15 @@ struct PhysicsGameView: View {
                 SpriteKitView(scene: getOrCreateScene(size: geometry.size))
                     .ignoresSafeArea()
                 
-                // SwiftUI overlay for UI elements (keep inside ZStack for proper overlaying)
+                // UI Layout - Clean and Simple
                 VStack {
-                        // Top navigation bar
-                        HStack {
-                            // Back to Lobby button (top left)
+                    // TOP ROW
+                    HStack {
+                        Spacer() // Push everything to the right
+                        
+                        // Top-right group: Lobby button + Version number
+                        HStack(spacing: 15) {
+                            // Back to Lobby button
                             Button(action: {
                                 Task {
                                     await gameModel.skipCurrentGame()
@@ -360,14 +364,24 @@ struct PhysicsGameView: View {
                                 .cornerRadius(20)
                                 .shadow(radius: 4)
                             }
-                            .padding(.leading, 20)
-                            .padding(.top, 10)
-                        
-                            Spacer()
+                            
+                            // Version number
+                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .fontWeight(.bold)
+                                .onTapGesture {
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.triggerQuake()
+                                    }
+                                }
                         }
-                        
-                        
-                        // Custom phrase attribution (top center)
+                        .padding(.trailing, 20)
+                        .padding(.top, 10)
+                    }
+                    
+                    // MIDDLE - Game content and overlays
+                    // Custom phrase attribution (top center)
                         if !gameModel.customPhraseInfo.isEmpty {
                             if gameModel.isShowingPhraseNotification {
                             // Notification styling: white text on black background with yellow border
@@ -416,168 +430,77 @@ struct PhysicsGameView: View {
                             .zIndex(3000)
                     }
                     
-                    }
-                }
-                
-                // Bottom controls - OUTSIDE ZStack, at bottom of screen
-                HStack {
-                    VStack(alignment: .leading, spacing: 10) {
-                        // Skip button - Top position
-                        Button(action: {
-                            Task {
-                                isSkipping = true
-                                await gameModel.skipCurrentGame()
-                                // CRITICAL: Reset the scene after model updates
-                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                    scene.resetGame()
-                                }
-                                // Brief delay to show loading completed
-                                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-                                isSkipping = false
-                            }
-                        }) {
-                            HStack {
-                                if isSkipping {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Text("Loading...")
-                                } else {
-                                    Image(systemName: "forward.fill")
-                                    Text("Skip")
-                                }
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.orange.opacity(0.8))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
-                        }
-                        .disabled(isSkipping)
-                        .opacity(isSkipping ? 0.6 : 1.0)
-                        
-                        // Send Phrase button - Bottom position
-                        Button(action: {
-                            showingPhraseCreation = true
-                        }) {
-                            HStack {
-                                Image(systemName: "square.and.pencil")
-                                Text("Send Phrase")
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.blue.opacity(0.8))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
-                        }
-                    }
-                    .padding(.leading, 20)
                     
-                    Spacer()
+                    Spacer() // Push bottom controls down
                     
-                    // Hint button - Aligned with Send Phrase button
-                    VStack {
-                        Spacer() // Push hint button down to align with Send Phrase
-                        HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
-                            // No longer used - clue is now displayed persistently
-                        }
-                        .padding(.trailing, 20)
-                    }
-                
-                // Version number overlay - Top Right  
-                VStack {
+                    // BOTTOM ROW - Clean layout inside ZStack
                     HStack {
-                        Spacer()
-                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .fontWeight(.bold)
-                            .onTapGesture {
-                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                    scene.triggerQuake()
+                        // Bottom-left group: Skip + Send Phrase (stacked)
+                        VStack(spacing: 10) {
+                            // Skip button
+                            Button(action: {
+                                Task {
+                                    isSkipping = true
+                                    await gameModel.skipCurrentGame()
+                                    // CRITICAL: Reset the scene after model updates
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.resetGame()
+                                    }
+                                    // Brief delay to show loading completed
+                                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                                    isSkipping = false
                                 }
-                            }
-                            .padding(.trailing, 20)
-                            .padding(.top, 20)
-                    }
-                    Spacer()
-                }
-            }
-            
-            // Bottom controls - positioned at bottom of screen, outside main ZStack
-            VStack {
-                Spacer() // Push buttons to bottom
-                HStack {
-                    VStack(alignment: .leading, spacing: 10) {
-                        // Skip button - Top position
-                        Button(action: {
-                            Task {
-                                isSkipping = true
-                                await gameModel.skipCurrentGame()
-                                // CRITICAL: Reset the scene after model updates
-                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                    scene.resetGame()
+                            }) {
+                                HStack {
+                                    if isSkipping {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Text("Loading...")
+                                    } else {
+                                        Image(systemName: "forward.fill")
+                                        Text("Skip")
+                                    }
                                 }
-                                // Brief delay to show loading completed
-                                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-                                isSkipping = false
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.orange.opacity(0.8))
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
                             }
-                        }) {
-                            HStack {
-                                if isSkipping {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Text("Loading...")
-                                } else {
-                                    Image(systemName: "forward.fill")
-                                    Text("Skip")
+                            .disabled(isSkipping)
+                            .opacity(isSkipping ? 0.6 : 1.0)
+                            
+                            // Send Phrase button
+                            Button(action: {
+                                showingPhraseCreation = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.pencil")
+                                    Text("Send Phrase")
                                 }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.blue.opacity(0.8))
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
                             }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.orange.opacity(0.8))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
                         }
-                        .disabled(isSkipping)
-                        .opacity(isSkipping ? 0.6 : 1.0)
+                        .padding(.leading, 20)
                         
-                        // Send Phrase button - Bottom position
-                        Button(action: {
-                            showingPhraseCreation = true
-                        }) {
-                            HStack {
-                                Image(systemName: "square.and.pencil")
-                                Text("Send Phrase")
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.blue.opacity(0.8))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
-                        }
-                    }
-                    .padding(.leading, 20)
-                    
-                    Spacer()
-                    
-                    // Hint button - Aligned with Send Phrase button
-                    VStack {
-                        Spacer() // Push hint button down to align with Send Phrase
+                        Spacer() // Push hint button to the right
+                        
+                        // Bottom-right: Hint button (standalone)
                         HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
                             // No longer used - clue is now displayed persistently
                         }
                         .padding(.trailing, 20)
                     }
+                    .padding(.bottom, 20)
                 }
-                .padding(.bottom, 20)
             }
         }
         .fullScreenCover(isPresented: $showingPhraseCreation) {
