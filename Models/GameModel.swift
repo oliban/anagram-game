@@ -35,11 +35,25 @@ class GameModel: ObservableObject {
     private var sentences: [String] = []
     var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
     private var phraseQueue: [CustomPhrase] = [] // Queue for incoming phrases
+    private var lobbyDisplayQueue: [CustomPhrase] = [] // Separate queue for lobby display only
     private var isStartingNewGame = false
     
     // Computed property to get current language for LanguageTile display
     var currentLanguage: String {
         return currentCustomPhrase?.language ?? "en"
+    }
+    
+    // Computed properties for phrase queue status (public for UI access)
+    var waitingPhrasesCount: Int {
+        return lobbyDisplayQueue.count
+    }
+    
+    var waitingPhrasesSenders: [String] {
+        return lobbyDisplayQueue.map { $0.senderName }
+    }
+    
+    var hasWaitingPhrases: Bool {
+        return !lobbyDisplayQueue.isEmpty
     }
     
     enum GameState {
@@ -311,10 +325,41 @@ class GameModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // Method to refresh phrase queue for lobby display
+    func refreshPhrasesForLobby() async {
+        let networkManager = NetworkManager.shared
+        
+        let phrases = await networkManager.fetchPhrasesForCurrentPlayer()
+        
+        await MainActor.run {
+            print("📥 LOBBY: BEFORE REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count)")
+            
+            // Only update if the server data is different from what we have
+            let serverPhraseIds = Set(phrases.map { $0.id })
+            let currentPhraseIds = Set(lobbyDisplayQueue.map { $0.id })
+            
+            if serverPhraseIds != currentPhraseIds {
+                print("📥 LOBBY: Server data changed, updating lobby display queue")
+                lobbyDisplayQueue.removeAll()
+                lobbyDisplayQueue.append(contentsOf: phrases)
+            } else {
+                print("📥 LOBBY: Server data unchanged, keeping current lobby display queue")
+            }
+            
+            print("📥 LOBBY: AFTER REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count)")
+            print("📥 LOBBY: Loaded \(phrases.count) phrases for lobby display")
+            if !phrases.isEmpty {
+                print("📥 LOBBY: Phrase senders: \(phrases.map { $0.senderName })")
+            }
+            print("📥 LOBBY: Queue status - hasWaitingPhrases: \(hasWaitingPhrases), waitingPhrasesCount: \(waitingPhrasesCount)")
+        }
+    }
+    
     // Phrase queue management
     private func addPhraseToQueue(_ phrase: CustomPhrase) {
         phraseQueue.append(phrase)
-        print("📥 QUEUE: Added phrase to queue: '\(phrase.content)' from \(phrase.senderName) (Queue size: \(phraseQueue.count))")
+        lobbyDisplayQueue.append(phrase) // Also add to lobby display queue
+        print("📥 QUEUE: Added phrase to queue: '\(phrase.content)' from \(phrase.senderName) (Lobby: \(lobbyDisplayQueue.count))")
         
         // Show notification for the new phrase
         showPhraseNotification(senderName: phrase.senderName)
@@ -322,12 +367,17 @@ class GameModel: ObservableObject {
     
     private func getNextPhraseFromQueue() -> CustomPhrase? {
         guard !phraseQueue.isEmpty else {
-            print("📭 QUEUE: No phrases in queue")
             return nil
         }
         
         let nextPhrase = phraseQueue.removeFirst()
-        print("📤 QUEUE: Retrieved phrase from queue: '\(nextPhrase.content)' from \(nextPhrase.senderName) (Remaining: \(phraseQueue.count))")
+        
+        // Also remove from lobby display queue if it exists there
+        if let index = lobbyDisplayQueue.firstIndex(where: { $0.id == nextPhrase.id }) {
+            lobbyDisplayQueue.remove(at: index)
+        }
+        
+        print("📤 QUEUE: Retrieved phrase from queue: '\(nextPhrase.content)' from \(nextPhrase.senderName) (Lobby: \(lobbyDisplayQueue.count))")
         return nextPhrase
     }
     

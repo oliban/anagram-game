@@ -8,6 +8,7 @@ struct LobbyView: View {
     @State private var playerStats: PlayerStats?
     @State private var onlinePlayersCount: Int = 0
     @State private var isLoadingData = false
+    @State private var refreshTimer: Timer?
     
     var body: some View {
         NavigationView {
@@ -18,6 +19,9 @@ struct LobbyView: View {
                     
                     // Online players count
                     onlinePlayersSection
+                    
+                    // Custom phrases waiting section
+                    customPhrasesWaitingSection
                     
                     // Personal statistics
                     personalStatsSection
@@ -43,6 +47,13 @@ struct LobbyView: View {
             Task {
                 await loadInitialData()
             }
+            
+            // Load custom phrases only once on appear - rely on real-time notifications for updates
+            // No periodic timer needed since WebSocket provides real-time updates
+        }
+        .onDisappear {
+            refreshTimer?.invalidate()
+            refreshTimer = nil
         }
         .fullScreenCover(isPresented: $showingGame) {
             PhysicsGameView(gameModel: gameModel, showingGame: $showingGame)
@@ -79,6 +90,35 @@ struct LobbyView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+    
+    // MARK: - Custom Phrases Waiting Section
+    private var customPhrasesWaitingSection: some View {
+        Group {
+            if gameModel.hasWaitingPhrases {
+                HStack {
+                    Image(systemName: "envelope.fill")
+                        .foregroundColor(.blue)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("You have \(gameModel.waitingPhrasesCount) custom phrase\(gameModel.waitingPhrasesCount == 1 ? "" : "s") waiting for you")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text("from \(formatSenderNames(gameModel.waitingPhrasesSenders))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue, lineWidth: 1)
+                )
+            }
+        }
     }
     
     // MARK: - Personal Statistics Section
@@ -195,6 +235,7 @@ struct LobbyView: View {
             group.addTask { await loadPlayerStats() }
             group.addTask { await loadLeaderboard() }
             group.addTask { await loadOnlinePlayersCount() }
+            group.addTask { await loadCustomPhrases() }
         }
         
         isLoadingData = false
@@ -241,6 +282,28 @@ struct LobbyView: View {
             }
         } catch {
             print("Failed to load online players count: \(error)")
+        }
+    }
+    
+    private func loadCustomPhrases() async {
+        await gameModel.refreshPhrasesForLobby()
+    }
+    
+    // MARK: - Helper Functions
+    private func formatSenderNames(_ senders: [String]) -> String {
+        // Remove duplicates while preserving order
+        let uniqueSenders = Array(NSOrderedSet(array: senders)) as! [String]
+        
+        if uniqueSenders.isEmpty {
+            return ""
+        } else if uniqueSenders.count == 1 {
+            return uniqueSenders[0]
+        } else if uniqueSenders.count == 2 {
+            return "\(uniqueSenders[0]) and \(uniqueSenders[1])"
+        } else {
+            let firstNames = uniqueSenders.prefix(uniqueSenders.count - 1).joined(separator: ", ")
+            let lastName = uniqueSenders.last!
+            return "\(firstNames) and \(lastName)"
         }
     }
 }
