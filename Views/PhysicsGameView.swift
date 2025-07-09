@@ -1435,63 +1435,28 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     override func update(_ currentTime: TimeInterval) {
-        // --- Universal Tile Respawn Logic ---
-        
-        // Combine all tiles into a single array for processing
-        let allTiles: [SKSpriteNode] = tiles + [scoreTile, languageTile].compactMap { $0 } + messageTiles
-        
-        for tile in allTiles {
-            let margin: CGFloat = 100.0  // Buffer zone for tiles completely off-screen
-
-            // Condition 1: Tile is far off-screen
-            let isFarOffscreen = tile.position.x < -margin ||
-                                 tile.position.x > size.width + margin ||
-                                 tile.position.y < -margin ||
-                                 tile.position.y > size.height + margin
-
-            // Condition 2: Tile is stuck near an edge
-            let edgeThreshold: CGFloat = 30.0
-            let velocityThresholdSq: CGFloat = 15.0 * 15.0
-
-            let isNearEdge = tile.position.x < edgeThreshold ||
-                             tile.position.x > size.width - edgeThreshold ||
-                             tile.position.y < edgeThreshold ||
-                             tile.position.y > size.height - edgeThreshold
-            
-            var isStuck = false
-            if isNearEdge {
-                if let velocity = tile.physicsBody?.velocity {
-                    let speedSq = velocity.dx * velocity.dx + velocity.dy * velocity.dy
-                    if speedSq < velocityThresholdSq {
-                        isStuck = true
-                    }
-                }
-            }
-
-            // Respawn if either condition is met
-            if isFarOffscreen || isStuck {
+        // Check for tiles that have left the screen and respawn them
+        for tile in tiles {
+            let margin: CGFloat = 100  // Buffer zone outside screen
+            if tile.position.x < -margin || 
+               tile.position.x > size.width + margin || 
+               tile.position.y < -margin || 
+               tile.position.y > size.height + margin {
+                // Respawn tile in center area with some randomness
                 let randomX = CGFloat.random(in: size.width * 0.3...size.width * 0.7)
                 let randomY = CGFloat.random(in: size.height * 0.4...size.height * 0.6)
                 tile.position = CGPoint(x: randomX, y: randomY)
                 
+                // Reset physics properties
                 tile.physicsBody?.velocity = CGVector.zero
                 tile.physicsBody?.angularVelocity = 0
                 tile.zRotation = CGFloat.random(in: -0.3...0.3)
                 
-                // Use a generic description for logging
-                let tileName = (tile as? LetterTile)?.letter ?? tile.name ?? "Unnamed Tile"
-                
-                if isStuck {
-                    print("Respawned STUCK tile '\(tileName)' at (\(Int(randomX)), \(Int(randomY)))")
-                } else {
-                    print("Respawned OFF-SCREEN tile '\(tileName)' at (\(Int(randomX)), \(Int(randomY)))")
-                }
+                print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
             }
             
-            // Adjust visual appearance for LetterTiles
-            if let letterTile = tile as? LetterTile {
-                letterTile.updateVisualForRotation()
-            }
+            // Adjust visual appearance based on rotation to look like proper resting
+            tile.updateVisualForRotation()
         }
     }
     
