@@ -1298,7 +1298,11 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         // Trigger UI button jolt animation
         onJolt?()
         
-        print("⚡ JOLT: Applied impulse to \(allRespawnableTiles.count) tiles, bookshelf, and UI buttons")
+        // Trigger haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+        impactFeedback.impactOccurred(intensity: 1.0)
+        
+        print("⚡ JOLT: Applied impulse to \(allRespawnableTiles.count) tiles, bookshelf, UI buttons, and haptic feedback")
     }
     
     private func joltBookshelf() {

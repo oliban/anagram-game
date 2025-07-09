@@ -8,6 +8,7 @@ struct LobbyView: View {
     @State private var playerStats: PlayerStats?
     @State private var onlinePlayersCount: Int = 0
     @State private var isLoadingData = false
+    @State private var isLoadingLeaderboard = false
     @State private var refreshTimer: Timer?
     
     var body: some View {
@@ -180,13 +181,19 @@ struct LobbyView: View {
             .pickerStyle(.segmented)
             .onChange(of: selectedLeaderboardPeriod) { _, _ in
                 Task {
+                    isLoadingLeaderboard = true
                     await loadLeaderboard()
+                    isLoadingLeaderboard = false
                 }
             }
             
             // Leaderboard list
-            if leaderboardData.isEmpty {
+            if isLoadingData || isLoadingLeaderboard {
                 Text("Loading leaderboard...")
+                    .foregroundColor(.secondary)
+                    .padding()
+            } else if leaderboardData.isEmpty {
+                Text("No leaderboard data available")
                     .foregroundColor(.secondary)
                     .padding()
             } else {
@@ -231,14 +238,17 @@ struct LobbyView: View {
     private func loadInitialData() async {
         isLoadingData = true
         
+        // Load critical data first (stats and leaderboard)
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await loadPlayerStats() }
             group.addTask { await loadLeaderboard() }
             group.addTask { await loadOnlinePlayersCount() }
-            group.addTask { await loadCustomPhrases() }
         }
         
         isLoadingData = false
+        
+        // Load phrases after critical data is loaded to avoid interference
+        await loadCustomPhrases()
     }
     
     private func refreshData() async {
@@ -246,16 +256,26 @@ struct LobbyView: View {
     }
     
     private func loadPlayerStats() async {
-        guard let playerId = gameModel.playerId,
-              let networkManager = gameModel.networkManager else { return }
+        guard let playerId = gameModel.playerId else { 
+            print("❌ loadPlayerStats: gameModel.playerId is nil")
+            return 
+        }
+        
+        guard let networkManager = gameModel.networkManager else { 
+            print("❌ loadPlayerStats: gameModel.networkManager is nil")
+            return 
+        }
+        
+        print("📊 Loading player stats for playerId: \(playerId)")
         
         do {
             let stats = try await networkManager.getPlayerStats(playerId: playerId)
             await MainActor.run {
                 self.playerStats = stats
             }
+            print("✅ Successfully loaded player stats")
         } catch {
-            print("Failed to load player stats: \(error)")
+            print("❌ Failed to load player stats: \(error)")
         }
     }
     
