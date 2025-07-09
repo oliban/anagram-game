@@ -327,6 +327,7 @@ struct PhysicsGameView: View {
     @State private var celebrationMessage = ""
     @State private var isSkipping = false
     @State private var showingPhraseCreation = false
+    @State private var isJolting = false
     @StateObject private var networkManager = NetworkManager.shared
     
     // Static reference to avoid SwiftUI state issues
@@ -444,6 +445,8 @@ struct PhysicsGameView: View {
                             }
                             .disabled(isSkipping)
                             .opacity(isSkipping ? 0.6 : 1.0)
+                            .offset(y: isJolting ? -8 : 0)
+                            .animation(.easeInOut(duration: 0.15), value: isJolting)
                             
                             // Send Phrase button
                             Button(action: {
@@ -461,6 +464,8 @@ struct PhysicsGameView: View {
                                 .cornerRadius(20)
                                 .shadow(radius: 4)
                             }
+                            .offset(y: isJolting ? -8 : 0)
+                            .animation(.easeInOut(duration: 0.15), value: isJolting)
                         }
                         .padding(.leading, 20)
                         
@@ -470,6 +475,8 @@ struct PhysicsGameView: View {
                         HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
                             // No longer used - clue is now displayed persistently
                         }
+                        .offset(y: isJolting ? -8 : 0)
+                        .animation(.easeInOut(duration: 0.15), value: isJolting)
                         .padding(.trailing, 20)
                     }
                     .padding(.bottom, 20)
@@ -533,6 +540,17 @@ struct PhysicsGameView: View {
                 }
             }
             
+            // Set up jolt callback for UI buttons
+            sharedScene.onJolt = {
+                DispatchQueue.main.async {
+                    self.isJolting = true
+                    // Reset after brief animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.isJolting = false
+                    }
+                }
+            }
+            
             sharedScene.motionManager = motionManager
             sharedScene.resetGame()
         } else {
@@ -575,6 +593,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     private let gameModel: GameModel
     var motionManager: CMMotionManager?
     var onCelebration: ((String) -> Void)?
+    var onJolt: (() -> Void)?
     
     private var bookshelf: SKNode!
     private var floor: SKNode!
@@ -1233,6 +1252,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         for i in 0..<min(wordCount, shelves.count) {
             lightUpShelf(shelves[i], wordIndex: i)
         }
+        
+        // Apply jolt effect when hint is used
+        joltPlayingField()
     }
     
     func showHint2() {
@@ -1240,11 +1262,70 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         // Only clear tile hints, preserve shelf highlights from Hint 1
         clearTileHints()
         highlightFirstLetterTiles()
+        
+        // Apply jolt effect when hint is used
+        joltPlayingField()
     }
     
     func showHint3() {
         // Hint 3: Don't clear tile highlights - preserve blue highlighting from Hint 2
         // Only show text hint, maintain all visual hints from previous levels
+        
+        // Apply jolt effect when hint is used
+        joltPlayingField()
+    }
+    
+    private func joltPlayingField() {
+        // Apply brief upward impulse to all tiles to create jolt effect
+        let impulseStrength: CGFloat = 300.0  // Upward impulse force
+        
+        for tile in allRespawnableTiles {
+            // Apply random upward impulse with slight horizontal variation
+            let horizontalVariation = CGFloat.random(in: -50...50)
+            let verticalImpulse = impulseStrength + CGFloat.random(in: -50...50)
+            let impulse = CGVector(dx: horizontalVariation, dy: verticalImpulse)
+            
+            tile.physicsBody?.applyImpulse(impulse)
+            
+            // Also add slight random angular impulse for rotation
+            let angularImpulse = CGFloat.random(in: -2...2)
+            tile.physicsBody?.applyAngularImpulse(angularImpulse)
+        }
+        
+        // Add bookshelf jolt animation
+        joltBookshelf()
+        
+        // Trigger UI button jolt animation
+        onJolt?()
+        
+        print("⚡ JOLT: Applied impulse to \(allRespawnableTiles.count) tiles, bookshelf, and UI buttons")
+    }
+    
+    private func joltBookshelf() {
+        // Create brief shake animation for bookshelf
+        let shakeDistance: CGFloat = 8.0
+        let shakeDuration: TimeInterval = 0.1
+        
+        // Create shake sequence: up -> down -> center
+        let shakeUp = SKAction.moveBy(x: 0, y: shakeDistance, duration: shakeDuration)
+        let shakeDown = SKAction.moveBy(x: 0, y: -shakeDistance * 2, duration: shakeDuration)
+        let shakeCenter = SKAction.moveBy(x: 0, y: shakeDistance, duration: shakeDuration)
+        
+        // Also add slight horizontal shake
+        let horizontalShake = SKAction.sequence([
+            SKAction.moveBy(x: shakeDistance * 0.5, y: 0, duration: shakeDuration),
+            SKAction.moveBy(x: -shakeDistance, y: 0, duration: shakeDuration),
+            SKAction.moveBy(x: shakeDistance * 0.5, y: 0, duration: shakeDuration)
+        ])
+        
+        // Combine vertical and horizontal shakes
+        let verticalShake = SKAction.sequence([shakeUp, shakeDown, shakeCenter])
+        let combinedShake = SKAction.group([verticalShake, horizontalShake])
+        
+        // Apply to bookshelf
+        bookshelf.run(combinedShake, withKey: "hintJolt")
+        
+        print("📚 BOOKSHELF: Applied jolt animation")
     }
     
     private func highlightFirstLetterTiles() {
