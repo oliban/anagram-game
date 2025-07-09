@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- English flag (St. George's Cross): White background with red cross -->
+  <!-- Background white -->
+  <rect width="120" height="80" fill="#FFFFFF"/>
+  
+  <!-- Red cross - horizontal bar -->
+  <rect x="0" y="32" width="120" height="16" fill="#CE1126"/>
+  
+  <!-- Red cross - vertical bar -->
+  <rect x="52" y="0" width="16" height="80" fill="#CE1126"/>
+</svg>
