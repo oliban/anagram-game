@@ -202,6 +202,13 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
   - `./setup_sims.sh` - Boot simulators only
 - After deployment, automatically monitor server logs and iOS device logs to analyze connection patterns and debug issues before proceeding with next tasks
 
+## Code Map Integration
+- **Check timestamp first**: At session start, run `head -n 1 code_map.swift` to read only the timestamp from the first line
+- **Auto-regenerate when stale**: If the timestamp is older than 1 hour, automatically run `python3 code_map_generator.py . --output code_map.swift` to refresh it
+- **Then read full map**: After ensuring freshness, read the complete `code_map.swift` to understand the current API surface
+- **Use for context**: Reference the code map when planning implementations, understanding relationships between components, and ensuring consistent API design
+- **Update after major changes**: After implementing new features or modifying APIs, regenerate the code map to keep it current
+
 ## CRITICAL: Proven Multi-Simulator Deployment Flow
 **When deploying new app versions, ALWAYS follow this exact sequence:**
 
