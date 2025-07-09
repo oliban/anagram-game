@@ -33,11 +33,49 @@ These are not suggestions. Fix ALL issues before continuing.
 
 ### Research → Plan → Implement
 **NEVER JUMP STRAIGHT TO CODING!** Always follow this sequence:
-1. **Research**: Explore the codebase, understand existing patterns
+1. **Research**: **ALWAYS START WITH code_map.swift** - Use as the index to the entire codebase
 2. **Plan**: Create a detailed implementation plan and verify it with me  
 3. **Implement**: Execute the plan with validation checkpoints
 
 When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."
+
+### 🚨 MANDATORY: Code Map First Research Protocol
+**ALWAYS START WITH code_map.swift** - It's the INDEX to the entire codebase:
+
+#### Required Research Steps (in order):
+1. **Check freshness**: `head -n 1 code_map.swift` - regenerate if > 1 hour old
+2. **Search for targets**: `grep -n "ClassName\|propertyName\|functionName" code_map.swift`
+3. **Use line numbers**: Target specific file sections with `Read` tool using line numbers
+4. **Only then**: Use Task agents for complex multi-file relationships
+
+#### Examples of Efficient Code Map Usage:
+```bash
+# ✅ CORRECT: Finding ScoreTile implementation
+grep -n "ScoreTile" code_map.swift
+# Returns: Line 407: class ScoreTile: SKSpriteNode
+# Then: Read PhysicsGameView.swift around line 407
+
+# ✅ CORRECT: Finding properties
+grep -n "customPhraseInfo" code_map.swift  
+# Returns: Line 121: var customPhraseInfo: String
+# Then: Read GameModel.swift around line 121
+
+# ❌ WRONG: Broad searches without code map
+grep -r "ScoreTile" .
+Task: "Find all score-related code"
+```
+
+#### FORBIDDEN - Never Do These Without Code Map First:
+- **NO** broad file searches (`grep -r`, `find`, Task agents for simple lookups)
+- **NO** reading entire files to "understand context"
+- **NO** multiple Task agents for straightforward property/class searches
+- **NO** guessing file locations - the code map knows exactly where everything is
+
+#### Why This Matters:
+- **code_map.swift** contains the complete API surface with exact line references
+- **Prevents wasted time** on broad searches across multiple files
+- **Immediate precision** - find exactly what you need in seconds, not minutes
+- **Efficient context** - understand relationships between components instantly
 
 For complex architectural decisions or challenging problems, use **"ultrathink"** to engage maximum reasoning capacity. Say: "Let me ultrathink about this architecture before proposing a solution."
 
