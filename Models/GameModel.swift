@@ -2,6 +2,10 @@ import Foundation
 import SwiftData
 import Combine
 
+protocol MessageTileSpawner: AnyObject {
+    func spawnMessageTile(message: String)
+}
+
 @Observable
 class GameModel: ObservableObject {
     var currentSentence: String = ""
@@ -11,8 +15,10 @@ class GameModel: ObservableObject {
     var customPhraseInfo: String = ""
     
     // Phrase notification state
-    var isShowingPhraseNotification: Bool = false
     private var notificationTimer: Timer?
+    
+    // Game scene reference for tile spawning
+    weak var messageTileSpawner: MessageTileSpawner?
     
     // Hint system state
     var currentPhraseId: String? = nil
@@ -28,6 +34,7 @@ class GameModel: ObservableObject {
     
     private var sentences: [String] = []
     var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
+    private var phraseQueue: [CustomPhrase] = [] // Queue for incoming phrases
     private var isStartingNewGame = false
     
     // Computed property to get current language for LanguageTile display
@@ -90,59 +97,78 @@ class GameModel: ObservableObject {
         
         let networkManager = NetworkManager.shared
         
-        // PRIORITY 1: Check for push-delivered phrase (instant delivery) - ONLY for user-initiated actions
-        if isUserInitiated && networkManager.hasNewPhrase, let pushedPhrase = networkManager.lastReceivedPhrase {
-            print("⚡ GAME: Using push-delivered phrase: '\(pushedPhrase.content)' (user-initiated)")
+        // PRIORITY 1: Check phrase queue first
+        if let queuedPhrase = getNextPhraseFromQueue() {
+            print("📤 GAME: Using queued phrase: '\(queuedPhrase.content)' from \(queuedPhrase.senderName)")
             
-            currentCustomPhrase = pushedPhrase
-            currentSentence = pushedPhrase.content
-            customPhraseInfo = "Custom phrase from \(pushedPhrase.senderName)"
-            currentPhraseId = pushedPhrase.id
+            currentCustomPhrase = queuedPhrase
+            currentSentence = queuedPhrase.content
+            customPhraseInfo = "Custom phrase from \(queuedPhrase.senderName)"
+            currentPhraseId = queuedPhrase.id
             
-            // Mark as consumed and clear the push flag
-            let consumeSuccess = await networkManager.consumePhrase(phraseId: pushedPhrase.id)
-            networkManager.hasNewPhrase = false
+            // Mark as consumed on server
+            let consumeSuccess = await networkManager.consumePhrase(phraseId: queuedPhrase.id)
             
             if consumeSuccess {
-                print("✅ GAME: Successfully consumed push-delivered phrase \(pushedPhrase.id)")
+                print("✅ GAME: Successfully consumed queued phrase \(queuedPhrase.id)")
             } else {
-                print("❌ GAME: Failed to consume push-delivered phrase \(pushedPhrase.id)")
+                print("❌ GAME: Failed to consume queued phrase \(queuedPhrase.id)")
             }
         } else {
-            // FALLBACK: Fetch from server if no push-delivered phrase
-            print("🔍 GAME: No push-delivered phrase, fetching from server")
-            let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer()
-            
-            if let firstPhrase = customPhrases.first {
-                print("✅ GAME: Got phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
+            // PRIORITY 2: Check for push-delivered phrase (for user-initiated actions)
+            if isUserInitiated && networkManager.hasNewPhrase, let pushedPhrase = networkManager.lastReceivedPhrase {
+                print("⚡ GAME: Using push-delivered phrase: '\(pushedPhrase.content)' (user-initiated)")
                 
-                currentCustomPhrase = firstPhrase
-                currentSentence = firstPhrase.content
-                customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
-                currentPhraseId = firstPhrase.id
+                currentCustomPhrase = pushedPhrase
+                currentSentence = pushedPhrase.content
+                customPhraseInfo = "Custom phrase from \(pushedPhrase.senderName)"
+                currentPhraseId = pushedPhrase.id
                 
-                // Mark the phrase as consumed on server IMMEDIATELY
-                let consumeSuccess = await networkManager.consumePhrase(phraseId: firstPhrase.id)
+                // Mark as consumed and clear the push flag
+                let consumeSuccess = await networkManager.consumePhrase(phraseId: pushedPhrase.id)
+                networkManager.hasNewPhrase = false
                 
                 if consumeSuccess {
-                    print("✅ GAME: Successfully consumed server phrase \(firstPhrase.id)")
+                    print("✅ GAME: Successfully consumed push-delivered phrase \(pushedPhrase.id)")
                 } else {
-                    print("❌ GAME: Failed to consume server phrase \(firstPhrase.id)")
+                    print("❌ GAME: Failed to consume push-delivered phrase \(pushedPhrase.id)")
                 }
             } else {
-                print("🎯 GAME: No custom phrases available, using default sentence")
+                // FALLBACK: Fetch from server if no queued or push-delivered phrase
+                print("🔍 GAME: No queued or push-delivered phrase, fetching from server")
+                let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer()
                 
-                // Use a random sentence from the default collection
-                guard !sentences.isEmpty else {
-                    gameState = .error
-                    return
+                if let firstPhrase = customPhrases.first {
+                    print("✅ GAME: Got phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
+                    
+                    currentCustomPhrase = firstPhrase
+                    currentSentence = firstPhrase.content
+                    customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
+                    currentPhraseId = firstPhrase.id
+                    
+                    // Mark the phrase as consumed on server IMMEDIATELY
+                    let consumeSuccess = await networkManager.consumePhrase(phraseId: firstPhrase.id)
+                    
+                    if consumeSuccess {
+                        print("✅ GAME: Successfully consumed server phrase \(firstPhrase.id)")
+                    } else {
+                        print("❌ GAME: Failed to consume server phrase \(firstPhrase.id)")
+                    }
+                } else {
+                    print("🎯 GAME: No custom phrases available, using default sentence")
+                    
+                    // Use a random sentence from the default collection
+                    guard !sentences.isEmpty else {
+                        gameState = .error
+                        return
+                    }
+                    
+                    currentCustomPhrase = nil
+                    currentSentence = sentences.randomElement() ?? "The cat sat on the mat"
+                    customPhraseInfo = ""
+                    // Create a session-based phrase ID for local sentences
+                    currentPhraseId = "local-\(UUID().uuidString)"
                 }
-                
-                currentCustomPhrase = nil
-                currentSentence = sentences.randomElement() ?? "The cat sat on the mat"
-                customPhraseInfo = ""
-                // Create a session-based phrase ID for local sentences
-                currentPhraseId = "local-\(UUID().uuidString)"
             }
         }
         
@@ -275,7 +301,7 @@ class GameModel: ObservableObject {
             .compactMap { $0 } // Only proceed if phrase is not nil
             .sink { [weak self] phrase in
                 DispatchQueue.main.async {
-                    self?.showPhraseNotification(senderName: phrase.senderName)
+                    self?.addPhraseToQueue(phrase)
                     // Clear the trigger so it doesn't fire again
                     networkManager.justReceivedPhrase = nil
                 }
@@ -285,22 +311,45 @@ class GameModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // Phrase queue management
+    private func addPhraseToQueue(_ phrase: CustomPhrase) {
+        phraseQueue.append(phrase)
+        print("📥 QUEUE: Added phrase to queue: '\(phrase.content)' from \(phrase.senderName) (Queue size: \(phraseQueue.count))")
+        
+        // Show notification for the new phrase
+        showPhraseNotification(senderName: phrase.senderName)
+    }
+    
+    private func getNextPhraseFromQueue() -> CustomPhrase? {
+        guard !phraseQueue.isEmpty else {
+            print("📭 QUEUE: No phrases in queue")
+            return nil
+        }
+        
+        let nextPhrase = phraseQueue.removeFirst()
+        print("📤 QUEUE: Retrieved phrase from queue: '\(nextPhrase.content)' from \(nextPhrase.senderName) (Remaining: \(phraseQueue.count))")
+        return nextPhrase
+    }
+    
     // Phrase notification system
     private func showPhraseNotification(senderName: String) {
         // Clear any existing timer
         notificationTimer?.invalidate()
         
-        // Show notification immediately
-        customPhraseInfo = "New phrase from \(senderName) incoming!"
-        isShowingPhraseNotification = true
+        // Spawn notification message tile
+        let notificationMessage = "New phrase from \(senderName) incoming!"
+        messageTileSpawner?.spawnMessageTile(message: notificationMessage)
         
-        // Switch to normal display after 3 seconds
+        // Update phrase info for any remaining UI that might need it
+        customPhraseInfo = "Custom phrase from \(senderName)"
+        
+        // Schedule spawning of the persistent phrase info tile after 3 seconds
         notificationTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isShowingPhraseNotification = false
                 if let currentPhrase = self.currentCustomPhrase {
-                    self.customPhraseInfo = "Custom phrase from \(currentPhrase.senderName)"
+                    let persistentMessage = "Custom phrase from \(currentPhrase.senderName)"
+                    self.messageTileSpawner?.spawnMessageTile(message: persistentMessage)
                 }
             }
         }

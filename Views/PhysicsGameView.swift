@@ -383,36 +383,7 @@ struct PhysicsGameView: View {
                     }
                     
                     // MIDDLE - Game content and overlays
-                    // Custom phrase attribution (top center)
-                        if !gameModel.customPhraseInfo.isEmpty {
-                            if gameModel.isShowingPhraseNotification {
-                            // Notification styling: white text on black background with yellow border
-                            Text(gameModel.customPhraseInfo)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.yellow, lineWidth: 2)
-                                )
-                                .cornerRadius(12)
-                                .shadow(radius: 4)
-                                .padding(.top, 50)
-                        } else {
-                            // Normal phrase info styling
-                            Text(gameModel.customPhraseInfo)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.8))
-                                .cornerRadius(12)
-                                .shadow(radius: 4)
-                                .padding(.top, 50)
-                        }
-                    }
+                    // Custom phrase info now handled by MessageTile spawning
                     
                     
                     
@@ -595,7 +566,7 @@ struct PhysicsGameView: View {
     }
 }
 
-class PhysicsGameScene: SKScene {
+class PhysicsGameScene: SKScene, MessageTileSpawner {
     private let gameModel: GameModel
     var motionManager: CMMotionManager?
     var onCelebration: ((String) -> Void)?
@@ -605,6 +576,7 @@ class PhysicsGameScene: SKScene {
     private var tiles: [LetterTile] = []
     private var scoreTile: ScoreTile?
     private var languageTile: LanguageTile?
+    private var messageTiles: [MessageTile] = []
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var celebrationText: String = ""
 
@@ -621,6 +593,9 @@ class PhysicsGameScene: SKScene {
         
         setupPhysicsWorld()
         setupEnvironment()
+        
+        // Connect this scene as the message tile spawner
+        gameModel.messageTileSpawner = self
         
         // Don't create tiles automatically - wait for setupGame() to call resetGame()
         
@@ -986,6 +961,29 @@ class PhysicsGameScene: SKScene {
         let newLanguage = getCurrentPhraseLanguage()
         languageTile?.updateFlag(language: newLanguage)
         print("Language tile updated to: \(newLanguage)")
+    }
+    
+    func spawnMessageTile(message: String) {
+        // Create new message tile - width calculated based on text length
+        let newMessageTile = MessageTile(message: message)
+        
+        // Position message tile to fall from the left side (opposite of score tile)
+        // Add some randomness to X position to avoid stacking
+        let baseSpawnX = size.width * 0.2  // Left side base position
+        let randomOffsetX = Float.random(in: -50...50)  // Random offset
+        let messageSpawnX = baseSpawnX + CGFloat(randomOffsetX)
+        let messageSpawnY = size.height * 0.95  // Near top
+        newMessageTile.position = CGPoint(x: messageSpawnX, y: messageSpawnY)
+        
+        // Add small random rotation for natural look
+        let randomRotation = Float.random(in: -0.2...0.2)
+        newMessageTile.zRotation = CGFloat(randomRotation)
+        
+        // Add to scene and track in array
+        addChild(newMessageTile)
+        messageTiles.append(newMessageTile)
+        
+        print("Message tile spawned with text: \(message) (Total: \(messageTiles.count))")
     }
     
     func updateGravity(from gravity: CMAcceleration) {
@@ -1437,28 +1435,63 @@ class PhysicsGameScene: SKScene {
     }
     
     override func update(_ currentTime: TimeInterval) {
-        // Check for tiles that have left the screen and respawn them
-        for tile in tiles {
-            let margin: CGFloat = 100  // Buffer zone outside screen
-            if tile.position.x < -margin || 
-               tile.position.x > size.width + margin || 
-               tile.position.y < -margin || 
-               tile.position.y > size.height + margin {
-                // Respawn tile in center area with some randomness
+        // --- Universal Tile Respawn Logic ---
+        
+        // Combine all tiles into a single array for processing
+        let allTiles: [SKSpriteNode] = tiles + [scoreTile, languageTile].compactMap { $0 } + messageTiles
+        
+        for tile in allTiles {
+            let margin: CGFloat = 100.0  // Buffer zone for tiles completely off-screen
+
+            // Condition 1: Tile is far off-screen
+            let isFarOffscreen = tile.position.x < -margin ||
+                                 tile.position.x > size.width + margin ||
+                                 tile.position.y < -margin ||
+                                 tile.position.y > size.height + margin
+
+            // Condition 2: Tile is stuck near an edge
+            let edgeThreshold: CGFloat = 30.0
+            let velocityThresholdSq: CGFloat = 15.0 * 15.0
+
+            let isNearEdge = tile.position.x < edgeThreshold ||
+                             tile.position.x > size.width - edgeThreshold ||
+                             tile.position.y < edgeThreshold ||
+                             tile.position.y > size.height - edgeThreshold
+            
+            var isStuck = false
+            if isNearEdge {
+                if let velocity = tile.physicsBody?.velocity {
+                    let speedSq = velocity.dx * velocity.dx + velocity.dy * velocity.dy
+                    if speedSq < velocityThresholdSq {
+                        isStuck = true
+                    }
+                }
+            }
+
+            // Respawn if either condition is met
+            if isFarOffscreen || isStuck {
                 let randomX = CGFloat.random(in: size.width * 0.3...size.width * 0.7)
                 let randomY = CGFloat.random(in: size.height * 0.4...size.height * 0.6)
                 tile.position = CGPoint(x: randomX, y: randomY)
                 
-                // Reset physics properties
                 tile.physicsBody?.velocity = CGVector.zero
                 tile.physicsBody?.angularVelocity = 0
                 tile.zRotation = CGFloat.random(in: -0.3...0.3)
                 
-                print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
+                // Use a generic description for logging
+                let tileName = (tile as? LetterTile)?.letter ?? tile.name ?? "Unnamed Tile"
+                
+                if isStuck {
+                    print("Respawned STUCK tile '\(tileName)' at (\(Int(randomX)), \(Int(randomY)))")
+                } else {
+                    print("Respawned OFF-SCREEN tile '\(tileName)' at (\(Int(randomX)), \(Int(randomY)))")
+                }
             }
             
-            // Adjust visual appearance based on rotation to look like proper resting
-            tile.updateVisualForRotation()
+            // Adjust visual appearance for LetterTiles
+            if let letterTile = tile as? LetterTile {
+                letterTile.updateVisualForRotation()
+            }
         }
     }
     
@@ -1478,6 +1511,13 @@ class PhysicsGameScene: SKScene {
         }
         tiles.removeAll()
         
+        // Clear existing message tiles
+        print("🗑️ Clearing \(messageTiles.count) existing message tiles")
+        for messageTile in messageTiles {
+            messageTile.removeFromParent()
+        }
+        messageTiles.removeAll()
+        
         // Stop any ongoing physics effects
         removeAction(forKey: "quakeForces")
         quakeState = .none
@@ -1490,6 +1530,11 @@ class PhysicsGameScene: SKScene {
         
         // Create new tiles with current game model data (don't call startNewGame again)
         createTiles()
+        
+        // Spawn MessageTile if there's a custom phrase
+        if !gameModel.customPhraseInfo.isEmpty {
+            spawnMessageTile(message: gameModel.customPhraseInfo)
+        }
         
         print("✅ Scene reset complete - \(tiles.count) new tiles created")
     }
@@ -1955,6 +2000,11 @@ class PhysicsGameScene: SKScene {
                 languageTile.physicsBody?.isDynamic = false
                 print("Started dragging language tile")
                 break
+            } else if let messageTile = node as? MessageTile {
+                messageTile.isBeingDragged = true
+                messageTile.physicsBody?.isDynamic = false
+                print("Started dragging message tile: \(messageTile.messageText)")
+                break
             } else if let tile = tiles.first(where: { $0.contains(node) }) {
                 tile.isBeingDragged = true
                 tile.physicsBody?.isDynamic = false
@@ -1993,6 +2043,17 @@ class PhysicsGameScene: SKScene {
                 print("Started dragging language tile (by distance)")
             }
         }
+        
+        // Check direct distance to message tiles
+        for messageTile in messageTiles {
+            let distance = sqrt(pow(location.x - messageTile.position.x, 2) + pow(location.y - messageTile.position.y, 2))
+            if distance < 30 { // Within 30 points of message tile center
+                messageTile.isBeingDragged = true
+                messageTile.physicsBody?.isDynamic = false
+                print("Started dragging message tile (by distance): \(messageTile.messageText)")
+                break
+            }
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -2012,6 +2073,14 @@ class PhysicsGameScene: SKScene {
         // Move dragged language tile
         if let languageTile = languageTile, languageTile.isBeingDragged {
             languageTile.position = location
+        }
+        
+        // Move dragged message tiles
+        for messageTile in messageTiles {
+            if messageTile.isBeingDragged {
+                messageTile.position = location
+                break
+            }
         }
     }
     
@@ -2057,6 +2126,21 @@ class PhysicsGameScene: SKScene {
             languageTile.physicsBody?.angularVelocity = 0
             
             print("Released language tile - stopped immediately")
+        }
+        
+        // Release dragged message tiles
+        for messageTile in messageTiles {
+            if messageTile.isBeingDragged {
+                messageTile.isBeingDragged = false
+                messageTile.physicsBody?.isDynamic = true
+                
+                // Stop all movement immediately - no sliding
+                messageTile.physicsBody?.velocity = CGVector.zero
+                messageTile.physicsBody?.angularVelocity = 0
+                
+                print("Released message tile - stopped immediately: \(messageTile.messageText)")
+                break
+            }
         }
     }
 }
@@ -2302,6 +2386,139 @@ class ScoreTile: SKSpriteNode {
         
         physicsBody?.allowsRotation = true
         physicsBody?.density = 0.8  // Lighter than letter tiles
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+class MessageTile: SKSpriteNode {
+    private var frontFace: SKShapeNode?
+    private var messageLabel: SKLabelNode?
+    var isBeingDragged = false
+    
+    var messageText: String {
+        return messageLabel?.text ?? ""
+    }
+    
+    init(message: String) {
+        // Calculate tile width based on text length - similar to other tiles
+        let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        tempLabel.fontSize = 24
+        tempLabel.text = message
+        let textWidth = tempLabel.frame.width
+        
+        // Add padding and ensure minimum width
+        let tileWidth = max(textWidth + 20, 80)  // Minimum 80 pixels width
+        let tileHeight: CGFloat = 40  // Standard tile height
+        let calculatedSize = CGSize(width: tileWidth, height: tileHeight)
+        
+        super.init(texture: nil, color: .clear, size: calculatedSize)
+        
+        let depth: CGFloat = 6
+        
+        // Create the main tile body (top surface) - light blue for message tiles
+        let topFace = SKShapeNode()
+        let topPath = CGMutablePath()
+        topPath.move(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
+        topPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        topPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        topPath.addLine(to: CGPoint(x: -tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        topPath.closeSubpath()
+        topFace.path = topPath
+        topFace.fillColor = UIColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)  // Light blue
+        topFace.strokeColor = .black
+        topFace.lineWidth = 2
+        topFace.zPosition = -0.1
+        addChild(topFace)
+        
+        // Create the front face (main visible surface) - medium blue
+        let frontFaceShape = SKShapeNode()
+        let frontPath = CGMutablePath()
+        frontPath.move(to: CGPoint(x: -tileWidth / 2, y: -tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        frontPath.addLine(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
+        frontPath.closeSubpath()
+        frontFaceShape.path = frontPath
+        frontFaceShape.fillColor = UIColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1.0)  // Medium blue
+        frontFaceShape.strokeColor = .black
+        frontFaceShape.lineWidth = 2
+        frontFaceShape.zPosition = 0.1
+        frontFace = frontFaceShape
+        addChild(frontFaceShape)
+        
+        // Create the right face (shadow side - darker blue)
+        let rightFace = SKShapeNode()
+        let rightPath = CGMutablePath()
+        rightPath.move(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: -tileHeight / 2 + depth))
+        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
+        rightPath.closeSubpath()
+        rightFace.path = rightPath
+        rightFace.fillColor = UIColor(red: 0.1, green: 0.4, blue: 0.7, alpha: 1.0)  // Dark blue shadow
+        rightFace.strokeColor = UIColor(red: 0.0, green: 0.3, blue: 0.6, alpha: 1.0)
+        rightFace.lineWidth = 2
+        rightFace.zPosition = 0.0
+        addChild(rightFace)
+        
+        // Create message label - same style as other tiles
+        messageLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        messageLabel?.fontSize = 24  // Same as other tiles
+        messageLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)  // Dark text like other tiles
+        messageLabel?.verticalAlignmentMode = .center
+        messageLabel?.horizontalAlignmentMode = .center
+        messageLabel?.zPosition = 10.0
+        messageLabel?.text = message
+        addChild(messageLabel!)
+        
+        // Set z-position to match other tiles
+        zPosition = 50
+        
+        setupPhysics()
+    }
+    
+    private func setupPhysics() {
+        // Create physics body - same as ScoreTile
+        physicsBody = SKPhysicsBody(rectangleOf: size)
+        physicsBody?.isDynamic = true
+        physicsBody?.mass = 0.1  // Same as ScoreTile
+        physicsBody?.friction = 0.6
+        physicsBody?.restitution = 0.3  // Bouncy
+        physicsBody?.linearDamping = 0.95
+        physicsBody?.angularDamping = 0.99
+        physicsBody?.affectedByGravity = true
+        
+        // Collision detection
+        physicsBody?.categoryBitMask = PhysicsCategories.tile
+        physicsBody?.contactTestBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        
+        physicsBody?.allowsRotation = true
+        physicsBody?.density = 0.8  // Same as ScoreTile
+    }
+    
+    // Touch handling for dragging (same pattern as ScoreTile and LanguageTile)
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = true
+        physicsBody?.velocity = CGVector.zero
+        physicsBody?.angularVelocity = 0
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard isBeingDragged, let touch = touches.first else { return }
+        let location = touch.location(in: parent!)
+        position = location
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = false
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = false
     }
     
     required init?(coder aDecoder: NSCoder) {
