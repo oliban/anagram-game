@@ -16,20 +16,18 @@ const LANGUAGES = {
 
 // English letter frequencies (based on typical English text)
 // Frequency = occurrences per 1000 letters
-const ENGLISH_FREQUENCIES = {
-    'a': 82, 'b': 15, 'c': 28, 'd': 43, 'e': 127, 'f': 22, 'g': 20, 'h': 61,
-    'i': 70, 'j': 2, 'k': 8, 'l': 40, 'm': 24, 'n': 67, 'o': 75, 'p': 19,
-    'q': 1, 'r': 60, 's': 63, 't': 91, 'u': 28, 'v': 10, 'w': 24, 'x': 2,
-    'y': 20, 'z': 1
+const ENGLISH_LETTER_FREQUENCIES = {
+    'e': 12.7, 't': 9.1, 'a': 8.2, 'o': 7.5, 'i': 7.0, 'n': 6.7, 's': 6.3, 'h': 6.1, 'r': 6.0,
+    'd': 4.3, 'l': 4.0, 'c': 2.8, 'u': 2.8, 'm': 2.4, 'w': 2.4, 'f': 2.2, 'g': 2.0, 'y': 2.0,
+    'p': 1.9, 'b': 1.5, 'v': 1.0, 'k': 0.8, 'j': 0.2, 'x': 0.2, 'q': 0.1, 'z': 0.1
 };
 
-// Swedish letter frequencies (based on Swedish text corpus)
-// Frequency = occurrences per 1000 letters
-const SWEDISH_FREQUENCIES = {
-    'a': 94, 'b': 13, 'c': 15, 'd': 45, 'e': 101, 'f': 20, 'g': 28, 'h': 21,
-    'i': 58, 'j': 6, 'k': 32, 'l': 52, 'm': 35, 'n': 89, 'o': 44, 'p': 18,
-    'q': 0, 'r': 84, 's': 68, 't': 77, 'u': 18, 'v': 24, 'w': 1, 'x': 1,
-    'y': 7, 'z': 1, 'å': 18, 'ä': 18, 'ö': 13
+// Swedish letter frequencies (percentage-based)
+const SWEDISH_LETTER_FREQUENCIES = {
+    'e': 10.1, 'a': 9.4, 'n': 8.9, 't': 8.7, 'r': 8.4, 's': 6.8, 'l': 5.2, 'i': 5.8,
+    'd': 4.5, 'o': 4.4, 'k': 3.2, 'g': 2.8, 'm': 3.5, 'h': 2.1, 'f': 2.0, 'v': 2.4,
+    'u': 1.8, 'p': 1.8, 'b': 1.3, 'c': 1.5, 'y': 0.7, 'j': 0.6, 'x': 0.1, 'w': 0.1,
+    'z': 0.1, 'å': 1.8, 'ä': 1.8, 'ö': 1.3, 'q': 0.01
 };
 
 /**
@@ -112,46 +110,56 @@ function calculateStructuralComplexity(text) {
  */
 function calculateScore({ phrase, language = LANGUAGES.ENGLISH }) {
     try {
-        // Validate inputs
-        if (!phrase || typeof phrase !== 'string') {
-            console.warn('📊 DIFFICULTY: Invalid phrase provided');
+        if (!phrase || typeof phrase !== 'string' || phrase.trim().length === 0) {
+            console.warn('📊 DIFFICULTY: Invalid or empty phrase provided');
             return 1;
         }
-        
+
         if (!Object.values(LANGUAGES).includes(language)) {
             console.warn(`📊 DIFFICULTY: Unknown language '${language}', defaulting to English`);
             language = LANGUAGES.ENGLISH;
         }
-        
-        // Get appropriate frequency table
-        const frequencies = language === LANGUAGES.SWEDISH ? SWEDISH_FREQUENCIES : ENGLISH_FREQUENCIES;
-        
-        // Normalize the phrase
+
+        const frequencies = language === LANGUAGES.SWEDISH ? SWEDISH_LETTER_FREQUENCIES : ENGLISH_LETTER_FREQUENCIES;
+        const maxFrequency = language === LANGUAGES.SWEDISH ? 10.1 : 12.7; // Max freq for 'e' in each language
+
+        const words = phrase.trim().split(/\s+/);
+        const wordCount = words.length;
+
         const normalizedText = normalize(phrase, language);
-        
-        if (normalizedText.length === 0) {
-            console.warn('📊 DIFFICULTY: No valid letters found in phrase');
+        const letterCount = normalizedText.length;
+
+        if (letterCount === 0) {
             return 1;
         }
+
+        // 1. Word Count Factor
+        const wordCountFactor = Math.pow(Math.max(0, wordCount - 1), 1.5) * 10;
+
+        // 2. Letter Count Factor
+        const letterCountFactor = Math.pow(letterCount, 1.2) * 1.5;
+
+        // 3. Letter Commonality Factor
+        let totalFrequency = 0;
+        for (const char of normalizedText) {
+            totalFrequency += frequencies[char] || 0;
+        }
+        const averageFrequency = totalFrequency / letterCount;
+        let commonalityFactor = (averageFrequency / maxFrequency) * 25;
+
+        // Dampen commonality for very short phrases
+        if (letterCount <= 3) {
+            commonalityFactor *= 0.5;
+        }
         
-        // Calculate component scores
-        const rarityScore = calculateLetterRarity(normalizedText, frequencies);
-        const complexityScore = calculateStructuralComplexity(normalizedText);
-        
-        // Weighted combination: 70% rarity + 30% complexity
-        const combinedScore = (rarityScore * 0.7) + (complexityScore * 0.3);
-        
-        // Normalize to 1-100 scale
-        // Empirical scaling based on typical ranges:
-        // - Rarity scores typically range 10-100
-        // - Complexity scores typically range 20-80
-        // - Combined scores typically range 15-95
-        const normalizedScore = Math.max(1, Math.min(100, Math.round(combinedScore)));
-        
-        console.log(`📊 DIFFICULTY: "${phrase}" (${language}) -> Score: ${normalizedScore} (rarity: ${rarityScore.toFixed(1)}, complexity: ${complexityScore.toFixed(1)})`);
-        
-        return normalizedScore;
-        
+        // Combine factors and clamp the score
+        const rawScore = wordCountFactor + letterCountFactor + commonalityFactor;
+        const finalScore = Math.round(Math.max(1, rawScore));
+
+        console.log(`📊 NEW DIFFICULTY: "${phrase}" (${language}) -> Score: ${finalScore} (words: ${wordCount}, letters: ${letterCount}, commonality: ${commonalityFactor.toFixed(1)})`);
+
+        return finalScore;
+
     } catch (error) {
         console.error('📊 DIFFICULTY: Error calculating score:', error.message);
         return 1; // Return minimum score on error
@@ -223,8 +231,6 @@ module.exports = {
     
     // Export for testing purposes
     normalize,
-    calculateLetterRarity,
-    calculateStructuralComplexity,
-    ENGLISH_FREQUENCIES,
-    SWEDISH_FREQUENCIES
+    ENGLISH_LETTER_FREQUENCIES,
+    SWEDISH_LETTER_FREQUENCIES
 };
