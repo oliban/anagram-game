@@ -13,7 +13,7 @@ iOS "Anagram Game" for iPhone built with SwiftUI. Players drag letter tiles to f
 - **Current Focus**: Following 8-step implementation plan
 - **Time Estimates**: Each step has rough time estimates (30-120 minutes) for session planning
 - **Server Log Monitoring**: YOU are responsible for monitoring server logs automatically during testing. Do NOT wait for me to paste logs. Use proper log capture techniques (background processes, log files, tail commands) to monitor real-time server output and connection behavior.
-- **Testing Process**: After implementing features/fixes, run `./build_multi_sim.sh` to build and deploy to both iPhone 15 and iPhone 15 Pro simulators, then automatically monitor server logs and iOS device logs for debugging
+- **Testing Process**: After implementing features/fixes, run `/Users/fredriksafsten/Workprojects/anagram-game/build_multi_sim.sh` to build and deploy to both iPhone 15 and iPhone 15 Pro simulators, then automatically monitor server logs and iOS device logs for debugging
 
 ## Current Implementation Status
 Track progress in `DEVELOPMENT_PROGRESS.md` - update checkboxes as each step completes.
@@ -235,7 +235,7 @@ Avoid complex abstractions or "clever" code. The simple, obvious solution is pro
 ## Code Review and Testing
 - Always have me test the code changes before committing anything to git
 - **Multi-Simulator Testing**: Use the provided build scripts to test multiplayer functionality:
-  - `./build_multi_sim.sh` - Full build and deploy to both iPhone 15 and iPhone 15 Pro simulators
+  - `/Users/fredriksafsten/Workprojects/anagram-game/build_multi_sim.sh` - Full build and deploy to both iPhone 15 and iPhone 15 Pro simulators
   - `./quick_test.sh` - Quick relaunch if app already installed
   - `./setup_sims.sh` - Boot simulators only
 - After deployment, automatically monitor server logs and iOS device logs to analyze connection patterns and debug issues before proceeding with next tasks
@@ -395,7 +395,7 @@ DATABASE_URL=postgresql://localhost/anagram_game
 ### WebSocket Connection Issues
 1. Check server logs: `tail -f server/server_output.log`
 2. Verify client connection in NetworkManager.swift
-3. Test with multiple simulators using `./build_multi_sim.sh`
+3. Test with multiple simulators using `/Users/fredriksafsten/Workprojects/anagram-game/build_multi_sim.sh`
 4. Check for proper UUID format in player identification
 
 ### Build Failures

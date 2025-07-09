@@ -484,6 +484,215 @@ class ComprehensiveTestSuite {
     return true;
   }
 
+  // Test language field functionality
+  async testLanguageFieldFunctionality() {
+    this.log('Testing language field functionality...');
+
+    let allPassed = true;
+
+    // Test 1: Creating phrases with different languages
+    const languageTests = [
+      { language: 'en', content: 'hello world test', expectedLang: 'en' },
+      { language: 'sv', content: 'hej världen test', expectedLang: 'sv' },
+      { language: 'es', content: 'hola mundo test', expectedLang: 'es' },
+      { language: null, content: 'default language test', expectedLang: 'en' }, // Should default to 'en'
+      { language: undefined, content: 'undefined language test', expectedLang: 'en' }, // Should default to 'en'
+      { language: '', content: 'empty language test', expectedLang: 'en' }, // Should default to 'en'
+    ];
+
+    // Ensure we have test players
+    if (this.testPlayers.length < 2) {
+      // Create test players if needed
+      const player1 = await this.makeRequest('POST', '/api/players/register', {
+        name: `LangTestPlayer1_${Date.now()}`,
+        socketId: 'lang-test-1'
+      });
+      
+      const player2 = await this.makeRequest('POST', '/api/players/register', {
+        name: `LangTestPlayer2_${Date.now()}`,
+        socketId: 'lang-test-2'
+      });
+
+      if (player1.success) this.testPlayers.push(player1.data.player);
+      if (player2.success) this.testPlayers.push(player2.data.player);
+    }
+
+    const testPhraseIds = [];
+
+    for (const test of languageTests) {
+      const phraseData = {
+        content: test.content,
+        senderId: this.testPlayers[0]?.id,
+        targetId: this.testPlayers[1]?.id
+      };
+
+      // Only include language field if it's not null/undefined
+      if (test.language !== null && test.language !== undefined) {
+        phraseData.language = test.language;
+      }
+
+      const result = await this.makeRequest('POST', '/api/phrases', phraseData, 201);
+      
+      if (result.success) {
+        testPhraseIds.push(result.data.phrase.id);
+        
+        // Check if language field is properly set in response
+        const returnedLanguage = result.data.phrase.language;
+        const languagePassed = returnedLanguage === test.expectedLang;
+        
+        this.logResult(`Language field - Create phrase with language "${test.language}"`, 
+          languagePassed,
+          `Expected: ${test.expectedLang}, Got: ${returnedLanguage}`, 'Language');
+        
+        allPassed = allPassed && languagePassed;
+      } else {
+        this.logResult(`Language field - Create phrase with language "${test.language}"`, 
+          false,
+          `Failed to create phrase: ${result.error}`, 'Language');
+        allPassed = false;
+      }
+    }
+
+    // Test 2: Verifying language field in phrase retrieval
+    if (this.testPlayers.length >= 2) {
+      const retrievalResult = await this.makeRequest('GET', `/api/phrases/for/${this.testPlayers[1].id}`);
+      
+      if (retrievalResult.success && retrievalResult.data.phrases.length > 0) {
+        const phrasesWithLanguage = retrievalResult.data.phrases.filter(p => p.language);
+        const allHaveLanguage = phrasesWithLanguage.length === retrievalResult.data.phrases.length;
+        
+        this.logResult('Language field - Phrase retrieval includes language', 
+          allHaveLanguage,
+          `${phrasesWithLanguage.length}/${retrievalResult.data.phrases.length} phrases have language field`, 'Language');
+        
+        allPassed = allPassed && allHaveLanguage;
+
+        // Check specific languages are preserved
+        const englishPhrases = retrievalResult.data.phrases.filter(p => p.language === 'en');
+        const swedishPhrases = retrievalResult.data.phrases.filter(p => p.language === 'sv');
+        
+        this.logResult('Language field - Multiple languages preserved', 
+          englishPhrases.length > 0 && swedishPhrases.length > 0,
+          `EN: ${englishPhrases.length}, SV: ${swedishPhrases.length}`, 'Language');
+      } else {
+        this.logResult('Language field - Phrase retrieval test', 
+          false,
+          'No phrases found for retrieval test', 'Language');
+        allPassed = false;
+      }
+    }
+
+    // Test 3: Testing global phrases endpoint with language field
+    const globalResult = await this.makeRequest('GET', '/api/phrases/global');
+    
+    if (globalResult.success && globalResult.data.phrases.length > 0) {
+      const globalPhrasesWithLanguage = globalResult.data.phrases.filter(p => p.language);
+      const globalLanguagesPassed = globalPhrasesWithLanguage.length === globalResult.data.phrases.length;
+      
+      this.logResult('Language field - Global phrases include language', 
+        globalLanguagesPassed,
+        `${globalPhrasesWithLanguage.length}/${globalResult.data.phrases.length} global phrases have language field`, 'Language');
+      
+      allPassed = allPassed && globalLanguagesPassed;
+    }
+
+    // Test 4: Testing phrase creation with enhanced API
+    const enhancedPhraseResult = await this.makeRequest('POST', '/api/phrases/create', {
+      content: 'enhanced api test phrase',
+      senderId: this.testPlayers[0]?.id,
+      targetId: this.testPlayers[1]?.id,
+      language: 'sv',
+      hint: 'Detta är en svensk fras'
+    }, 201);
+
+    if (enhancedPhraseResult.success) {
+      const enhancedLanguage = enhancedPhraseResult.data.phrase.language;
+      const enhancedPassed = enhancedLanguage === 'sv';
+      
+      this.logResult('Language field - Enhanced API phrase creation', 
+        enhancedPassed,
+        `Language: ${enhancedLanguage}`, 'Language');
+      
+      allPassed = allPassed && enhancedPassed;
+    } else {
+      this.logResult('Language field - Enhanced API phrase creation', 
+        false,
+        `Failed: ${enhancedPhraseResult.error}`, 'Language');
+      allPassed = false;
+    }
+
+    // Test 5: Testing backward compatibility with existing phrases
+    // Create a phrase using the old API structure (without language field)
+    const backwardCompatResult = await this.makeRequest('POST', '/api/phrases', {
+      content: 'backward compatibility test',
+      senderId: this.testPlayers[0]?.id,
+      targetId: this.testPlayers[1]?.id
+      // No language field - should default to 'en'
+    }, 201);
+
+    if (backwardCompatResult.success) {
+      const backwardLanguage = backwardCompatResult.data.phrase.language;
+      const backwardPassed = backwardLanguage === 'en';
+      
+      this.logResult('Language field - Backward compatibility (no language field)', 
+        backwardPassed,
+        `Default language: ${backwardLanguage}`, 'Language');
+      
+      allPassed = allPassed && backwardPassed;
+    } else {
+      this.logResult('Language field - Backward compatibility', 
+        false,
+        `Failed: ${backwardCompatResult.error}`, 'Language');
+      allPassed = false;
+    }
+
+    // Test 6: Testing invalid language codes
+    const invalidLanguageTests = [
+      { language: 'invalidlang', shouldFail: false }, // Server might accept any string
+      { language: 'xx', shouldFail: false },
+      { language: 123, shouldFail: true }, // Non-string should fail
+      { language: {}, shouldFail: true }, // Object should fail
+      { language: [], shouldFail: true }, // Array should fail
+    ];
+
+    for (const test of invalidLanguageTests) {
+      const invalidResult = await this.makeRequest('POST', '/api/phrases', {
+        content: 'invalid language test',
+        senderId: this.testPlayers[0]?.id,
+        targetId: this.testPlayers[1]?.id,
+        language: test.language
+      }, test.shouldFail ? 400 : 201);
+
+      const invalidPassed = test.shouldFail ? !invalidResult.success : invalidResult.success;
+      
+      this.logResult(`Language field - Invalid language type: ${typeof test.language}`, 
+        invalidPassed,
+        `Language: ${JSON.stringify(test.language)}, Expected to ${test.shouldFail ? 'fail' : 'succeed'}`, 'Language');
+      
+      allPassed = allPassed && invalidPassed;
+    }
+
+    // Test 7: Test language field persistence through consumption
+    if (testPhraseIds.length > 0) {
+      const phraseId = testPhraseIds[0];
+      const consumeResult = await this.makeRequest('POST', `/api/phrases/${phraseId}/consume`);
+      
+      if (consumeResult.success) {
+        // Check if the consumed phrase still has language information
+        const consumedPhrase = consumeResult.data?.phrase;
+        const languagePreserved = consumedPhrase?.language !== undefined;
+        
+        this.logResult('Language field - Preserved after consumption', 
+          languagePreserved,
+          `Language after consumption: ${consumedPhrase?.language}`, 'Language');
+        
+        allPassed = allPassed && languagePreserved;
+      }
+    }
+
+    return allPassed;
+  }
+
   // Test error recovery scenarios
   async testErrorRecoveryScenarios() {
     this.log('Testing error recovery scenarios...');
@@ -545,6 +754,7 @@ class ComprehensiveTestSuite {
       { name: 'WebSocket Events Coverage', test: () => this.testWebSocketEvents() },
       { name: 'Edge Cases & Security', test: () => this.testEdgeCasesAndSecurity() },
       { name: 'Integration Flows', test: () => this.testIntegrationFlows() },
+      { name: 'Language Field Functionality', test: () => this.testLanguageFieldFunctionality() },
       { name: 'Performance Scenarios', test: () => this.testPerformanceScenarios() },
       { name: 'Error Recovery', test: () => this.testErrorRecoveryScenarios() }
     ];
