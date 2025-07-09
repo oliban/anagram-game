@@ -2256,19 +2256,26 @@ extension PhysicsGameScene: SKPhysicsContactDelegate {
     }
 }
 
-class ScoreTile: SKSpriteNode {
+// Base class for information tiles (ScoreTile, MessageTile, LanguageTile) with consistent green color scheme
+class InformationTile: SKSpriteNode {
     private var frontFace: SKShapeNode?
-    private var scoreLabel: SKLabelNode?
     var isBeingDragged = false
     
     init(size: CGSize) {
         super.init(texture: nil, color: .clear, size: size)
-        
+        setupTileGeometry(size: size)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupTileGeometry(size: CGSize) {
         let tileWidth = size.width
         let tileHeight = size.height
         let depth: CGFloat = 6
         
-        // Create the main tile body (top surface) - lighter gold for top lighting (like LetterTile)
+        // Create the main tile body (top surface) - light green for information tiles
         let topFace = SKShapeNode()
         let topPath = CGMutablePath()
         topPath.move(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
@@ -2277,13 +2284,13 @@ class ScoreTile: SKSpriteNode {
         topPath.addLine(to: CGPoint(x: -tileWidth / 2 + depth, y: tileHeight / 2 + depth))
         topPath.closeSubpath()
         topFace.path = topPath
-        topFace.fillColor = UIColor(red: 1.0, green: 0.9, blue: 0.2, alpha: 1.0)  // Very bright gold
+        topFace.fillColor = UIColor(red: 0.3, green: 1.0, blue: 0.3, alpha: 1.0)  // Light green
         topFace.strokeColor = .black
         topFace.lineWidth = 2
-        topFace.zPosition = -0.1  // Put tile roofs in background
+        topFace.zPosition = -0.1
         addChild(topFace)
         
-        // Create the front face (main visible surface) - like LetterTile
+        // Create the front face (main visible surface) - medium green
         let frontFaceShape = SKShapeNode()
         let frontPath = CGMutablePath()
         frontPath.move(to: CGPoint(x: -tileWidth / 2, y: -tileHeight / 2))
@@ -2292,14 +2299,14 @@ class ScoreTile: SKSpriteNode {
         frontPath.addLine(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
         frontPath.closeSubpath()
         frontFaceShape.path = frontPath
-        frontFaceShape.fillColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0)  // Gold color
+        frontFaceShape.fillColor = UIColor(red: 0.2, green: 0.8, blue: 0.2, alpha: 1.0)  // Medium green
         frontFaceShape.strokeColor = .black
         frontFaceShape.lineWidth = 2
         frontFaceShape.zPosition = 0.1
-        frontFace = frontFaceShape  // Store reference
+        frontFace = frontFaceShape
         addChild(frontFaceShape)
         
-        // Create the right face (shadow side - darker) - like LetterTile
+        // Create the right face (shadow side - darker green)
         let rightFace = SKShapeNode()
         let rightPath = CGMutablePath()
         rightPath.move(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
@@ -2308,22 +2315,30 @@ class ScoreTile: SKSpriteNode {
         rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
         rightPath.closeSubpath()
         rightFace.path = rightPath
-        rightFace.fillColor = UIColor(red: 0.6, green: 0.5, blue: 0.0, alpha: 1.0)  // Dark gold shadow side
-        rightFace.strokeColor = UIColor(red: 0.4, green: 0.3, blue: 0.0, alpha: 1.0)
+        rightFace.fillColor = UIColor(red: 0.1, green: 0.6, blue: 0.1, alpha: 1.0)  // Dark green shadow
+        rightFace.strokeColor = UIColor(red: 0.0, green: 0.5, blue: 0.0, alpha: 1.0)
         rightFace.lineWidth = 2
         rightFace.zPosition = 0.0
         addChild(rightFace)
+    }
+}
+
+class ScoreTile: InformationTile {
+    private var scoreLabel: SKLabelNode?
+    
+    override init(size: CGSize) {
+        super.init(size: size)
         
         // Create score label
         scoreLabel = SKLabelNode(fontNamed: "Arial-Bold")
         scoreLabel?.fontSize = 24
-        scoreLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)  // Dark text like letter tiles
+        scoreLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
         scoreLabel?.verticalAlignmentMode = .center
         scoreLabel?.horizontalAlignmentMode = .center
-        scoreLabel?.zPosition = 10.0  // Same as letter tiles
+        scoreLabel?.zPosition = 10.0
         addChild(scoreLabel!)
         
-        // Set z-position to match letter tiles
+        // Set z-position to match other tiles
         zPosition = 50
         
         setupPhysics()
@@ -2337,9 +2352,9 @@ class ScoreTile: SKSpriteNode {
         // Create physics body
         physicsBody = SKPhysicsBody(rectangleOf: size)
         physicsBody?.isDynamic = true
-        physicsBody?.mass = 0.1  // Lighter than letter tiles
+        physicsBody?.mass = 0.1
         physicsBody?.friction = 0.6
-        physicsBody?.restitution = 0.3  // Bouncy
+        physicsBody?.restitution = 0.3
         physicsBody?.linearDamping = 0.95
         physicsBody?.angularDamping = 0.99
         physicsBody?.affectedByGravity = true
@@ -2350,7 +2365,7 @@ class ScoreTile: SKSpriteNode {
         physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
         
         physicsBody?.allowsRotation = true
-        physicsBody?.density = 0.8  // Lighter than letter tiles
+        physicsBody?.density = 0.8
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -2358,17 +2373,15 @@ class ScoreTile: SKSpriteNode {
     }
 }
 
-class MessageTile: SKSpriteNode {
-    private var frontFace: SKShapeNode?
+class MessageTile: InformationTile {
     private var messageLabel: SKLabelNode?
-    var isBeingDragged = false
     
     var messageText: String {
         return messageLabel?.text ?? ""
     }
     
     init(message: String) {
-        // Calculate tile width based on text length - similar to other tiles
+        // Calculate tile width based on text length
         let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
         tempLabel.fontSize = 24
         tempLabel.text = message
@@ -2379,60 +2392,12 @@ class MessageTile: SKSpriteNode {
         let tileHeight: CGFloat = 40  // Standard tile height
         let calculatedSize = CGSize(width: tileWidth, height: tileHeight)
         
-        super.init(texture: nil, color: .clear, size: calculatedSize)
+        super.init(size: calculatedSize)
         
-        let depth: CGFloat = 6
-        
-        // Create the main tile body (top surface) - light blue for message tiles
-        let topFace = SKShapeNode()
-        let topPath = CGMutablePath()
-        topPath.move(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
-        topPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
-        topPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
-        topPath.addLine(to: CGPoint(x: -tileWidth / 2 + depth, y: tileHeight / 2 + depth))
-        topPath.closeSubpath()
-        topFace.path = topPath
-        topFace.fillColor = UIColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)  // Light blue
-        topFace.strokeColor = .black
-        topFace.lineWidth = 2
-        topFace.zPosition = -0.1
-        addChild(topFace)
-        
-        // Create the front face (main visible surface) - medium blue
-        let frontFaceShape = SKShapeNode()
-        let frontPath = CGMutablePath()
-        frontPath.move(to: CGPoint(x: -tileWidth / 2, y: -tileHeight / 2))
-        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
-        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
-        frontPath.addLine(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
-        frontPath.closeSubpath()
-        frontFaceShape.path = frontPath
-        frontFaceShape.fillColor = UIColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1.0)  // Medium blue
-        frontFaceShape.strokeColor = .black
-        frontFaceShape.lineWidth = 2
-        frontFaceShape.zPosition = 0.1
-        frontFace = frontFaceShape
-        addChild(frontFaceShape)
-        
-        // Create the right face (shadow side - darker blue)
-        let rightFace = SKShapeNode()
-        let rightPath = CGMutablePath()
-        rightPath.move(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
-        rightPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
-        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: -tileHeight / 2 + depth))
-        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
-        rightPath.closeSubpath()
-        rightFace.path = rightPath
-        rightFace.fillColor = UIColor(red: 0.1, green: 0.4, blue: 0.7, alpha: 1.0)  // Dark blue shadow
-        rightFace.strokeColor = UIColor(red: 0.0, green: 0.3, blue: 0.6, alpha: 1.0)
-        rightFace.lineWidth = 2
-        rightFace.zPosition = 0.0
-        addChild(rightFace)
-        
-        // Create message label - same style as other tiles
+        // Create message label
         messageLabel = SKLabelNode(fontNamed: "Arial-Bold")
-        messageLabel?.fontSize = 24  // Same as other tiles
-        messageLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)  // Dark text like other tiles
+        messageLabel?.fontSize = 24
+        messageLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
         messageLabel?.verticalAlignmentMode = .center
         messageLabel?.horizontalAlignmentMode = .center
         messageLabel?.zPosition = 10.0
@@ -2449,9 +2414,9 @@ class MessageTile: SKSpriteNode {
         // Create physics body - same as ScoreTile
         physicsBody = SKPhysicsBody(rectangleOf: size)
         physicsBody?.isDynamic = true
-        physicsBody?.mass = 0.1  // Same as ScoreTile
+        physicsBody?.mass = 0.1
         physicsBody?.friction = 0.6
-        physicsBody?.restitution = 0.3  // Bouncy
+        physicsBody?.restitution = 0.3
         physicsBody?.linearDamping = 0.95
         physicsBody?.angularDamping = 0.99
         physicsBody?.affectedByGravity = true
@@ -2462,10 +2427,10 @@ class MessageTile: SKSpriteNode {
         physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
         
         physicsBody?.allowsRotation = true
-        physicsBody?.density = 0.8  // Same as ScoreTile
+        physicsBody?.density = 0.8
     }
     
-    // Touch handling for dragging (same pattern as ScoreTile and LanguageTile)
+    // Touch handling for dragging
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         isBeingDragged = true
         physicsBody?.velocity = CGVector.zero
@@ -2491,74 +2456,29 @@ class MessageTile: SKSpriteNode {
     }
 }
 
-class LanguageTile: SKSpriteNode {
-    private var frontFace: SKShapeNode?
+class LanguageTile: InformationTile {
     private var flagImageNode: SKSpriteNode?
-    var isBeingDragged = false
     var currentLanguage: String = "en"
     
     init(size: CGSize, language: String = "en") {
-        super.init(texture: nil, color: .clear, size: size)
+        super.init(size: size)
         self.currentLanguage = language
-        
-        let tileWidth = size.width
-        let tileHeight = size.height
-        let depth: CGFloat = 6
-        
-        // Create the main tile body (top surface) - blue theme for language
-        let topFace = SKShapeNode()
-        let topPath = CGMutablePath()
-        topPath.move(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
-        topPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
-        topPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
-        topPath.addLine(to: CGPoint(x: -tileWidth / 2 + depth, y: tileHeight / 2 + depth))
-        topPath.closeSubpath()
-        topFace.path = topPath
-        topFace.fillColor = UIColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)  // Light blue
-        topFace.strokeColor = .black
-        topFace.lineWidth = 2
-        topFace.zPosition = -0.1  // Put tile roofs in background
-        addChild(topFace)
-        
-        // Create the front face (main visible surface) - blue theme
-        let frontFaceShape = SKShapeNode()
-        let frontPath = CGMutablePath()
-        frontPath.move(to: CGPoint(x: -tileWidth / 2, y: -tileHeight / 2))
-        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
-        frontPath.addLine(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
-        frontPath.addLine(to: CGPoint(x: -tileWidth / 2, y: tileHeight / 2))
-        frontPath.closeSubpath()
-        frontFaceShape.path = frontPath
-        frontFaceShape.fillColor = UIColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1.0)  // Medium blue
-        frontFaceShape.strokeColor = .black
-        frontFaceShape.lineWidth = 2
-        frontFaceShape.zPosition = 0.1
-        frontFace = frontFaceShape  // Store reference
-        addChild(frontFaceShape)
-        
-        // Create the right face (shadow side - darker blue)
-        let rightFace = SKShapeNode()
-        let rightPath = CGMutablePath()
-        rightPath.move(to: CGPoint(x: tileWidth / 2, y: tileHeight / 2))
-        rightPath.addLine(to: CGPoint(x: tileWidth / 2, y: -tileHeight / 2))
-        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: -tileHeight / 2 + depth))
-        rightPath.addLine(to: CGPoint(x: tileWidth / 2 + depth, y: tileHeight / 2 + depth))
-        rightPath.closeSubpath()
-        rightFace.path = rightPath
-        rightFace.fillColor = UIColor(red: 0.1, green: 0.4, blue: 0.7, alpha: 1.0)  // Dark blue shadow
-        rightFace.strokeColor = .black
-        rightFace.lineWidth = 2
-        rightFace.zPosition = 0.0
-        addChild(rightFace)
         
         // Add flag image on front face
         updateFlag(language: language)
         
-        // Set up physics body (same as letter tiles for consistency)
-        physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: tileWidth, height: tileHeight))
+        // Set up physics body
+        setupPhysics()
+        
+        // Set z-position for proper layering
+        zPosition = 50
+    }
+    
+    private func setupPhysics() {
+        physicsBody = SKPhysicsBody(rectangleOf: size)
         physicsBody?.isDynamic = true
         physicsBody?.affectedByGravity = true
-        physicsBody?.mass = 0.1  // Same as ScoreTile
+        physicsBody?.mass = 0.1
         physicsBody?.friction = 0.6
         physicsBody?.restitution = 0.3
         physicsBody?.linearDamping = 0.95
@@ -2569,10 +2489,7 @@ class LanguageTile: SKSpriteNode {
         physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
         
         physicsBody?.allowsRotation = true
-        physicsBody?.density = 0.8  // Same as ScoreTile
-        
-        // Set z-position for proper layering
-        zPosition = 50  // Same as letter tiles
+        physicsBody?.density = 0.8
     }
     
     func updateFlag(language: String) {
@@ -2599,7 +2516,7 @@ class LanguageTile: SKSpriteNode {
         addChild(flagNode)
     }
     
-    // Touch handling for dragging (same pattern as ScoreTile)
+    // Touch handling for dragging
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         isBeingDragged = true
         physicsBody?.velocity = CGVector.zero
