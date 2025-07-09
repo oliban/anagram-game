@@ -566,6 +566,11 @@ struct PhysicsGameView: View {
     }
 }
 
+// Protocol for tiles that can be respawned when they go off-screen
+protocol RespawnableTile: SKSpriteNode {
+    var isBeingDragged: Bool { get set }
+}
+
 class PhysicsGameScene: SKScene, MessageTileSpawner {
     private let gameModel: GameModel
     var motionManager: CMMotionManager?
@@ -577,6 +582,16 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     private var scoreTile: ScoreTile?
     private var languageTile: LanguageTile?
     private var messageTiles: [MessageTile] = []
+    
+    // Unified collection for respawn tracking
+    private var allRespawnableTiles: [RespawnableTile] {
+        var allTiles: [RespawnableTile] = []
+        allTiles.append(contentsOf: tiles)
+        allTiles.append(contentsOf: messageTiles)
+        if let scoreTile = scoreTile { allTiles.append(scoreTile) }
+        if let languageTile = languageTile { allTiles.append(languageTile) }
+        return allTiles
+    }
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var celebrationText: String = ""
 
@@ -1436,12 +1451,33 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     override func update(_ currentTime: TimeInterval) {
         // Check for tiles that have left the screen and respawn them
-        for tile in tiles {
+        for tile in allRespawnableTiles {
             let margin: CGFloat = 100  // Buffer zone outside screen
-            if tile.position.x < -margin || 
-               tile.position.x > size.width + margin || 
-               tile.position.y < -margin || 
-               tile.position.y > size.height + margin {
+            let topMargin: CGFloat = 0   // No margin for top - respawn immediately when above screen
+            
+            // Check all boundaries with zero tolerance for top boundary
+            let isOutOfBounds = tile.position.x < -margin || 
+                               tile.position.x > size.width + margin || 
+                               tile.position.y < -margin || 
+                               tile.position.y > size.height + topMargin  // Respawn immediately when above screen
+            
+            if isOutOfBounds {
+                // Get tile description for logging
+                let tileDescription: String
+                if let letterTile = tile as? LetterTile {
+                    tileDescription = "letter '\(letterTile.letter)'"
+                } else if tile is ScoreTile {
+                    tileDescription = "score tile"
+                } else if tile is MessageTile {
+                    tileDescription = "message tile"
+                } else if tile is LanguageTile {
+                    tileDescription = "language tile"
+                } else {
+                    tileDescription = "tile"
+                }
+                
+                print("🚨 RESPAWN: \(tileDescription) was out of bounds at (\(tile.position.x), \(tile.position.y)) - screen size: (\(size.width), \(size.height))")
+                
                 // Respawn tile in center area with some randomness
                 let randomX = CGFloat.random(in: size.width * 0.3...size.width * 0.7)
                 let randomY = CGFloat.random(in: size.height * 0.4...size.height * 0.6)
@@ -1452,10 +1488,12 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
                 tile.physicsBody?.angularVelocity = 0
                 tile.zRotation = CGFloat.random(in: -0.3...0.3)
                 
-                print("Respawned tile '\(tile.letter)' at center: \(tile.position)")
+                print("✅ RESPAWN: \(tileDescription) respawned at center: \(tile.position)")
             }
-            
-            // Adjust visual appearance based on rotation to look like proper resting
+        }
+        
+        // Update visual appearance for letter tiles only
+        for tile in tiles {
             tile.updateVisualForRotation()
         }
     }
@@ -2110,7 +2148,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
 }
 
-class LetterTile: SKSpriteNode {
+class LetterTile: SKSpriteNode, RespawnableTile {
     let letter: String
     var isBeingDragged = false
     private var frontFace: SKShapeNode?
@@ -2257,7 +2295,7 @@ extension PhysicsGameScene: SKPhysicsContactDelegate {
 }
 
 // Base class for information tiles (ScoreTile, MessageTile, LanguageTile) with consistent green color scheme
-class InformationTile: SKSpriteNode {
+class InformationTile: SKSpriteNode, RespawnableTile {
     private var frontFace: SKShapeNode?
     var isBeingDragged = false
     
