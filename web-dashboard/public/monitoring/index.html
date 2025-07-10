@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anagram Game - Monitoring Dashboard</title>
+    <link rel="stylesheet" href="/web/shared/shared.css">
+    <link rel="stylesheet" href="/web/monitoring/monitoring.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Game Activity Monitor</h1>
+            <p>Real-time game activity tracking and statistics</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="online-players">0</div>
+                <div class="stat-label">Players Online</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="active-phrases">0</div>
+                <div class="stat-label">Active Phrases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="phrases-today">0</div>
+                <div class="stat-label">Phrases Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completion-rate">0%</div>
+                <div class="stat-label">Completion Rate</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h2>Live Activity Feed</h2>
+                <div class="activity-controls">
+                    <button class="btn btn-secondary" id="clear-feed">Clear Feed</button>
+                    <button class="btn btn-secondary" id="toggle-auto-scroll">
+                        <span id="auto-scroll-text">Auto-scroll: ON</span>
+                    </button>
+                </div>
+                <div class="activity-feed" id="activity-feed">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Connecting to activity stream...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Current Game State</h2>
+                <div class="game-state-section">
+                    <h3>Online Players</h3>
+                    <div id="players-list" class="players-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <span>Loading players...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="game-state-section">
+                    <h3>Recent Phrases</h3>
+                    <div id="phrases-list" class="phrases-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <span>Loading phrases...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Event Filters</h2>
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label class="form-label">Event Types:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filter-player" checked>
+                            Player Events
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filter-phrase" checked>
+                            Phrase Events
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filter-game" checked>
+                            Game Events
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filter-system" checked>
+                            System Events
+                        </label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="form-label">Time Range:</label>
+                    <select class="form-select" id="time-range">
+                        <option value="all">All Time</option>
+                        <option value="1h">Last Hour</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/web/shared/api-client.js"></script>
+    <script src="/web/monitoring/monitoring.js"></script>
+</body>
+</html>

@@ -18,6 +18,10 @@ const { detectLanguage } = require('./services/difficultyScorer');
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger-output.json');
 
+// Web dashboard modules
+const path = require('path');
+const ContributionLinkGenerator = require('../web-dashboard/server/link-generator');
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -34,6 +38,78 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 3000;
 
+// Create monitoring namespace for dashboard
+const monitoringNamespace = io.of('/monitoring');
+
+monitoringNamespace.on('connection', (socket) => {
+  console.log(`📊 MONITORING: Dashboard connected: ${socket.id}`);
+  
+  // Send initial connection confirmation
+  socket.emit('connected', {
+    message: 'Connected to monitoring dashboard',
+    timestamp: new Date().toISOString()
+  });
+  
+  // Handle monitoring stats request
+  socket.on('request-stats', async () => {
+    try {
+      if (isDatabaseConnected) {
+        const stats = await getMonitoringStats();
+        socket.emit('stats', stats);
+      }
+    } catch (error) {
+      console.error('❌ MONITORING: Error getting stats:', error);
+    }
+  });
+  
+  // Emit activity events to monitoring dashboard
+  socket.on('request-activity', () => {
+    socket.emit('activity', {
+      type: 'system',
+      message: 'Monitoring dashboard connected',
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  socket.on('disconnect', () => {
+    console.log(`📊 MONITORING: Dashboard disconnected: ${socket.id}`);
+  });
+});
+
+// Helper function to get monitoring stats
+async function getMonitoringStats() {
+  try {
+    const [playersResult, phrasesResult, todayPhrasesResult] = await Promise.all([
+      pool.query('SELECT COUNT(*) as count FROM players WHERE is_active = true AND last_seen > NOW() - INTERVAL \'5 minutes\''),
+      pool.query('SELECT COUNT(*) as count FROM phrases WHERE created_at > NOW() - INTERVAL \'24 hours\''),
+      pool.query('SELECT COUNT(*) as count FROM phrases WHERE created_at > CURRENT_DATE')
+    ]);
+
+    const completedResult = await pool.query(`
+      SELECT 
+        COUNT(*) as completed,
+        COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM phrases WHERE created_at > NOW() - INTERVAL '24 hours'), 0) as completion_rate
+      FROM completed_phrases cp
+      JOIN phrases p ON cp.phrase_id = p.id
+      WHERE cp.completed_at > NOW() - INTERVAL '24 hours'
+    `);
+
+    return {
+      onlinePlayers: parseInt(playersResult.rows[0].count),
+      activePhrases: parseInt(phrasesResult.rows[0].count),
+      phrasesToday: parseInt(todayPhrasesResult.rows[0].count),
+      completionRate: Math.round(parseFloat(completedResult.rows[0].completion_rate || 0))
+    };
+  } catch (error) {
+    console.error('Error calculating monitoring stats:', error);
+    return {
+      onlinePlayers: 0,
+      activePhrases: 0,
+      phrasesToday: 0,
+      completionRate: 0
+    };
+  }
+}
 
 // Database initialization flag
 let isDatabaseConnected = false;
@@ -57,6 +133,171 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Anagram Game API Documentation'
 }));
+
+// Web Dashboard Static Files
+app.use('/web', express.static(path.join(__dirname, '../web-dashboard/public')));
+
+// Web Dashboard Routes
+const linkGenerator = new ContributionLinkGenerator();
+
+// Serve monitoring dashboard
+app.get('/monitoring', (req, res) => {
+  res.sendFile(path.join(__dirname, '../web-dashboard/public/monitoring/index.html'));
+});
+
+// Serve contribution form
+app.get('/contribute/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, '../web-dashboard/public/contribute/index.html'));
+});
+
+// Generate contribution link
+app.post('/api/contribution/request', async (req, res) => {
+  try {
+    const { playerId, expirationHours = 48, maxUses = 3, customMessage } = req.body;
+    
+    if (!playerId) {
+      return res.status(400).json({ error: 'Player ID is required' });
+    }
+
+    if (!isDatabaseConnected) {
+      return res.status(503).json({ error: 'Database connection required' });
+    }
+
+    const player = await DatabasePlayer.getPlayerById(playerId);
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    const link = await linkGenerator.createContributionLink(playerId, {
+      expirationHours,
+      maxUses,
+      customMessage
+    });
+
+    res.status(201).json({
+      success: true,
+      link: link
+    });
+  } catch (error) {
+    console.error('Error creating contribution link:', error);
+    res.status(500).json({ error: 'Failed to create contribution link' });
+  }
+});
+
+// Get contribution link details
+app.get('/api/contribution/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    if (!isDatabaseConnected) {
+      return res.status(503).json({ error: 'Database connection required' });
+    }
+    
+    const validation = await linkGenerator.validateToken(token);
+    
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.reason });
+    }
+
+    res.json({
+      success: true,
+      link: validation.link
+    });
+  } catch (error) {
+    console.error('Error validating contribution token:', error);
+    res.status(500).json({ error: 'Failed to validate contribution link' });
+  }
+});
+
+// Submit phrase via contribution link
+app.post('/api/contribution/:token/submit', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { phrase, clue, language = 'en', contributorName } = req.body;
+    
+    if (!isDatabaseConnected) {
+      return res.status(503).json({ error: 'Database connection required' });
+    }
+    
+    // Validate token
+    const validation = await linkGenerator.validateToken(token);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.reason });
+    }
+
+    // Validate phrase using same logic as app
+    if (!phrase || typeof phrase !== 'string') {
+      return res.status(400).json({ error: 'Phrase is required' });
+    }
+
+    const trimmedPhrase = phrase.trim();
+    if (trimmedPhrase.length < 3) {
+      return res.status(400).json({ error: 'Phrase must be at least 3 characters long' });
+    }
+
+    if (trimmedPhrase.length > 200) {
+      return res.status(400).json({ error: 'Phrase must be less than 200 characters' });
+    }
+
+    // Count words (same logic as PhraseCreationView.swift)
+    const wordCount = trimmedPhrase.split(/\s+/).filter(word => word.length > 0).length;
+    if (wordCount < 2) {
+      return res.status(400).json({ error: 'Phrase must contain at least 2 words' });
+    }
+
+    if (wordCount > 6) {
+      return res.status(400).json({ error: 'Phrase must contain no more than 6 words' });
+    }
+
+    // Validate clue
+    const finalClue = clue && clue.trim() ? clue.trim() : 'No clue provided';
+    if (finalClue.length > 500) {
+      return res.status(400).json({ error: 'Clue must be less than 500 characters' });
+    }
+
+    // Validate language
+    if (!['en', 'sv'].includes(language)) {
+      return res.status(400).json({ error: 'Invalid language' });
+    }
+
+    // Create phrase using existing DatabasePhrase.createPhrase logic
+    const createdPhrase = await DatabasePhrase.createPhrase({
+      content: trimmedPhrase,
+      hint: finalClue,
+      language: detectLanguage(trimmedPhrase) || language,
+      senderId: null, // External contribution
+      targetId: validation.link.requestingPlayerId
+    });
+    
+    if (!createdPhrase) {
+      return res.status(500).json({ error: 'Failed to create phrase' });
+    }
+
+    // Record the contribution
+    const contributorInfo = {
+      name: contributorName || null,
+      ip: req.ip || req.connection.remoteAddress
+    };
+
+    const recordResult = await linkGenerator.recordContribution(token, contributorInfo);
+
+    res.status(201).json({
+      success: true,
+      phrase: {
+        id: createdPhrase.id,
+        content: createdPhrase.content,
+        hint: createdPhrase.hint,
+        language: createdPhrase.language
+      },
+      remainingUses: recordResult.remainingUses,
+      message: 'Phrase submitted successfully!'
+    });
+
+  } catch (error) {
+    console.error('Error submitting contribution:', error);
+    res.status(500).json({ error: 'Failed to submit phrase' });
+  }
+});
 
 // API Routes
 app.get('/api/status', async (req, res) => {
