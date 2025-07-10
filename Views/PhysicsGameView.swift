@@ -344,43 +344,42 @@ struct PhysicsGameView: View {
                 VStack {
                     // TOP ROW
                     HStack {
-                        Spacer() // Push everything to the right
-                        
-                        // Top-right group: Lobby button + Version number
-                        HStack(spacing: 15) {
-                            // Back to Lobby button
-                            Button(action: {
-                                Task {
-                                    await gameModel.skipCurrentGame()
-                                    showingGame = false
-                                }
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "arrow.left")
-                                    Text("Lobby")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(20)
-                                .shadow(radius: 4)
+                        // Back to Lobby button - moved to top-left
+                        Button(action: {
+                            Task {
+                                await gameModel.skipCurrentGame()
+                                showingGame = false
                             }
-                            
-                            // Version number
-                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .fontWeight(.bold)
-                                .onTapGesture {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.triggerQuake()
-                                    }
-                                }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.left")
+                                Text("Lobby")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
                         }
-                        .padding(.trailing, 20)
+                        .padding(.leading, 20)
                         .padding(.top, 10)
+                        
+                        Spacer() // Push version to the right
+                        
+                        // Version number
+                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .fontWeight(.bold)
+                            .onTapGesture {
+                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                    scene.triggerQuake()
+                                }
+                            }
+                            .padding(.trailing, 20)
+                            .padding(.top, 10)
                     }
                     
                     // MIDDLE - Game content and overlays
@@ -408,9 +407,9 @@ struct PhysicsGameView: View {
                     Spacer() // Push bottom controls down
                     
                     // BOTTOM ROW - Clean layout inside ZStack
-                    HStack {
-                        // Bottom-left group: Skip + Send Phrase (stacked)
-                        VStack(spacing: 10) {
+                    HStack(alignment: .bottom) {
+                        // Bottom-left group: Skip + Send Phrase (stacked, left-aligned)
+                        VStack(alignment: .leading, spacing: 10) {
                             // Skip button
                             Button(action: {
                                 Task {
@@ -471,7 +470,7 @@ struct PhysicsGameView: View {
                         
                         Spacer() // Push hint button to the right
                         
-                        // Bottom-right: Hint button (standalone)
+                        // Bottom-right: Hint button (aligned with Send Phrase button)
                         HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
                             // No longer used - clue is now displayed persistently
                         }
@@ -1138,12 +1137,12 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         let shelfThickness: CGFloat = 8
         let depthOffset: CGFloat = 15
         
-        // Softer, more subtle color palette
+        // Enhanced, more vibrant color palette for better visibility
         let hintColors: [UIColor] = [
-            UIColor(red: 1.0, green: 0.9, blue: 0.7, alpha: 1.0),   // Warm cream (1st word)
-            UIColor(red: 0.8, green: 1.0, blue: 0.8, alpha: 1.0),   // Soft mint (2nd word)
-            UIColor(red: 0.8, green: 0.9, blue: 1.0, alpha: 1.0),   // Light sky blue (3rd word)
-            UIColor(red: 0.95, green: 0.8, blue: 1.0, alpha: 1.0)   // Lavender (4th word)
+            UIColor(red: 1.0, green: 0.8, blue: 0.4, alpha: 1.0),   // Bright warm orange (1st word)
+            UIColor(red: 0.6, green: 1.0, blue: 0.6, alpha: 1.0),   // Vibrant mint green (2nd word)
+            UIColor(red: 0.6, green: 0.8, blue: 1.0, alpha: 1.0),   // Bright sky blue (3rd word)
+            UIColor(red: 0.9, green: 0.6, blue: 1.0, alpha: 1.0)   // Bright lavender (4th word)
         ]
         
         let colorIndex = wordIndex % hintColors.count
@@ -1163,9 +1162,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         topPath.closeSubpath()
         
         topGlow.path = topPath
-        topGlow.fillColor = hintColor.withAlphaComponent(0.4)  // More prominent
-        topGlow.strokeColor = hintColor.withAlphaComponent(0.7)
-        topGlow.lineWidth = 2
+        topGlow.fillColor = hintColor.withAlphaComponent(0.8)  // Much more prominent
+        topGlow.strokeColor = hintColor.withAlphaComponent(1.0)
+        topGlow.lineWidth = 3
         topGlow.zPosition = 5  // Above the actual shelf
         
         // 2. Create glow for the shelf front face
@@ -1178,9 +1177,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         frontPath.closeSubpath()
         
         frontGlow.path = frontPath
-        frontGlow.fillColor = hintColor.withAlphaComponent(0.35)  // More prominent
-        frontGlow.strokeColor = hintColor.withAlphaComponent(0.6)
-        frontGlow.lineWidth = 2
+        frontGlow.fillColor = hintColor.withAlphaComponent(0.75)  // Much more prominent
+        frontGlow.strokeColor = hintColor.withAlphaComponent(0.9)
+        frontGlow.lineWidth = 3
         frontGlow.zPosition = 4  // Just above the front face
         
         // 3. Create glow for the shelf right edge (3D depth side)
@@ -1193,9 +1192,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         rightPath.closeSubpath()
         
         rightGlow.path = rightPath
-        rightGlow.fillColor = hintColor.withAlphaComponent(0.25)  // More prominent
-        rightGlow.strokeColor = hintColor.withAlphaComponent(0.5)
-        rightGlow.lineWidth = 2
+        rightGlow.fillColor = hintColor.withAlphaComponent(0.7)  // Much more prominent
+        rightGlow.strokeColor = hintColor.withAlphaComponent(0.85)
+        rightGlow.lineWidth = 3
         rightGlow.zPosition = 3
         
         // Add all glow elements to container
@@ -1203,15 +1202,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         glowContainer.addChild(rightGlow)
         glowContainer.addChild(topGlow)
         
-        // First: 2-second pulsating intro for attention
-        let pulseBright = SKAction.fadeAlpha(to: 1.0, duration: 0.3)
-        let pulseDim = SKAction.fadeAlpha(to: 0.4, duration: 0.3)
+        // First: Enhanced pulsating intro for better attention
+        let pulseBright = SKAction.fadeAlpha(to: 1.0, duration: 0.25)
+        let pulseDim = SKAction.fadeAlpha(to: 0.3, duration: 0.25)
         let pulseSequence = SKAction.sequence([pulseBright, pulseDim])
-        let pulsatingIntro = SKAction.repeat(pulseSequence, count: 3)  // 3 pulses = ~1.8 seconds
+        let pulsatingIntro = SKAction.repeat(pulseSequence, count: 5)  // 5 pulses = ~2.5 seconds
         
-        // Then: settle into gentle breathing
-        let breatheOut = SKAction.fadeAlpha(to: 0.6, duration: 2.0)
-        let breatheIn = SKAction.fadeAlpha(to: 0.8, duration: 2.0)
+        // Then: settle into more prominent breathing
+        let breatheOut = SKAction.fadeAlpha(to: 0.5, duration: 2.0)
+        let breatheIn = SKAction.fadeAlpha(to: 0.9, duration: 2.0)
         let breathing = SKAction.sequence([breatheOut, breatheIn])
         let repeatBreathing = SKAction.repeatForever(breathing)
         

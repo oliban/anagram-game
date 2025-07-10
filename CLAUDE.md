@@ -4,7 +4,7 @@
 iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter tiles to form words from scrambled sentences.
 
 ## 🚨 CORE WORKFLOW - ALWAYS FOLLOW
-1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections
+1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py` from project root.
 2. **Plan**: Create detailed implementation plan, verify with me before coding
 3. **Implement**: Write production-quality Swift code following all best practices
 4. **Test**: Deploy to both simulators with `build_multi_sim.sh`, monitor server logs, await my feedback
