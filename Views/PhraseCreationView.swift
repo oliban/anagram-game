@@ -71,10 +71,11 @@ struct PhraseCreationView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
                     
-                    Text("Create an anagram puzzle for one or more players")
+                    Text("Create an anagram puzzle for other players to solve")
                         .font(.subheadline)
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top)
                 
@@ -153,7 +154,7 @@ struct PhraseCreationView: View {
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        TextField("Enter a helpful clue...", text: $clueText, axis: .vertical)
+                        TextField("Enter a helpful clue (min 10 characters)...", text: $clueText, axis: .vertical)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .lineLimit(1...3)
                             .frame(minHeight: 44)
@@ -161,19 +162,31 @@ struct PhraseCreationView: View {
                             .focused($isClueFieldFocused)
                             .foregroundColor(.primary)
                             .accentColor(.blue)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(
+                                        clueText.count < 10 && !clueText.isEmpty ? Color.orange : Color.clear,
+                                        lineWidth: 1
+                                    )
+                            )
                         
                         HStack {
-                            Text("This clue will be revealed when the player uses Hint 3")
-                                .font(.caption)
-                                .foregroundColor(.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("This clue will be revealed when the player uses Hint 3")
+                                    .font(.caption)
+                                    .foregroundColor(.primary)
+                                
+                                Text("All clues require minimum 10 characters")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                             
                             Spacer()
                             
-                            if !clueText.isEmpty {
-                                Text("✓")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                            }
+                            Text("\(clueText.count)/10")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(clueText.count >= 10 ? .green : (clueText.isEmpty ? .secondary : .orange))
                         }
                     }
                 }
@@ -253,14 +266,22 @@ struct PhraseCreationView: View {
                     Text("Select the language for this phrase. This will be displayed as a flag icon during gameplay.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 4)
                 }
                 
                 // Player availability section
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Send to Players")
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Send to Players")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text("Choose where your puzzle will be delivered")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     
                     // Available to all players checkbox
                     Button(action: {
@@ -269,8 +290,13 @@ struct PhraseCreationView: View {
                         HStack {
                             Image(systemName: isAvailableToAll ? "checkmark.square.fill" : "square")
                                 .foregroundColor(isAvailableToAll ? .blue : .gray)
-                            Text("Available to all players")
-                                .foregroundColor(.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Add to global phrase pool")
+                                    .foregroundColor(.primary)
+                                Text("Available for any player to pick up")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                             Spacer()
                         }
                     }
@@ -393,10 +419,18 @@ struct PhraseCreationView: View {
                             }
                             
                             // Hint text
-                            Text("Type at least 2 characters to search for players")
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                                .padding(.top, 4)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Type at least 2 characters to search and select players who will receive your puzzle")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                
+                                Text("Targeting specific players creates a challenge for them to solve. They'll be notified and can start playing immediately.")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.top, 4)
                         }
                     }
                 }
@@ -512,7 +546,10 @@ struct PhraseCreationView: View {
     }
     
     private var canSendPhrase: Bool {
-        return isValidPhrase && !availableTargets.isEmpty && (isAvailableToAll || !selectedPlayers.isEmpty)
+        let hasValidTargets = !availableTargets.isEmpty && (isAvailableToAll || !selectedPlayers.isEmpty)
+        let hasValidClue = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 10
+        
+        return isValidPhrase && hasValidTargets && hasValidClue
     }
     
     private func sendPhrase() {
@@ -524,21 +561,6 @@ struct PhraseCreationView: View {
         
         Task {
             var allSuccessful = true
-            // Combine target lists: if "Available to all" is checked, include all players
-            // If specific players are selected, include them too (avoiding duplicates)
-            var allTargetIds = Set<String>()
-            
-            if isAvailableToAll {
-                allTargetIds.formUnion(availableTargets.map { $0.id })
-            }
-            
-            if !selectedPlayers.isEmpty {
-                allTargetIds.formUnion(selectedPlayers.map { $0.id })
-            }
-            
-            let targetIds = Array(allTargetIds)
-            
-            // Ensure we have current difficulty analysis before sending
             let finalPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
             var difficultyAnalysis = currentDifficulty
             
@@ -547,12 +569,11 @@ struct PhraseCreationView: View {
                 difficultyAnalysis = await networkManager.analyzeDifficulty(phrase: finalPhrase)
             }
             
-            // Send phrase to each selected player
-            for targetId in targetIds {
-                let success = await networkManager.sendPhrase(
+            // Handle global phrase creation
+            if isAvailableToAll {
+                let success = await networkManager.createGlobalPhrase(
                     content: finalPhrase,
-                    targetId: targetId,
-                    clue: clueText.trimmingCharacters(in: .whitespacesAndNewlines), // Now required, never nil
+                    hint: clueText.trimmingCharacters(in: .whitespacesAndNewlines),
                     language: selectedLanguage
                 )
                 
@@ -561,14 +582,52 @@ struct PhraseCreationView: View {
                 }
             }
             
+            // Handle targeted phrases to specific players
+            if !selectedPlayers.isEmpty {
+                for player in selectedPlayers {
+                    let success = await networkManager.sendPhrase(
+                        content: finalPhrase,
+                        targetId: player.id,
+                        clue: clueText.trimmingCharacters(in: .whitespacesAndNewlines),
+                        language: selectedLanguage
+                    )
+                    
+                    if !success {
+                        allSuccessful = false
+                        break
+                    }
+                }
+            }
+            
             await MainActor.run {
                 isLoading = false
                 
                 if allSuccessful {
-                    // Directly dismiss the view on success
-                    isPresented = false
+                    // Create appropriate success message
+                    var actions: [String] = []
+                    if isAvailableToAll {
+                        actions.append("added to global pool")
+                    }
+                    if !selectedPlayers.isEmpty {
+                        actions.append("sent to \(selectedPlayers.count) player\(selectedPlayers.count == 1 ? "" : "s")")
+                    }
+                    
+                    successMessage = "Phrase " + actions.joined(separator: " and ") + " successfully!"
+                    
+                    // Dismiss after a brief delay to show success message
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        isPresented = false
+                    }
                 } else {
-                    errorMessage = "Failed to send phrase to some players. Please try again."
+                    var errorActions: [String] = []
+                    if isAvailableToAll {
+                        errorActions.append("add to global pool")
+                    }
+                    if !selectedPlayers.isEmpty {
+                        errorActions.append("send to selected players")
+                    }
+                    
+                    errorMessage = "Failed to " + errorActions.joined(separator: " and ") + ". Please try again."
                     showingAlert = true
                 }
             }
