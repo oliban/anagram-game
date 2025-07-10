@@ -806,6 +806,15 @@ class NetworkManager: ObservableObject {
         }
     }
     
+    func clearCachedPhrase() async {
+        await MainActor.run {
+            self.lastReceivedPhrase = nil
+            self.hasNewPhrase = false
+            self.justReceivedPhrase = nil
+        }
+        print("🧹 PHRASE: Cleared cached phrase data")
+    }
+    
     func skipPhrase(phraseId: String) async -> Bool {
         guard let currentPlayer = currentPlayer else {
             print("❌ PHRASE: No current player to skip phrase")

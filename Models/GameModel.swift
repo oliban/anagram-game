@@ -292,6 +292,16 @@ class GameModel: ObservableObject {
             } else {
                 print("❌ Failed to skip phrase on server")
             }
+            
+            // Clear cached phrase data to prevent reuse
+            await MainActor.run {
+                currentCustomPhrase = nil
+                customPhraseInfo = ""
+                currentPhraseId = nil
+            }
+            
+            // Clear any cached phrases from NetworkManager
+            await networkManager.clearCachedPhrase()
         }
         
         // Start a new game regardless of skip result
