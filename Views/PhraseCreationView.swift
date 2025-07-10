@@ -569,34 +569,19 @@ struct PhraseCreationView: View {
                 difficultyAnalysis = await networkManager.analyzeDifficulty(phrase: finalPhrase)
             }
             
-            // Handle global phrase creation
-            if isAvailableToAll {
-                let success = await networkManager.createGlobalPhrase(
-                    content: finalPhrase,
-                    hint: clueText.trimmingCharacters(in: .whitespacesAndNewlines),
-                    language: selectedLanguage
-                )
-                
-                if !success {
-                    allSuccessful = false
-                }
-            }
+            // Create single phrase with multiple delivery methods
+            let targetIds = selectedPlayers.map { $0.id }
             
-            // Handle targeted phrases to specific players
-            if !selectedPlayers.isEmpty {
-                for player in selectedPlayers {
-                    let success = await networkManager.sendPhrase(
-                        content: finalPhrase,
-                        targetId: player.id,
-                        clue: clueText.trimmingCharacters(in: .whitespacesAndNewlines),
-                        language: selectedLanguage
-                    )
-                    
-                    if !success {
-                        allSuccessful = false
-                        break
-                    }
-                }
+            let success = await networkManager.createEnhancedPhrase(
+                content: finalPhrase,
+                hint: clueText.trimmingCharacters(in: .whitespacesAndNewlines),
+                targetIds: targetIds,
+                isGlobal: isAvailableToAll,
+                language: selectedLanguage
+            )
+            
+            if !success {
+                allSuccessful = false
             }
             
             await MainActor.run {

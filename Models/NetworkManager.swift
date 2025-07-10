@@ -696,6 +696,56 @@ class NetworkManager: ObservableObject {
         }
     }
     
+    func createEnhancedPhrase(content: String, hint: String, targetIds: [String], isGlobal: Bool, language: String = "en") async -> Bool {
+        guard let url = URL(string: "\(baseURL)/api/phrases/create") else {
+            print("❌ ENHANCED PHRASE: Invalid URL for creating enhanced phrase")
+            return false
+        }
+        
+        guard let currentPlayer = currentPlayer else {
+            print("❌ ENHANCED PHRASE: No current player registered")
+            return false
+        }
+        
+        print("🔍 ENHANCED PHRASE: Creating phrase for player: \(currentPlayer.name) (ID: \(currentPlayer.id))")
+        print("🔍 ENHANCED PHRASE: Global: \(isGlobal), Targets: \(targetIds.count), Language: \(language)")
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody: [String: Any] = [
+                "content": content,
+                "hint": hint,
+                "senderId": currentPlayer.id,
+                "targetIds": targetIds,
+                "isGlobal": isGlobal,
+                "language": language,
+                "phraseType": "custom"
+            ]
+            
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (data, response) = try await urlSession.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 {
+                print("✅ ENHANCED PHRASE: Successfully created enhanced phrase")
+                return true
+            } else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+                print("❌ ENHANCED PHRASE: Failed to create enhanced phrase. Status code: \(statusCode)")
+                print("❌ ENHANCED PHRASE: Response: \(responseBody)")
+                return false
+            }
+            
+        } catch {
+            print("❌ ENHANCED PHRASE: Error creating enhanced phrase: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
     func fetchPhrasesForCurrentPlayer() async -> [CustomPhrase] {
         guard let currentPlayer = currentPlayer else {
             print("❌ PHRASE: No current player registered")

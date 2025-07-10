@@ -14,6 +14,7 @@
 		7F1A4D9F5I495H6D00FE06H1 /* PhraseCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1A4D9E5I495H6D00FE06H1 /* PhraseCreationView.swift */; };
 		8A2B5E1F6J596I7E00GF17I2 /* LobbyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2B5E1E6J596I7E00GF17I2 /* LobbyView.swift */; };
 		9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */; };
+		9E4790732E203C610078A247 /* difficulty-algorithm-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E4790722E203C610078A247 /* difficulty-algorithm-config.json */; };
 		9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */; };
 		9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08512E192E3A00DB73E7 /* ContentView.swift */; };
 		9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08532E192E3A00DB73E7 /* Item.swift */; };
@@ -53,6 +54,7 @@
 		7F1A4D9E5I495H6D00FE06H1 /* PhraseCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseCreationView.swift; sourceTree = "<group>"; };
 		8A2B5E1E6J596I7E00GF17I2 /* LobbyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyView.swift; sourceTree = "<group>"; };
 		9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintButton.swift; sourceTree = "<group>"; };
+		9E4790722E203C610078A247 /* difficulty-algorithm-config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = "difficulty-algorithm-config.json"; sourceTree = "<group>"; };
 		9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Anagram Game.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameApp.swift; sourceTree = "<group>"; };
 		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -100,6 +102,7 @@
 		9EAA08432E192E3A00DB73E7 = {
 			isa = PBXGroup;
 			children = (
+				9E4790722E203C610078A247 /* difficulty-algorithm-config.json */,
 				9EAA084E2E192E3A00DB73E7,
 				9EAA08632E192E3B00DB73E7 /* Anagram GameTests */,
 				9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */,
@@ -299,6 +302,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9E4790732E203C610078A247 /* difficulty-algorithm-config.json in Resources */,
 				9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */,
 				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
 				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
