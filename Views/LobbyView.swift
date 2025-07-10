@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct LobbyView: View {
     @ObservedObject var gameModel: GameModel
@@ -10,6 +11,9 @@ struct LobbyView: View {
     @State private var isLoadingData = false
     @State private var isLoadingLeaderboard = false
     @State private var refreshTimer: Timer?
+    @State private var contributionLink: String = ""
+    @State private var isGeneratingLink = false
+    @State private var showingShareSheet = false
     
     var body: some View {
         NavigationView {
@@ -23,6 +27,9 @@ struct LobbyView: View {
                     
                     // Custom phrases waiting section
                     customPhrasesWaitingSection
+                    
+                    // Contribution link generator
+                    contributionLinkSection
                     
                     // Personal statistics
                     personalStatsSection
@@ -45,6 +52,7 @@ struct LobbyView: View {
             }
         }
         .onAppear {
+            print("🟢 LOBBY: LobbyView appeared!")
             Task {
                 await loadInitialData()
             }
@@ -234,6 +242,192 @@ struct LobbyView: View {
         .padding(.horizontal)
     }
     
+    // MARK: - Contribution Link Generator
+    private var contributionLinkSection: some View {
+        VStack(spacing: 15) {
+            HStack {
+                Image(systemName: "link.badge.plus")
+                    .foregroundColor(.blue)
+                Text("Share Your Challenge")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            Text("Generate a link for others to contribute phrases specifically for you")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: 12) {
+                Button(action: {
+                    Task {
+                        await generateContributionLink()
+                    }
+                }) {
+                    HStack {
+                        if isGeneratingLink {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                        }
+                        Text(isGeneratingLink ? "Generating..." : "Generate Link")
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.blue)
+                    .cornerRadius(8)
+                }
+                .disabled(isGeneratingLink)
+                
+                if !contributionLink.isEmpty {
+                    Button(action: {
+                        showingShareSheet = true
+                    }) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Share")
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                }
+            }
+            
+            if !contributionLink.isEmpty {
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Generated Link:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    
+                    Text(contributionLink)
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .padding(8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(6)
+                        .onTapGesture {
+                            UIPasteboard.general.string = contributionLink
+                        }
+                    
+                    Text("Tap to copy • Valid for 24 hours • 3 uses")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .sheet(isPresented: $showingShareSheet) {
+            ShareSheet(items: [contributionLink])
+        }
+    }
+    
+    // MARK: - Contribution Link Functions
+    private func generateContributionLink() async {
+        guard let currentPlayer = NetworkManager.shared.currentPlayer else {
+            print("❌ No current player available for generating contribution link")
+            return
+        }
+        
+        await MainActor.run {
+            isGeneratingLink = true
+        }
+        
+        do {
+            let requestBody: [String: Any] = [
+                "playerId": currentPlayer.id,
+                "expirationHours": 24,
+                "maxUses": 3
+            ]
+            
+            print("📝 CONTRIBUTION: Request body: \(requestBody)")
+            
+            guard let url = URL(string: "http://192.168.1.133:3001/api/contribution/request") else {
+                print("❌ CONTRIBUTION: Invalid URL for contribution request")
+                await MainActor.run {
+                    isGeneratingLink = false
+                }
+                return
+            }
+            
+            print("🌐 CONTRIBUTION: Making request to: \(url)")
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                print("❌ CONTRIBUTION: Failed to generate contribution link. Status: \(response)")
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("❌ CONTRIBUTION: Status code: \(httpResponse.statusCode)")
+                }
+                await MainActor.run {
+                    isGeneratingLink = false
+                }
+                return
+            }
+            
+            print("📊 CONTRIBUTION: Raw response data: \(String(data: data, encoding: .utf8) ?? "nil")")
+            
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                print("✅ CONTRIBUTION: Successfully parsed JSON: \(json)")
+                
+                if let linkData = json["link"] as? [String: Any] {
+                    print("✅ CONTRIBUTION: Found link data: \(linkData)")
+                    
+                    if let shareableUrl = linkData["shareableUrl"] as? String {
+                        print("✅ CONTRIBUTION: Found shareableUrl: \(shareableUrl)")
+                        
+                        await MainActor.run {
+                            // Use the base URL from config for sharing
+                            self.contributionLink = shareableUrl.replacingOccurrences(of: "http://localhost:3000", with: "http://192.168.1.133:3001")
+                            self.isGeneratingLink = false
+                            print("✅ CONTRIBUTION: Final generated link: \(self.contributionLink)")
+                        }
+                    } else {
+                        print("❌ CONTRIBUTION: No shareableUrl found in linkData")
+                        await MainActor.run {
+                            isGeneratingLink = false
+                        }
+                    }
+                } else {
+                    print("❌ CONTRIBUTION: No link data found in JSON")
+                    await MainActor.run {
+                        isGeneratingLink = false
+                    }
+                }
+            } else {
+                print("❌ CONTRIBUTION: Failed to parse JSON from response data")
+                await MainActor.run {
+                    isGeneratingLink = false
+                }
+            }
+            
+        } catch {
+            print("❌ Error generating contribution link: \(error)")
+            await MainActor.run {
+                isGeneratingLink = false
+            }
+        }
+    }
+    
     // MARK: - Data Loading Functions
     private func loadInitialData() async {
         isLoadingData = true
@@ -404,6 +598,17 @@ struct LeaderboardRow: View {
         default: return .secondary
         }
     }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {
