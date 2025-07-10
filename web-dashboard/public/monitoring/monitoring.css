@@ -9,9 +9,20 @@
 
 .activity-controls {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 16px;
     margin-bottom: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-group {
+    display: flex;
+    gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .activity-controls .btn {
@@ -166,17 +177,21 @@
 .filter-controls {
     display: flex;
     gap: 32px;
-    align-items: start;
+    align-items: flex-end;
+    flex-wrap: wrap;
 }
 
 .filter-group {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 120px;
 }
 
 .checkbox-group {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 .checkbox-label {
