@@ -20,7 +20,7 @@ CREATE TABLE phrases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content VARCHAR(200) NOT NULL,
     hint VARCHAR(300) NOT NULL,
-    difficulty_level INTEGER DEFAULT 1 CHECK (difficulty_level BETWEEN 1 AND 5),
+    difficulty_level INTEGER DEFAULT 1,
     is_global BOOLEAN DEFAULT false,
     created_by_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

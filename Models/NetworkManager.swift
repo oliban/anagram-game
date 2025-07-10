@@ -177,6 +177,9 @@ class NetworkManager: ObservableObject {
     private var manager: SocketManager?
     private var socket: SocketIOClient?
     
+    // Reference to GameModel for accessing messageTileSpawner
+    weak var gameModel: GameModel?
+    
     enum ConnectionStatus: Equatable {
         case disconnected
         case connecting
@@ -456,6 +459,10 @@ class NetworkManager: ObservableObject {
             self?.handleNewPhrase(data: data)
         }
         
+        socket.on("phrase-completion-notification") { [weak self] data, _ in
+            self?.handlePhraseCompletionNotification(data: data)
+        }
+        
     }
 
     private func handlePlayerListUpdate(data: [Any]) {
@@ -517,6 +524,28 @@ class NetworkManager: ObservableObject {
             }
         } catch {
             print("❌ SOCKET: Failed to decode new phrase: \(error.localizedDescription)")
+        }
+    }
+    
+    private func handlePhraseCompletionNotification(data: [Any]) {
+        guard let payload = data.first as? [String: Any] else {
+            print("❌ SOCKET: Invalid phrase completion notification data format")
+            return
+        }
+        
+        guard let message = payload["message"] as? String else {
+            print("❌ SOCKET: Missing required fields in phrase completion notification")
+            return
+        }
+        
+        print("🎉 NOTIFICATION: Received phrase completion notification - \(message)")
+        
+        // Trigger the notification on the main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Use the GameModel's messageTileSpawner to show the notification
+            self.gameModel?.messageTileSpawner?.spawnMessageTile(message: message)
         }
     }
     
