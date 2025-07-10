@@ -953,6 +953,10 @@ app.post('/api/phrases/create', async (req, res) => {
       language // Optional - will be auto-detected if not provided
     } = req.body;
 
+    // TEMPORARY DEBUG: Log language parameter
+    console.log(`🔍 DEBUG /api/phrases/create - Language received: "${language}" (type: ${typeof language})`);
+    console.log(`🔍 DEBUG /api/phrases/create - Full request body:`, JSON.stringify(req.body, null, 2));
+
     // Validate required fields
     if (!content) {
       return res.status(400).json({
@@ -994,7 +998,9 @@ app.post('/api/phrases/create', async (req, res) => {
     }
 
     // Auto-detect language if not provided
+    console.log(`🔍 DEBUG - Before language detection: language="${language}", content="${content}"`);
     const detectedLanguage = language || detectLanguage(content);
+    console.log(`🔍 DEBUG - After language detection: detectedLanguage="${detectedLanguage}"`);
 
     // Create enhanced phrase
     const result = await DatabasePhrase.createEnhancedPhrase({
