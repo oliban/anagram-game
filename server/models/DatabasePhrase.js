@@ -185,6 +185,29 @@ class DatabasePhrase {
   }
 
   /**
+   * Get phrase by ID
+   */
+  static async getPhraseById(phraseId) {
+    try {
+      const result = await query(`
+        SELECT * FROM phrases WHERE id = $1
+      `, [phraseId]);
+
+      if (result.rows.length === 0) {
+        console.log(`❌ DATABASE: Phrase ${phraseId} not found`);
+        return null;
+      }
+
+      const phrase = new DatabasePhrase(result.rows[0]);
+      console.log(`✅ DATABASE: Found phrase ${phraseId} - "${phrase.content}"`);
+      return phrase;
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting phrase by ID:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Get phrases for a player (backward compatible with old PhraseStore API)
    */
   static async getPhrasesForPlayer(playerId) {
