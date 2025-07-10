@@ -173,6 +173,10 @@
     color: #6b7280;
 }
 
+.language-flag {
+    font-size: 1.5em;
+}
+
 /* Filter Controls */
 .filter-controls {
     display: flex;

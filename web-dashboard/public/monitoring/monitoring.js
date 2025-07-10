@@ -268,17 +268,64 @@ class MonitoringDashboard {
                 return 'expert';
             };
             
+            // Convert language code to flag emoji
+            const getLanguageFlag = (langCode) => {
+                const flags = {
+                    'EN': '🇺🇸',
+                    'ES': '🇪🇸',
+                    'FR': '🇫🇷',
+                    'DE': '🇩🇪',
+                    'IT': '🇮🇹',
+                    'PT': '🇵🇹',
+                    'RU': '🇷🇺',
+                    'ZH': '🇨🇳',
+                    'JA': '🇯🇵',
+                    'KO': '🇰🇷',
+                    'AR': '🇸🇦',
+                    'HI': '🇮🇳',
+                    'NL': '🇳🇱',
+                    'SV': '🇸🇪',
+                    'NO': '🇳🇴',
+                    'DA': '🇩🇰',
+                    'FI': '🇫🇮',
+                    'PL': '🇵🇱',
+                    'TR': '🇹🇷',
+                    'HU': '🇭🇺',
+                    'CS': '🇨🇿',
+                    'SK': '🇸🇰',
+                    'HR': '🇭🇷',
+                    'SR': '🇷🇸',
+                    'BG': '🇧🇬',
+                    'RO': '🇷🇴',
+                    'EL': '🇬🇷',
+                    'HE': '🇮🇱',
+                    'TH': '🇹🇭',
+                    'VI': '🇻🇳',
+                    'ID': '🇮🇩',
+                    'MS': '🇲🇾',
+                    'UK': '🇺🇦',
+                    'LT': '🇱🇹',
+                    'LV': '🇱🇻',
+                    'ET': '🇪🇪',
+                    'SL': '🇸🇮',
+                    'MT': '🇲🇹',
+                    'IS': '🇮🇸'
+                };
+                return flags[langCode?.toUpperCase()] || '🏳️';
+            };
+            
             const difficultyLevel = getDifficultyLevel(phrase.difficulty);
-            const difficultyDisplay = phrase.difficulty ? `${phrase.difficulty}/100` : 'N/A';
+            const difficultyDisplay = phrase.difficulty ? `${phrase.difficulty} pts` : 'N/A';
+            const languageFlag = getLanguageFlag(phrase.language || 'EN');
             
             return `
                 <div class="phrase-item">
-                    <div class="phrase-text">${phrase.text}</div>
+                    <div class="phrase-text">${phrase.text}${phrase.hint ? ` (${phrase.hint})` : ''}</div>
                     <div class="phrase-meta">
                         <span class="difficulty-indicator difficulty-${difficultyLevel}">
                             ${difficultyDisplay}
                         </span>
-                        <span>${phrase.language || 'EN'}</span>
+                        <span class="language-flag">${languageFlag}</span>
                     </div>
                 </div>
             `;
