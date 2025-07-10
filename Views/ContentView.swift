@@ -137,6 +137,7 @@ struct ContentView: View {
                 gameModel.playerId = player.id
                 gameModel.playerName = player.name
                 gameModel.networkManager = networkManager
+                networkManager.gameModel = gameModel
             }
             
             // Player list updates are handled by NetworkManager's periodic timer

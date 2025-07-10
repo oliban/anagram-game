@@ -1766,6 +1766,27 @@ app.post('/api/phrases/:phraseId/complete', async (req, res) => {
         hintsUsed: result.hintsUsed,
         completionTime: result.completionTime
       });
+
+      // Notify phrase creator if this is a custom phrase completed by someone else
+      if (phrase.createdByPlayerId && phrase.createdByPlayerId !== playerId) {
+        const creator = await DatabasePlayer.getPlayerById(phrase.createdByPlayerId);
+        if (creator && creator.socketId) {
+          const notificationMessage = `${player.name} solved your anagram!`;
+          
+          // Send notification to creator via WebSocket
+          io.to(creator.socketId).emit('phrase-completion-notification', {
+            phraseId: phraseId,
+            phraseContent: phrase.content,
+            completedByName: player.name,
+            completedByPlayerId: playerId,
+            finalScore: result.finalScore,
+            message: notificationMessage,
+            timestamp: new Date().toISOString()
+          });
+          
+          console.log(`📢 NOTIFICATION: Sent completion notification to ${creator.name} (creator) about phrase "${phrase.content}" solved by ${player.name}`);
+        }
+      }
     }
 
     res.json({
