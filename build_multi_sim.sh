@@ -95,6 +95,10 @@ build_and_install() {
 # Main execution
 echo -e "${BLUE}🎯 Starting multi-simulator build process...${NC}"
 
+# Generate configuration from .env
+echo -e "${BLUE}⚙️ Generating configuration from server/.env...${NC}"
+./Scripts/generate-config.sh
+
 # Boot both simulators
 boot_simulator "$SIM1_UUID" "$SIM1_NAME"
 boot_simulator "$SIM2_UUID" "$SIM2_NAME"
