@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct PhraseCreationView: View {
     @Binding var isPresented: Bool
@@ -264,11 +265,6 @@ struct PhraseCreationView: View {
                     // Available to all players checkbox
                     Button(action: {
                         isAvailableToAll.toggle()
-                        if isAvailableToAll {
-                            selectedPlayers.removeAll()
-                            playerSearchText = ""
-                            showingSuggestions = false
-                        }
                     }) {
                         HStack {
                             Image(systemName: isAvailableToAll ? "checkmark.square.fill" : "square")
@@ -291,7 +287,7 @@ struct PhraseCreationView: View {
                             .padding()
                             .background(Color(.systemGray4))
                             .cornerRadius(8)
-                    } else if !isAvailableToAll {
+                    } else {
                         VStack(alignment: .leading, spacing: 8) {
                             // Search field
                             HStack {
@@ -506,12 +502,8 @@ struct PhraseCreationView: View {
                 return
             }
             
-            // Start new timer for debounced analysis
-            debounceTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: false) { _ in
-                Task {
-                    await analyzeDifficultyAsync(newValue)
-                }
-            }
+            // Use client-side scoring for immediate feedback
+            analyzeDifficultyClientSide(newValue)
         }
         .onChange(of: playerSearchText) { _, newValue in
             // Show suggestions when typing, hide when empty
@@ -520,11 +512,7 @@ struct PhraseCreationView: View {
     }
     
     private var canSendPhrase: Bool {
-        if isAvailableToAll {
-            return isValidPhrase && !availableTargets.isEmpty
-        } else {
-            return isValidPhrase && !selectedPlayers.isEmpty && !availableTargets.isEmpty
-        }
+        return isValidPhrase && !availableTargets.isEmpty && (isAvailableToAll || !selectedPlayers.isEmpty)
     }
     
     private func sendPhrase() {
@@ -536,7 +524,19 @@ struct PhraseCreationView: View {
         
         Task {
             var allSuccessful = true
-            let targetIds = isAvailableToAll ? availableTargets.map { $0.id } : selectedPlayers.map { $0.id }
+            // Combine target lists: if "Available to all" is checked, include all players
+            // If specific players are selected, include them too (avoiding duplicates)
+            var allTargetIds = Set<String>()
+            
+            if isAvailableToAll {
+                allTargetIds.formUnion(availableTargets.map { $0.id })
+            }
+            
+            if !selectedPlayers.isEmpty {
+                allTargetIds.formUnion(selectedPlayers.map { $0.id })
+            }
+            
+            let targetIds = Array(allTargetIds)
             
             // Ensure we have current difficulty analysis before sending
             let finalPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -589,27 +589,23 @@ struct PhraseCreationView: View {
         }
     }
     
-    private func analyzeDifficultyAsync(_ phrase: String) async {
+    private func analyzeDifficultyClientSide(_ phrase: String) {
         let trimmedPhrase = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedPhrase.isEmpty else {
-            await MainActor.run {
-                currentDifficulty = nil
-                isAnalyzingDifficulty = false
-            }
+            currentDifficulty = nil
+            isAnalyzingDifficulty = false
             return
         }
         
-        await MainActor.run {
-            isAnalyzingDifficulty = true
-        }
+        // Client-side analysis for immediate feedback (no network calls)
+        let analysis = NetworkManager.analyzeDifficultyClientSide(
+            phrase: trimmedPhrase,
+            language: selectedLanguage
+        )
         
-        let analysis = await networkManager.analyzeDifficulty(phrase: trimmedPhrase)
-        
-        await MainActor.run {
-            isAnalyzingDifficulty = false
-            currentDifficulty = analysis
-        }
+        currentDifficulty = analysis
+        isAnalyzingDifficulty = false
     }
     
     private func selectPlayer(_ player: Player) {
