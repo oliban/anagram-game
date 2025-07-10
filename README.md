@@ -58,7 +58,78 @@ open "Anagram Game.xcodeproj"
 # Build and run
 ⌘+R
 ```
-## 🎯 Game Rules
+## 🛠️ Backend Setup
+
+This section guides you through setting up the server environment for the Anagram Game.
+
+### Prerequisites
+Ensure you have the following installed:
+
+- Node.js 14.x or later
+- PostgreSQL 12.x or later
+- npm version 6.x or later
+
+### Quick Setup (Recommended)
+
+**Use the automated setup script located in the server directory:**
+```bash
+git clone git@github.com:oliban/anagram-game.git
+cd anagram-game/server
+./setup.sh
+```
+
+The setup script will automatically:
+- Install Node.js dependencies
+- Generate API documentation
+- Create environment file from template
+- Provide database setup instructions
+
+### Manual Installation Steps
+
+If you prefer to set up manually:
+
+1. **Clone the Repository:**
+   ```bash
+   git clone git@github.com:oliban/anagram-game.git
+   cd anagram-game/server
+   ```
+
+2. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Generate API Documentation:**
+   ```bash
+   npm run docs
+   ```
+
+4. **Environment Variables:**
+   - Copy the example environment file:
+     ```bash
+     cp .env.example .env
+     ```
+   - Edit the `.env` file to include your database credentials and configuration options.
+
+5. **Database Setup:**
+   - Ensure PostgreSQL is running.
+   - Initialize your database with the schema:
+     ```bash
+     psql -U <DB_USER> -d <DB_NAME> -f database/schema.sql
+     ```
+
+6. **Start the Server:**
+   ```bash
+   npm start
+   # or directly with:
+   node server.js
+   ```
+
+6. **API Documentation:**
+   - Swagger documentation is available at: `http://localhost:<PORT>/api/docs`
+   - Replace `<PORT>` with the port number specified in your `.env` file or default to `3000`.
+
+Make sure to adapt the `<DB_USER>` and `<DB_NAME>` placeholders to your actual database username and name.
 
 ## 🤝 Contributing
 
