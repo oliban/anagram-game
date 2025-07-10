@@ -58,7 +58,7 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - Performance-critical paths → Add performance tests
 
 ## DEPLOYMENT SEQUENCE
-1. **Server Setup**: Kill existing (`pkill -f "node server.js"`), start fresh with logging
+1. **Server Setup**: Use safe server management (`./server/manage-server.sh restart`), monitor logs
 2. **Version**: Increment `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
 3. **Build**: Clean build with local derived data (`-derivedDataPath ./build`)
 4. **Deploy**: Install and launch on both simulators
@@ -69,6 +69,13 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 **Patterns**: MVVM with @Observable GameModel, Socket.IO for multiplayer, URLSession for HTTP
 **Simulators**: iPhone 15 (`AF307F12-A657-4D6A-8123-240CBBEC5B31`), iPhone 15 Pro (`86355D8A-560E-465D-8FDC-3D037BCA482B`)
 **Bundle ID**: `com.fredrik.anagramgame`
+
+### Shared Algorithm Architecture
+**Configuration-Based Scoring**: Both iOS and server read from `shared/difficulty-algorithm-config.json`
+- **Server**: `shared/difficulty-algorithm.js` imports JSON config
+- **iOS**: `SharedDifficultyConfig` struct in `NetworkManager.swift` reads same JSON
+- **Benefits**: Single source of truth, no code duplication, easy maintenance
+- **Performance**: Client-side scoring eliminates network calls during typing
 
 ## KEY PRINCIPLES
 - **Clarity over cleverness** - Simple, obvious solutions preferred
@@ -87,9 +94,13 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 
 ### Development
 ```bash
-# Server
-node server/server.js > server/server_output.log 2>&1 &
-tail -f server/server_output.log
+# Server Management (Safe, Port-Specific)
+./server/manage-server.sh start    # Start server
+./server/manage-server.sh stop     # Stop server safely
+./server/manage-server.sh restart  # Restart server
+./server/manage-server.sh status   # Check server status
+./server/manage-server.sh logs     # View recent logs
+tail -f server/server_output.log   # Live logs
 
 # iOS Tests
 xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15'
@@ -100,6 +111,9 @@ psql -d anagram_game -f server/database/schema.sql
 
 # API Documentation
 npm run docs  # Generate automated API docs at /api-docs endpoint
+
+# Shared Algorithm Testing
+node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.calculateScore({phrase: 'test phrase', language: 'en'}));"
 ```
 
 ### API Endpoints
