@@ -138,11 +138,14 @@ async function getRecentPhrases() {
         p.language,
         p.created_at,
         p.hint,
+        p.created_by_player_id,
+        pl.name as author_name,
         CASE 
           WHEN EXISTS (SELECT 1 FROM completed_phrases cp WHERE cp.phrase_id = p.id) THEN 'completed'
           ELSE 'active'
         END as status
       FROM phrases p
+      LEFT JOIN players pl ON p.created_by_player_id = pl.id
       WHERE p.created_at > NOW() - INTERVAL '24 hours'
       ORDER BY p.created_at DESC
       LIMIT 10
@@ -155,6 +158,7 @@ async function getRecentPhrases() {
       language: row.language,
       createdAt: row.created_at,
       hint: row.hint,
+      authorName: row.author_name || 'System',
       status: row.status
     }));
   } catch (error) {
@@ -2381,10 +2385,11 @@ setInterval(async () => {
   
   try {
     const cleanedPlayersCount = await DatabasePlayer.cleanupInactivePlayers();
+    const cleanedStaleCount = await DatabasePlayer.cleanupStaleConnections();
     // Note: Phrase cleanup not yet implemented for database - will be added in Phase 4
     
-    if (cleanedPlayersCount > 0) {
-      console.log(`🧹 Cleaned up ${cleanedPlayersCount} inactive players`);
+    if (cleanedPlayersCount > 0 || cleanedStaleCount > 0) {
+      console.log(`🧹 Cleaned up ${cleanedPlayersCount} inactive players and ${cleanedStaleCount} stale connections`);
       const onlinePlayers = (await DatabasePlayer.getOnlinePlayers()).map(p => p.getPublicInfo());
       io.emit('player-list-updated', {
         players: onlinePlayers,

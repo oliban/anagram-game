@@ -321,6 +321,7 @@ class MonitoringDashboard {
             return `
                 <div class="phrase-item">
                     <div class="phrase-text">${phrase.text}${phrase.hint ? ` (${phrase.hint})` : ''}</div>
+                    <div class="phrase-author">by ${phrase.authorName || 'System'}</div>
                     <div class="phrase-meta">
                         <span class="difficulty-indicator difficulty-${difficultyLevel}">
                             ${difficultyDisplay}

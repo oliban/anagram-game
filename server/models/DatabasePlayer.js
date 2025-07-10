@@ -191,7 +191,7 @@ class DatabasePlayer {
     try {
       const result = await query(`
         SELECT * FROM players 
-        WHERE is_active = true AND socket_id IS NOT NULL
+        WHERE is_active = true AND last_seen > NOW() - INTERVAL '5 minutes'
         ORDER BY last_seen DESC
       `);
 
@@ -315,6 +315,30 @@ class DatabasePlayer {
       return deletedCount;
     } catch (error) {
       console.error('❌ DATABASE: Error cleaning up inactive players:', error.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Clean up stale socket connections (players who haven't been seen in 10+ minutes)
+   */
+  static async cleanupStaleConnections() {
+    try {
+      const result = await query(`
+        UPDATE players 
+        SET socket_id = NULL, is_active = false
+        WHERE socket_id IS NOT NULL 
+          AND last_seen < CURRENT_TIMESTAMP - INTERVAL '10 minutes'
+      `);
+
+      const updatedCount = result.rowCount || 0;
+      if (updatedCount > 0) {
+        console.log(`🧹 DATABASE: Cleaned up ${updatedCount} stale socket connections`);
+      }
+
+      return updatedCount;
+    } catch (error) {
+      console.error('❌ DATABASE: Error cleaning up stale connections:', error.message);
       return 0;
     }
   }
