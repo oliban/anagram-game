@@ -344,43 +344,42 @@ struct PhysicsGameView: View {
                 VStack {
                     // TOP ROW
                     HStack {
-                        Spacer() // Push everything to the right
-                        
-                        // Top-right group: Lobby button + Version number
-                        HStack(spacing: 15) {
-                            // Back to Lobby button
-                            Button(action: {
-                                Task {
-                                    await gameModel.skipCurrentGame()
-                                    showingGame = false
-                                }
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "arrow.left")
-                                    Text("Lobby")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(20)
-                                .shadow(radius: 4)
+                        // Back to Lobby button - moved to top-left
+                        Button(action: {
+                            Task {
+                                await gameModel.skipCurrentGame()
+                                showingGame = false
                             }
-                            
-                            // Version number
-                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .fontWeight(.bold)
-                                .onTapGesture {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.triggerQuake()
-                                    }
-                                }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.left")
+                                Text("Lobby")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
                         }
-                        .padding(.trailing, 20)
+                        .padding(.leading, 20)
                         .padding(.top, 10)
+                        
+                        Spacer() // Push version to the right
+                        
+                        // Version number
+                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .fontWeight(.bold)
+                            .onTapGesture {
+                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                    scene.triggerQuake()
+                                }
+                            }
+                            .padding(.trailing, 20)
+                            .padding(.top, 10)
                     }
                     
                     // MIDDLE - Game content and overlays
@@ -408,9 +407,9 @@ struct PhysicsGameView: View {
                     Spacer() // Push bottom controls down
                     
                     // BOTTOM ROW - Clean layout inside ZStack
-                    HStack {
-                        // Bottom-left group: Skip + Send Phrase (stacked)
-                        VStack(spacing: 10) {
+                    HStack(alignment: .bottom) {
+                        // Bottom-left group: Skip + Send Phrase (stacked, left-aligned)
+                        VStack(alignment: .leading, spacing: 10) {
                             // Skip button
                             Button(action: {
                                 Task {
@@ -471,7 +470,7 @@ struct PhysicsGameView: View {
                         
                         Spacer() // Push hint button to the right
                         
-                        // Bottom-right: Hint button (standalone)
+                        // Bottom-right: Hint button (aligned with Send Phrase button)
                         HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
                             // No longer used - clue is now displayed persistently
                         }
