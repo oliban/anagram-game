@@ -647,6 +647,55 @@ class NetworkManager: ObservableObject {
         }
     }
     
+    func createGlobalPhrase(content: String, hint: String, language: String = "en") async -> Bool {
+        guard let url = URL(string: "\(baseURL)/api/phrases/create") else {
+            print("❌ GLOBAL PHRASE: Invalid URL for creating global phrase")
+            return false
+        }
+        
+        guard let currentPlayer = currentPlayer else {
+            print("❌ GLOBAL PHRASE: No current player registered")
+            return false
+        }
+        
+        print("🔍 GLOBAL PHRASE: Creating global phrase for player: \(currentPlayer.name) (ID: \(currentPlayer.id))")
+        
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody: [String: Any] = [
+                "content": content,
+                "hint": hint,
+                "senderId": currentPlayer.id,
+                "targetIds": [], // Empty for global phrases
+                "isGlobal": true,
+                "language": language,
+                "phraseType": "custom"
+            ]
+            
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (data, response) = try await urlSession.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 {
+                print("✅ GLOBAL PHRASE: Successfully created global phrase")
+                return true
+            } else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                let responseBody = String(data: data, encoding: .utf8) ?? "No response body"
+                print("❌ GLOBAL PHRASE: Failed to create global phrase. Status code: \(statusCode)")
+                print("❌ GLOBAL PHRASE: Response: \(responseBody)")
+                return false
+            }
+            
+        } catch {
+            print("❌ GLOBAL PHRASE: Error creating global phrase: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
     func fetchPhrasesForCurrentPlayer() async -> [CustomPhrase] {
         guard let currentPlayer = currentPlayer else {
             print("❌ PHRASE: No current player registered")
