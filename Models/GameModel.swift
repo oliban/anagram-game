@@ -16,6 +16,7 @@ class GameModel: ObservableObject {
     
     // Phrase notification state
     private var notificationTimer: Timer?
+    private var activeNotifications: Set<String> = [] // Track active notifications by sender name
     
     // Game scene reference for tile spawning
     weak var messageTileSpawner: MessageTileSpawner?
@@ -88,6 +89,10 @@ class GameModel: ObservableObject {
     }
     
     func startNewGame(isUserInitiated: Bool = false) async {
+        
+        // Clear notification tracking for new game session
+        activeNotifications.removeAll()
+        print("📢 NOTIFICATION: Cleared notification tracking for new game session")
         
         // Prevent multiple concurrent calls
         guard !isStartingNewGame else {
@@ -393,12 +398,22 @@ class GameModel: ObservableObject {
     
     // Phrase notification system
     private func showPhraseNotification(senderName: String) {
+        // Check if we already have shown a notification from this sender during this game session
+        guard !activeNotifications.contains(senderName) else {
+            print("📢 NOTIFICATION: Skipping duplicate notification from \(senderName) - already shown this game session")
+            return
+        }
+        
+        // Add sender to active notifications for this game session
+        activeNotifications.insert(senderName)
+        
         // Clear any existing timer
         notificationTimer?.invalidate()
         
         // Spawn notification message tile
         let notificationMessage = "New phrase from \(senderName) incoming!"
         messageTileSpawner?.spawnMessageTile(message: notificationMessage)
+        print("📢 NOTIFICATION: Spawned notification tile for \(senderName) (first time this game session)")
         
         // Update phrase info for any remaining UI that might need it
         customPhraseInfo = "Custom phrase from \(senderName)"

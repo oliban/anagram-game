@@ -4,7 +4,7 @@
 iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter tiles to form words from scrambled sentences.
 
 ## 🚨 CORE WORKFLOW - ALWAYS FOLLOW
-1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py` from project root.
+1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
 2. **Plan**: Create detailed implementation plan, verify with me before coding
 3. **Implement**: Write production-quality Swift code following all best practices
 4. **Test**: Deploy to both simulators with `build_multi_sim.sh`, monitor server logs, await my feedback
@@ -123,7 +123,13 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 - `GET /api/phrases/for/:playerId` - Get targeted phrases
 - `POST /api/phrases/create` - Create new phrase
 
+### MCP Tools Available
+- **iOS Simulator Control**: Screenshot, UI inspection, tap/swipe gestures, text input
+- **IDE Integration**: Code diagnostics, error checking, code execution
+- Use these tools for troubleshooting UI issues, testing interactions, and debugging
+
 ### Common Debugging
 - **WebSocket issues**: Check server logs, verify NetworkManager.swift connections
 - **Build failures**: Clean derived data, check Info.plist versions, verify simulator UUIDs
 - **Database issues**: Test connection, verify schema, run server test suite
+- **iOS Simulator issues**: Use MCP iOS Simulator tools for UI inspection, screenshots, and interaction testing
