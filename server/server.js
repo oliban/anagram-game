@@ -56,6 +56,22 @@ monitoringNamespace.on('connection', (socket) => {
       if (isDatabaseConnected) {
         const stats = await getMonitoringStats();
         socket.emit('stats', stats);
+        
+        // Also send initial players and phrases data
+        const players = await DatabasePlayer.getOnlinePlayers();
+        const phrases = await getRecentPhrases();
+        
+        socket.emit('players', players.map(p => p.getPublicInfo()));
+        socket.emit('phrases', phrases);
+        
+        // Send a test activity event to verify the connection works
+        socket.emit('activity', {
+          type: 'system',
+          message: 'Test activity event on connection',
+          details: { socketId: socket.id },
+          timestamp: new Date().toISOString()
+        });
+        console.log(`🧪 TEST: Sent test activity to socket ${socket.id}`);
       }
     } catch (error) {
       console.error('❌ MONITORING: Error getting stats:', error);
@@ -111,8 +127,71 @@ async function getMonitoringStats() {
   }
 }
 
+// Helper function to get recent phrases for monitoring
+async function getRecentPhrases() {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        p.id,
+        p.content as text,
+        p.difficulty_level as difficulty,
+        p.language,
+        p.created_at,
+        p.hint,
+        CASE 
+          WHEN EXISTS (SELECT 1 FROM completed_phrases cp WHERE cp.phrase_id = p.id) THEN 'completed'
+          ELSE 'active'
+        END as status
+      FROM phrases p
+      WHERE p.created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY p.created_at DESC
+      LIMIT 10
+    `);
+    
+    return result.rows.map(row => ({
+      id: row.id,
+      text: row.text,
+      difficulty: row.difficulty,
+      language: row.language,
+      createdAt: row.created_at,
+      hint: row.hint,
+      status: row.status
+    }));
+  } catch (error) {
+    console.error('Error getting recent phrases:', error);
+    return [];
+  }
+}
+
 // Database initialization flag
 let isDatabaseConnected = false;
+
+// Function to broadcast activity to monitoring dashboard
+function broadcastActivity(type, message, details = null) {
+  const activity = {
+    type,
+    message,
+    details,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Send to all connected monitoring clients
+  const connectedClients = monitoringNamespace.sockets.size;
+  console.log(`📊 ACTIVITY: ${type} - ${message} (broadcasting to ${connectedClients} clients)`);
+  
+  // Emit to the namespace
+  monitoringNamespace.emit('activity', activity);
+  console.log(`📡 NAMESPACE: Activity emitted to monitoring namespace`);
+  
+  // Also emit directly to each connected socket for debugging
+  let socketCount = 0;
+  monitoringNamespace.sockets.forEach((socket) => {
+    socket.emit('activity', activity);
+    socketCount++;
+    console.log(`📤 DIRECT: Activity sent to socket ${socket.id}`);
+  });
+  console.log(`📊 DIRECT EMIT: Sent to ${socketCount} individual sockets`);
+}
 
 // Middleware
 app.use(cors({
@@ -435,6 +514,12 @@ app.post('/api/players/register', async (req, res) => {
     const player = await DatabasePlayer.createPlayer(name, socketId || null);
     console.log(`👤 Player registered: ${player.name} (${player.id})`);
     
+    // Broadcast activity to monitoring dashboard
+    broadcastActivity('player', `New player registered: ${player.name}`, {
+      playerId: player.id,
+      name: player.name
+    });
+    
     // Broadcast new player joined event
     io.emit('player-joined', {
       player: player.getPublicInfo(),
@@ -542,6 +627,25 @@ app.get('/api/players/online', async (req, res) => {
     console.error('❌ Error getting online players:', error);
     res.status(500).json({ 
       error: 'Failed to get online players' 
+    });
+  }
+});
+
+// Get monitoring stats for dashboard
+app.get('/api/stats', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for stats'
+      });
+    }
+    
+    const stats = await getMonitoringStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('❌ Error getting monitoring stats:', error);
+    res.status(500).json({ 
+      error: 'Failed to get monitoring stats' 
     });
   }
 });
@@ -669,6 +773,16 @@ app.post('/api/phrases', async (req, res) => {
     });
     
     console.log(`📝 Phrase created: "${content}" from ${sender.name} to ${target.name}`);
+    
+    // Broadcast activity to monitoring dashboard
+    broadcastActivity('phrase', `New phrase created: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`, {
+      phraseId: phrase.id,
+      content: content,
+      senderName: sender.name,
+      targetName: target.name,
+      difficulty: phrase.difficulty,
+      language: phrase.language
+    });
     
     // Send real-time notification to target player
     if (target.socketId) {
@@ -1626,6 +1740,23 @@ app.post('/api/phrases/:phraseId/complete', async (req, res) => {
 
     // Complete phrase with hint-based scoring
     const result = await HintSystem.completePhrase(playerId, phraseId, completionTime);
+
+    // Get player and phrase info for activity broadcast
+    const player = await DatabasePlayer.getPlayerById(playerId);
+    const phrase = await DatabasePhrase.getPhraseById(phraseId);
+    
+    // Broadcast activity to monitoring dashboard
+    if (player && phrase) {
+      broadcastActivity('game', `Phrase completed: "${phrase.content.substring(0, 50)}${phrase.content.length > 50 ? '...' : ''}" by ${player.name}`, {
+        phraseId: phraseId,
+        playerId: playerId,
+        playerName: player.name,
+        content: phrase.content,
+        finalScore: result.finalScore,
+        hintsUsed: result.hintsUsed,
+        completionTime: result.completionTime
+      });
+    }
 
     res.json({
       success: true,

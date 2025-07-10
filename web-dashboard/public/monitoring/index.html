@@ -38,10 +38,44 @@
             <div class="card">
                 <h2>Live Activity Feed</h2>
                 <div class="activity-controls">
-                    <button class="btn btn-secondary" id="clear-feed">Clear Feed</button>
-                    <button class="btn btn-secondary" id="toggle-auto-scroll">
-                        <span id="auto-scroll-text">Auto-scroll: ON</span>
-                    </button>
+                    <div class="control-group">
+                        <button class="btn btn-secondary" id="clear-feed">Clear Feed</button>
+                        <button class="btn btn-secondary" id="toggle-auto-scroll">
+                            <span id="auto-scroll-text">Auto-scroll: ON</span>
+                        </button>
+                    </div>
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label class="form-label">Event Types:</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="filter-player" checked>
+                                    Player
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="filter-phrase" checked>
+                                    Phrase
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="filter-game" checked>
+                                    Game
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="filter-system" checked>
+                                    System
+                                </label>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Time Range:</label>
+                            <select class="form-select" id="time-range">
+                                <option value="all">All Time</option>
+                                <option value="1h">Last Hour</option>
+                                <option value="24h" selected>Last 24 Hours</option>
+                                <option value="7d">Last 7 Days</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div class="activity-feed" id="activity-feed">
                     <div class="loading">
@@ -70,42 +104,6 @@
                             <span>Loading phrases...</span>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Event Filters</h2>
-            <div class="filter-controls">
-                <div class="filter-group">
-                    <label class="form-label">Event Types:</label>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="filter-player" checked>
-                            Player Events
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="filter-phrase" checked>
-                            Phrase Events
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="filter-game" checked>
-                            Game Events
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="filter-system" checked>
-                            System Events
-                        </label>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label class="form-label">Time Range:</label>
-                    <select class="form-select" id="time-range">
-                        <option value="all">All Time</option>
-                        <option value="1h">Last Hour</option>
-                        <option value="24h" selected>Last 24 Hours</option>
-                        <option value="7d">Last 7 Days</option>
-                    </select>
                 </div>
             </div>
         </div>

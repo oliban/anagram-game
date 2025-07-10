@@ -21,15 +21,27 @@ class MonitoringDashboard {
     }
 
     async init() {
+        console.log('🚀 Initializing monitoring dashboard...');
         this.setupEventListeners();
         this.showConnectionStatus('connecting');
         
+        // Check if Socket.IO is available
+        if (typeof io === 'undefined') {
+            console.error('❌ Socket.IO library not loaded!');
+            this.showConnectionStatus('disconnected');
+            return;
+        }
+        console.log('✅ Socket.IO library loaded');
+        
         try {
+            console.log('🔌 Attempting WebSocket connection...');
             await this.connectWebSocket();
+            console.log('📊 Loading initial data...');
             await this.loadInitialData();
+            console.log('✅ Dashboard initialized successfully');
             this.showConnectionStatus('connected');
         } catch (error) {
-            console.error('Failed to initialize dashboard:', error);
+            console.error('❌ Failed to initialize dashboard:', error);
             this.showConnectionStatus('disconnected');
         }
     }
@@ -58,6 +70,7 @@ class MonitoringDashboard {
 
     async connectWebSocket() {
         return new Promise((resolve, reject) => {
+            console.log('🔌 Creating Socket.IO connection to /monitoring namespace...');
             this.socket = io('/monitoring', {
                 transports: ['websocket', 'polling'],
                 upgrade: true,
@@ -65,7 +78,8 @@ class MonitoringDashboard {
             });
 
             this.socket.on('connect', () => {
-                console.log('Connected to monitoring WebSocket');
+                console.log('✅ Connected to monitoring WebSocket, socket ID:', this.socket.id);
+                console.log('📡 Requesting stats from server...');
                 this.socket.emit('request-stats');
                 resolve();
             });
@@ -86,18 +100,22 @@ class MonitoringDashboard {
             });
 
             this.socket.on('activity', (activity) => {
+                console.log('📊 Received activity event:', activity);
                 this.addActivity(activity);
             });
 
             this.socket.on('stats', (stats) => {
+                console.log('📈 Received stats update:', stats);
                 this.updateStats(stats);
             });
 
             this.socket.on('players', (players) => {
+                console.log('👥 Received players update:', players.length, 'players');
                 this.updatePlayersList(players);
             });
 
             this.socket.on('phrases', (phrases) => {
+                console.log('📝 Received phrases update:', phrases.length, 'phrases');
                 this.updatePhrasesList(phrases);
             });
 
@@ -141,18 +159,32 @@ class MonitoringDashboard {
     }
 
     renderActivity(activity, isNew = false) {
+        console.log('🎨 renderActivity called with:', activity, 'isNew:', isNew);
+        
         const feed = document.getElementById('activity-feed');
+        console.log('📦 Activity feed element:', feed);
+        
+        if (!feed) {
+            console.error('❌ Activity feed element not found!');
+            return;
+        }
+        
         const existingLoading = feed.querySelector('.loading');
         if (existingLoading) {
+            console.log('🗑️ Removing loading indicator');
             existingLoading.remove();
         }
 
         const activityElement = document.createElement('div');
         activityElement.className = `activity-item ${isNew ? 'new-item' : ''}`;
         activityElement.dataset.type = activity.type;
-        activityElement.dataset.timestamp = activity.timestamp.getTime();
+        
+        // Fix timestamp handling - convert string to Date first
+        const timestamp = activity.timestamp instanceof Date ? activity.timestamp : new Date(activity.timestamp);
+        activityElement.dataset.timestamp = timestamp.getTime();
+        console.log('⏰ Timestamp processed:', timestamp);
 
-        const time = activity.timestamp.toLocaleTimeString('en-US', {
+        const time = timestamp.toLocaleTimeString('en-US', {
             hour12: false,
             hour: '2-digit',
             minute: '2-digit',
@@ -164,21 +196,30 @@ class MonitoringDashboard {
             <div class="activity-type ${activity.type}">${activity.type}</div>
             <div class="activity-message">
                 ${activity.message}
-                ${activity.details ? `<div class="activity-details">${activity.details}</div>` : ''}
+                ${activity.details ? `<div class="activity-details">${JSON.stringify(activity.details)}</div>` : ''}
             </div>
         `;
 
+        console.log('🏗️ Created activity element:', activityElement);
+
         if (isNew) {
+            console.log('➕ Prepending to feed');
             feed.prepend(activityElement);
         } else {
+            console.log('➕ Appending to feed');
             feed.appendChild(activityElement);
         }
 
+        console.log('📊 Feed children count after add:', feed.children.length);
+
         if (this.isAutoScrolling && isNew) {
+            console.log('📜 Auto-scrolling to new item');
             activityElement.scrollIntoView({ behavior: 'smooth' });
         }
 
+        console.log('🔍 Applying filters...');
         this.applyFilters();
+        console.log('✅ renderActivity completed');
     }
 
     updateStats(stats) {
@@ -217,23 +258,41 @@ class MonitoringDashboard {
             return;
         }
 
-        phrasesList.innerHTML = phrases.map(phrase => `
-            <div class="phrase-item">
-                <div class="phrase-text">${phrase.text}</div>
-                <div class="phrase-meta">
-                    <span class="difficulty-indicator difficulty-${phrase.difficulty?.toLowerCase().replace(' ', '-')}">
-                        ${phrase.difficulty || 'N/A'}
-                    </span>
-                    <span>${phrase.language || 'EN'}</span>
+        phrasesList.innerHTML = phrases.map(phrase => {
+            // Convert numeric difficulty to descriptive level
+            const getDifficultyLevel = (score) => {
+                if (!score) return 'unknown';
+                if (score <= 20) return 'easy';
+                if (score <= 50) return 'medium';
+                if (score <= 80) return 'hard';
+                return 'expert';
+            };
+            
+            const difficultyLevel = getDifficultyLevel(phrase.difficulty);
+            const difficultyDisplay = phrase.difficulty ? `${phrase.difficulty}/100` : 'N/A';
+            
+            return `
+                <div class="phrase-item">
+                    <div class="phrase-text">${phrase.text}</div>
+                    <div class="phrase-meta">
+                        <span class="difficulty-indicator difficulty-${difficultyLevel}">
+                            ${difficultyDisplay}
+                        </span>
+                        <span>${phrase.language || 'EN'}</span>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     applyFilters() {
+        console.log('🔍 applyFilters called, current filters:', this.filters);
+        
         const feed = document.getElementById('activity-feed');
         const items = feed.querySelectorAll('.activity-item');
         const now = Date.now();
+        
+        console.log('📋 Found activity items:', items.length);
         
         let cutoffTime = 0;
         switch (this.filters.timeRange) {
@@ -249,16 +308,25 @@ class MonitoringDashboard {
             default:
                 cutoffTime = 0;
         }
+        
+        console.log('⏰ Filter cutoff time:', new Date(cutoffTime));
 
-        items.forEach(item => {
+        items.forEach((item, index) => {
             const type = item.dataset.type;
             const timestamp = parseInt(item.dataset.timestamp);
             
             const typeVisible = this.filters[type] !== false;
             const timeVisible = timestamp >= cutoffTime;
             
-            item.style.display = (typeVisible && timeVisible) ? 'flex' : 'none';
+            console.log(`📄 Item ${index}: type="${type}", timestamp=${timestamp} (${new Date(timestamp)}), typeVisible=${typeVisible}, timeVisible=${timeVisible}`);
+            
+            const shouldShow = typeVisible && timeVisible;
+            item.style.display = shouldShow ? 'flex' : 'none';
+            
+            console.log(`👁️ Item ${index} display set to: ${item.style.display}`);
         });
+        
+        console.log('✅ applyFilters completed');
     }
 
     clearActivityFeed() {
@@ -300,5 +368,5 @@ class MonitoringDashboard {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    new MonitoringDashboard();
+    window.monitoringDashboard = new MonitoringDashboard();
 });
