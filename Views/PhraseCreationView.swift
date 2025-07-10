@@ -265,11 +265,6 @@ struct PhraseCreationView: View {
                     // Available to all players checkbox
                     Button(action: {
                         isAvailableToAll.toggle()
-                        if isAvailableToAll {
-                            selectedPlayers.removeAll()
-                            playerSearchText = ""
-                            showingSuggestions = false
-                        }
                     }) {
                         HStack {
                             Image(systemName: isAvailableToAll ? "checkmark.square.fill" : "square")
@@ -292,7 +287,7 @@ struct PhraseCreationView: View {
                             .padding()
                             .background(Color(.systemGray4))
                             .cornerRadius(8)
-                    } else if !isAvailableToAll {
+                    } else {
                         VStack(alignment: .leading, spacing: 8) {
                             // Search field
                             HStack {
@@ -517,11 +512,7 @@ struct PhraseCreationView: View {
     }
     
     private var canSendPhrase: Bool {
-        if isAvailableToAll {
-            return isValidPhrase && !availableTargets.isEmpty
-        } else {
-            return isValidPhrase && !selectedPlayers.isEmpty && !availableTargets.isEmpty
-        }
+        return isValidPhrase && !availableTargets.isEmpty && (isAvailableToAll || !selectedPlayers.isEmpty)
     }
     
     private func sendPhrase() {
@@ -533,7 +524,19 @@ struct PhraseCreationView: View {
         
         Task {
             var allSuccessful = true
-            let targetIds = isAvailableToAll ? availableTargets.map { $0.id } : selectedPlayers.map { $0.id }
+            // Combine target lists: if "Available to all" is checked, include all players
+            // If specific players are selected, include them too (avoiding duplicates)
+            var allTargetIds = Set<String>()
+            
+            if isAvailableToAll {
+                allTargetIds.formUnion(availableTargets.map { $0.id })
+            }
+            
+            if !selectedPlayers.isEmpty {
+                allTargetIds.formUnion(selectedPlayers.map { $0.id })
+            }
+            
+            let targetIds = Array(allTargetIds)
             
             // Ensure we have current difficulty analysis before sending
             let finalPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
