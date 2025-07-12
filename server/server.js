@@ -501,6 +501,11 @@ app.post('/api/players/register', async (req, res) => {
     
     const { name, deviceId, socketId } = req.body;
     
+    // Development debug logging for device-user association
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 REGISTRATION: name='${name}', deviceId='${deviceId}', socketId='${socketId}'`);
+    }
+    
     // Validate input
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ 
