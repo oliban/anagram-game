@@ -73,7 +73,7 @@ struct LobbyView: View {
     private var headerSection: some View {
         VStack(spacing: 8) {
             if let playerName = gameModel.playerName {
-                let isFirstTime = playerStats?.totalPhrases == 0
+                let isFirstTime = UserDefaults.standard.bool(forKey: "isFirstLogin")
                 Text(isFirstTime ? "Welcome, \(playerName)!" : "Welcome back, \(playerName)!")
                     .font(.title2)
                     .fontWeight(.medium)
@@ -521,6 +521,7 @@ struct LobbyView: View {
             return "\(firstNames) and \(lastName)"
         }
     }
+    
 }
 
 // MARK: - Supporting Views

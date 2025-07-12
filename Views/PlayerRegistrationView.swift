@@ -6,7 +6,8 @@ struct PlayerRegistrationView: View {
     @State private var playerName: String = ""
     @State private var isRegistering: Bool = false
     @State private var errorMessage: String? = nil
-    @State private var showError: Bool = false
+    @State private var nameSuggestions: [String] = []
+    @State private var showSuggestions: Bool = false
     
     var body: some View {
         NavigationView {
@@ -41,7 +42,7 @@ struct PlayerRegistrationView: View {
                             .autocapitalization(.words)
                             .disableAutocorrection(true)
                             .onSubmit {
-                                if isValidName && networkManager.isConnected {
+                                if canRegister {
                                     registerPlayer()
                                 }
                             }
@@ -49,14 +50,59 @@ struct PlayerRegistrationView: View {
                         // Validation feedback
                         if !playerName.isEmpty {
                             HStack {
-                                Image(systemName: isValidName ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundColor(isValidName ? .green : .red)
+                                Image(systemName: isValidFormat ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundColor(isValidFormat ? .green : .red)
                                 
                                 Text(validationMessage)
                                     .font(.caption)
-                                    .foregroundColor(isValidName ? .green : .red)
+                                    .foregroundColor(isValidFormat ? .green : .red)
                             }
                         }
+                        
+                        // Error message display (inline instead of popup)
+                        if let errorMessage = errorMessage {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                    Text(errorMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                .padding(.top, 4)
+                            }
+                        }
+                    }
+                    
+                    // Name suggestions section
+                    if showSuggestions && !nameSuggestions.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Name suggestions:")
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                            
+                            ForEach(nameSuggestions, id: \.self) { suggestion in
+                                Button(action: {
+                                    playerName = suggestion
+                                    showSuggestions = false
+                                    nameSuggestions = []
+                                }) {
+                                    HStack {
+                                        Text(suggestion)
+                                            .foregroundColor(.blue)
+                                        Spacer()
+                                        Image(systemName: "arrow.right.circle")
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(8)
+                                }
+                            }
+                        }
+                        .padding(.top, 8)
                     }
                     
                     // Register Button
@@ -93,19 +139,11 @@ struct PlayerRegistrationView: View {
                 }
             }
         }
-        .alert("Registration Failed", isPresented: $showError) {
-            Button("OK") {
-                showError = false
-                errorMessage = nil
-            }
-        } message: {
-            Text(errorMessage ?? "Unknown error occurred")
-        }
     }
     
     // MARK: - Computed Properties
     
-    private var isValidName: Bool {
+    private var isValidFormat: Bool {
         let trimmed = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 && trimmed.count <= 20 else { return false }
         
@@ -122,15 +160,15 @@ struct PlayerRegistrationView: View {
             return "Name must be at least 2 characters"
         } else if trimmed.count > 20 {
             return "Name must be 20 characters or less"
-        } else if !isValidName {
+        } else if !isValidFormat {
             return "Only letters, numbers, spaces, hyphens, and underscores allowed"
         } else {
-            return "Valid name"
+            return "Valid name format"
         }
     }
     
     private var canRegister: Bool {
-        return isValidName && !isRegistering
+        return isValidFormat && !isRegistering
     }
     
     private var buttonBackgroundColor: Color {
@@ -159,31 +197,40 @@ struct PlayerRegistrationView: View {
                 await MainActor.run {
                     isRegistering = false
                     errorMessage = "Cannot connect to server. Please check your connection."
-                    showError = true
                 }
                 return
             }
             
             // Register player (this will also establish WebSocket connection)
-            let success = await networkManager.registerPlayer(name: trimmedName)
+            let result = await networkManager.registerPlayer(name: trimmedName)
             
             await MainActor.run {
                 isRegistering = false
                 
-                if success {
+                switch result {
+                case .success:
                     // Store player name locally
                     UserDefaults.standard.set(trimmedName, forKey: "playerName")
-                } else {
-                    errorMessage = "Registration failed. Please try again."
-                    showError = true
-                }
-            }
-            
-            if success {
-                // Wait briefly to ensure connection is stable before closing
-                try? await Task.sleep(nanoseconds: AppConfig.registrationStabilizationDelay)
-                await MainActor.run {
-                    isPresented = false
+                    // Wait briefly to ensure connection is stable before closing
+                    Task {
+                        try? await Task.sleep(nanoseconds: AppConfig.registrationStabilizationDelay)
+                        await MainActor.run {
+                            isPresented = false
+                        }
+                    }
+                    
+                case .nameConflict(let suggestions):
+                    // Show name suggestions
+                    nameSuggestions = suggestions
+                    showSuggestions = true
+                    errorMessage = "Name '\(trimmedName)' is already taken by another device. Try one of the suggestions below:"
+                    
+                case .failure(let message):
+                    // Show error message
+                    errorMessage = message
+                    // Clear any previous suggestions
+                    showSuggestions = false
+                    nameSuggestions = []
                 }
             }
         }

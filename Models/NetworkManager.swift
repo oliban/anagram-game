@@ -22,6 +22,13 @@ struct AppConfig {
     static let notificationDisplayDuration: TimeInterval = 3.0  // 3 seconds
 }
 
+// Registration result enum
+enum RegistrationResult {
+    case success
+    case nameConflict(suggestions: [String])
+    case failure(message: String)
+}
+
 // Player model matching server-side structure
 struct Player: Codable, Identifiable, Equatable {
     let id: String
@@ -167,6 +174,7 @@ struct CompletionResult: Codable {
 
 private struct RegistrationRequestBody: Encodable {
     let name: String
+    let deviceId: String
 }
 
 @MainActor
@@ -576,9 +584,9 @@ class NetworkManager: ObservableObject {
     
     // MARK: - HTTP API Methods
     
-    func registerPlayer(name: String) async -> Bool {
+    func registerPlayer(name: String) async -> RegistrationResult {
         guard let url = URL(string: "\(baseURL)/api/players/register") else {
-            return false
+            return .failure(message: "Invalid server URL")
         }
         
         do {
@@ -586,38 +594,76 @@ class NetworkManager: ObservableObject {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
-            let requestBody = RegistrationRequestBody(name: name)
+            let deviceId = DeviceManager.shared.getDeviceId()
+            let requestBody = RegistrationRequestBody(name: name, deviceId: deviceId)
             
             request.httpBody = try JSONEncoder().encode(requestBody)
             
             let (data, response) = try await urlSession.data(for: request)
             
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 201 else {
-                print("❌ REGISTER: Failed to register player. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
-                return false
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failure(message: "Invalid server response")
             }
             
-            // Decode the response to get the player object
-            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let playerData = jsonResponse["player"] {
-                let playerDataJSON = try JSONSerialization.data(withJSONObject: playerData)
-                let player = try JSONDecoder().decode(Player.self, from: playerDataJSON)
+            switch httpResponse.statusCode {
+            case 201:
+                // Success - decode the player
+                if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let playerData = jsonResponse["player"] {
+                    let playerDataJSON = try JSONSerialization.data(withJSONObject: playerData)
+                    let player = try JSONDecoder().decode(Player.self, from: playerDataJSON)
+                    
+                    self.currentPlayer = player
+                    
+                    // Store whether this is a first login
+                    let isFirstLogin = jsonResponse["isFirstLogin"] as? Bool ?? true
+                    UserDefaults.standard.set(isFirstLogin, forKey: "isFirstLogin")
+                    print("📝 REGISTER: First login status: \(isFirstLogin)")
+                    
+                    // Connect to the socket and wait a bit for connection
+                    connect(playerId: player.id)
+                    
+                    // Give the socket time to connect before returning
+                    try? await Task.sleep(nanoseconds: AppConfig.connectionRetryDelay)
+                    
+                    return .success
+                } else {
+                    return .failure(message: "Invalid player data in response")
+                }
                 
-                self.currentPlayer = player
+            case 409:
+                // Name conflict - parse suggestions
+                if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let suggestions = jsonResponse["suggestions"] as? [String] {
+                    print("🔄 REGISTER: Name conflict detected, suggestions: \(suggestions)")
+                    return .nameConflict(suggestions: suggestions)
+                } else {
+                    return .failure(message: "Name is already taken")
+                }
                 
-                // Now, connect to the socket and wait a bit for connection
-                connect(playerId: player.id)
-                
-                // Give the socket time to connect before returning
-                try? await Task.sleep(nanoseconds: AppConfig.connectionRetryDelay)
-                
-                return true
+            default:
+                // Other errors
+                if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = jsonResponse["error"] as? String {
+                    return .failure(message: errorMessage)
+                } else {
+                    return .failure(message: "Registration failed")
+                }
             }
-            
-            return false
             
         } catch {
-            print("❌ REGISTER: Error registering player: \(error.localizedDescription)")
+            print("❌ REGISTER: Network error: \(error)")
+            return .failure(message: "Network error: \(error.localizedDescription)")
+        }
+    }
+    
+    // Legacy method for backward compatibility
+    func registerPlayerBool(name: String) async -> Bool {
+        let result = await registerPlayer(name: name)
+        switch result {
+        case .success:
+            return true
+        case .nameConflict, .failure:
             return false
         }
     }

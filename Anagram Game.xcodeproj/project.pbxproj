@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A2B3C4D5E6F7G8H9I0J1K2L /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */; };
 		3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */; };
 		4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */; };
 		5D8E2B9E3G293F4B00DC84F8 /* PlayerRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D8E2B9D3G293F4B00DC84F8 /* PlayerRegistrationView.swift */; };
@@ -48,6 +49,7 @@
 
 /* Begin PBXFileReference section */
 		23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsGameView.swift; sourceTree = "<group>"; };
+		2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
 		5D8E2B9D3G293F4B00DC84F8 /* PlayerRegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRegistrationView.swift; sourceTree = "<group>"; };
 		6E9F3C8E4H394G5C00ED95G9 /* OnlinePlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlinePlayersView.swift; sourceTree = "<group>"; };
@@ -164,6 +166,7 @@
 				9EAA08532E192E3A00DB73E7 /* Item.swift */,
 				9EAA08A62E192E3A00DB73E7 /* GameModel.swift */,
 				4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */,
+				2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -335,6 +338,7 @@
 				9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */,
 				9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */,
 				4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */,
+				1A2B3C4D5E6F7G8H9I0J1K2L /* DeviceManager.swift in Sources */,
 				5D8E2B9E3G293F4B00DC84F8 /* PlayerRegistrationView.swift in Sources */,
 				6E9F3C8F4H394G5C00ED95G9 /* OnlinePlayersView.swift in Sources */,
 				7F1A4D9F5I495H6D00FE06H1 /* PhraseCreationView.swift in Sources */,
