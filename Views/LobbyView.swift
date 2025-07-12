@@ -73,7 +73,8 @@ struct LobbyView: View {
     private var headerSection: some View {
         VStack(spacing: 8) {
             if let playerName = gameModel.playerName {
-                Text("Welcome back, \(playerName)!")
+                let isFirstTime = playerStats?.totalPhrases == 0
+                Text(isFirstTime ? "Welcome, \(playerName)!" : "Welcome back, \(playerName)!")
                     .font(.title2)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
