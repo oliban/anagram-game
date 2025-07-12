@@ -355,7 +355,7 @@ struct LobbyView: View {
             
             print("📝 CONTRIBUTION: Request body: \(requestBody)")
             
-            guard let url = URL(string: "http://192.168.1.133:3001/api/contribution/request") else {
+            guard let url = URL(string: AppConfig.contributionAPIURL) else {
                 print("❌ CONTRIBUTION: Invalid URL for contribution request")
                 await MainActor.run {
                     isGeneratingLink = false
@@ -397,7 +397,7 @@ struct LobbyView: View {
                         
                         await MainActor.run {
                             // Use the base URL from config for sharing
-                            self.contributionLink = shareableUrl.replacingOccurrences(of: "http://localhost:3000", with: "http://192.168.1.133:3001")
+                            self.contributionLink = shareableUrl.replacingOccurrences(of: "http://127.0.0.1:3000", with: AppConfig.contributionBaseURL)
                             self.isGeneratingLink = false
                             print("✅ CONTRIBUTION: Final generated link: \(self.contributionLink)")
                         }

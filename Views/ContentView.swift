@@ -213,7 +213,7 @@ struct ContentView: View {
             networkManager.connect()
             
             // Wait briefly for connection to establish
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            try? await Task.sleep(nanoseconds: AppConfig.registrationStabilizationDelay)
             
             // For testing: always create a new random player name
             let randomPlayerName = "Player_\(Int.random(in: 100...999))"

@@ -20,6 +20,11 @@ struct PlayerRegistrationView: View {
                     Text("Enter your player name to start playing")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                    
+                    // Version number
+                    Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.top, 40)
                 
@@ -176,7 +181,7 @@ struct PlayerRegistrationView: View {
             
             if success {
                 // Wait briefly to ensure connection is stable before closing
-                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                try? await Task.sleep(nanoseconds: AppConfig.registrationStabilizationDelay)
                 await MainActor.run {
                     isPresented = false
                 }

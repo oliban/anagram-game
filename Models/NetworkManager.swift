@@ -3,6 +3,25 @@ import Network
 import UIKit
 import SocketIO
 
+// MARK: - Configuration
+// This matches server/.env configuration
+struct AppConfig {
+    // Server Configuration
+    static let serverPort = "8080"  // From server/.env PORT
+    static let baseURL = "http://localhost:\(serverPort)"  // Using localhost for iOS simulator compatibility
+    
+    // Contribution system URLs (different service)
+    static let contributionPort = "3001"
+    static let contributionBaseURL = "http://localhost:\(contributionPort)"
+    static let contributionAPIURL = "\(contributionBaseURL)/api/contribution/request"
+    
+    // Timing Configuration
+    static let connectionRetryDelay: UInt64 = 2_000_000_000  // 2 seconds in nanoseconds
+    static let registrationStabilizationDelay: UInt64 = 1_000_000_000  // 1 second in nanoseconds
+    static let playerListRefreshInterval: TimeInterval = 15.0  // 15 seconds
+    static let notificationDisplayDuration: TimeInterval = 3.0  // 3 seconds
+}
+
 // Player model matching server-side structure
 struct Player: Codable, Identifiable, Equatable {
     let id: String
@@ -166,8 +185,14 @@ class NetworkManager: ObservableObject {
     @Published var hasNewPhrase: Bool = false
     @Published var justReceivedPhrase: CustomPhrase? = nil
     
+    // Debug properties
+    @Published var lastError: String? = nil
+    var debugServerURL: String {
+        return baseURL
+    }
     
-    private let baseURL = "http://192.168.1.133:3000"
+    
+    private let baseURL = AppConfig.baseURL
     private var urlSession: URLSession
     private var playerListTimer: Timer?
     private var connectionMonitorTimer: Timer?
@@ -584,7 +609,7 @@ class NetworkManager: ObservableObject {
                 connect(playerId: player.id)
                 
                 // Give the socket time to connect before returning
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                try? await Task.sleep(nanoseconds: AppConfig.connectionRetryDelay)
                 
                 return true
             }
@@ -1033,7 +1058,7 @@ class NetworkManager: ObservableObject {
             await fetchOnlinePlayers()
         }
         
-        playerListTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+        playerListTimer = Timer.scheduledTimer(withTimeInterval: AppConfig.playerListRefreshInterval, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             Task { @MainActor in
                 await self.fetchOnlinePlayers()
@@ -1173,11 +1198,18 @@ class NetworkManager: ObservableObject {
     
     func testConnection() async -> Result<Bool, NetworkError> {
         guard let url = URL(string: "\(baseURL)/api/status") else {
-            print("❌ TEST: Invalid URL: \(baseURL)")
+            let error = "Invalid URL: \(baseURL)"
+            print("❌ TEST: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
             return .failure(.invalidURL)
         }
         
         print("🔍 TEST: Testing connection to \(baseURL)")
+        await MainActor.run {
+            self.lastError = "Testing connection..."
+        }
         
         do {
             // Add timeout to prevent hanging
@@ -1199,13 +1231,24 @@ class NetworkManager: ObservableObject {
                let status = jsonResponse["status"] as? String,
                status == "online" {
                 print("✅ TEST: Connection successful")
+                await MainActor.run {
+                    self.lastError = nil
+                }
                 return .success(true)
             }
             
-            print("❌ TEST: Invalid response format")
+            let error = "Invalid response format"
+            print("❌ TEST: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
             return .failure(.invalidResponse)
         } catch {
-            print("❌ TEST: Connection failed with error: \(error.localizedDescription)")
+            let errorMsg = "Connection failed: \(error.localizedDescription)"
+            print("❌ TEST: \(errorMsg)")
+            await MainActor.run {
+                self.lastError = errorMsg
+            }
             return .failure(.connectionFailed)
         }
     }
