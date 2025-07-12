@@ -419,7 +419,7 @@ class GameModel: ObservableObject {
         customPhraseInfo = "Custom phrase from \(senderName)"
         
         // Schedule spawning of the persistent phrase info tile after 3 seconds
-        notificationTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+        notificationTimer = Timer.scheduledTimer(withTimeInterval: AppConfig.notificationDisplayDuration, repeats: false) { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let currentPhrase = self.currentCustomPhrase {
