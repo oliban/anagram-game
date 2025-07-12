@@ -12,6 +12,7 @@ class DatabasePlayer {
     this.lastSeen = data.last_seen;
     this.phrasesCompleted = data.phrases_completed;
     this.socketId = data.socket_id;
+    this.deviceId = data.device_id;
     this.createdAt = data.created_at;
   }
 
@@ -93,6 +94,237 @@ class DatabasePlayer {
       console.error('❌ DATABASE: Error creating/getting player:', error.message);
       throw new Error('Failed to create or retrieve player');
     }
+  }
+
+  /**
+   * Create a new player (rejecting duplicates instead of reusing)
+   * Used for the duplicate name prevention system
+   */
+  static async createNewPlayer(name, socketId = null) {
+    const validation = this.validateName(name);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    try {
+      // Create new player directly (will fail if name exists due to UNIQUE constraint)
+      const createResult = await query(`
+        INSERT INTO players (name, socket_id, is_active, last_seen)
+        VALUES ($1, $2, true, CURRENT_TIMESTAMP)
+        RETURNING *
+      `, [validation.name, socketId]);
+
+      const playerData = createResult.rows[0];
+      console.log(`👤 DATABASE: New player created: ${playerData.name} (${playerData.id})`);
+      return new DatabasePlayer(playerData);
+      
+    } catch (error) {
+      if (error.code === '23505' || error.message.includes('duplicate key')) {
+        throw new Error('Player name is already taken');
+      }
+      console.error('❌ DATABASE: Error creating new player:', error.message);
+      throw new Error('Failed to create player');
+    }
+  }
+
+  /**
+   * Get player by name
+   */
+  static async getPlayerByName(name) {
+    try {
+      const result = await query(`
+        SELECT * FROM players WHERE name = $1
+      `, [name]);
+
+      if (result.rows.length > 0) {
+        return new DatabasePlayer(result.rows[0]);
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting player by name:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get player by name and device ID
+   */
+  static async getPlayerByNameAndDevice(name, deviceId) {
+    try {
+      const result = await query(`
+        SELECT * FROM players WHERE name = $1 AND device_id = $2
+      `, [name, deviceId]);
+
+      if (result.rows.length > 0) {
+        return new DatabasePlayer(result.rows[0]);
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ DATABASE: Error getting player by name and device:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Create player with device ID
+   */
+  static async createPlayerWithDevice(name, deviceId, socketId = null) {
+    const validation = this.validateName(name);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    try {
+      const createResult = await query(`
+        INSERT INTO players (name, device_id, socket_id, is_active, last_seen)
+        VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP)
+        RETURNING *
+      `, [validation.name, deviceId, socketId]);
+
+      const playerData = createResult.rows[0];
+      console.log(`👤 DATABASE: New player created with device: ${playerData.name} (${playerData.id})`);
+      return new DatabasePlayer(playerData);
+      
+    } catch (error) {
+      if (error.code === '23505' || error.message.includes('duplicate key')) {
+        throw new Error('Player name and device combination already exists');
+      }
+      console.error('❌ DATABASE: Error creating player with device:', error.message);
+      throw new Error('Failed to create player');
+    }
+  }
+
+  /**
+   * Update player login (for existing players)
+   */
+  static async updatePlayerLogin(playerId, socketId = null) {
+    try {
+      const updateResult = await query(`
+        UPDATE players 
+        SET socket_id = $2, is_active = true, last_seen = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `, [playerId, socketId]);
+
+      if (updateResult.rows.length > 0) {
+        const playerData = updateResult.rows[0];
+        console.log(`👤 DATABASE: Player login updated: ${playerData.name} (${playerData.id})`);
+        return new DatabasePlayer(playerData);
+      } else {
+        throw new Error('Player not found for login update');
+      }
+    } catch (error) {
+      console.error('❌ DATABASE: Error updating player login:', error.message);
+      throw new Error('Failed to update player login');
+    }
+  }
+
+  /**
+   * Generate name suggestions when a name is taken
+   * Uses truly random selection without bias towards any category
+   */
+  static async generateNameSuggestions(baseName, count = 3) {
+    const suggestions = [];
+    
+    // Creative adjectives to combine with the base name
+    const adjectives = [
+      'Swift', 'Clever', 'Bold', 'Bright', 'Quick', 'Sharp', 'Wise', 'Cool',
+      'Epic', 'Super', 'Prime', 'Elite', 'Pro', 'Star', 'Ace', 'Alpha',
+      'Nova', 'Zen', 'Wild', 'Free', 'True', 'Pure', 'Royal', 'Golden'
+    ];
+    
+    // Fun suffixes that are more interesting than just numbers
+    const suffixes = [
+      'X', 'Pro', 'Star', 'Ace', 'Max', 'Neo', 'Zen', 'Prime',
+      'Elite', 'Alpha', 'Beta', 'Omega', 'Phoenix', 'Storm', 'Quest'
+    ];
+    
+    // Gaming/word-game themed prefixes
+    const prefixes = [
+      'Master', 'Captain', 'Agent', 'Super', 'Epic', 'Mega', 'Ultra',
+      'Word', 'Puzzle', 'Game', 'Quiz', 'Brain', 'Logic', 'Smart'
+    ];
+    
+    // Create a single pool of all possible suggestions with their types
+    const allOptions = [];
+    
+    // Add adjectives (prefix to base name)
+    for (const adj of adjectives) {
+      allOptions.push({ type: 'adjective', suggestion: `${adj}${baseName}` });
+    }
+    
+    // Add prefixes (prefix to base name)
+    for (const prefix of prefixes) {
+      allOptions.push({ type: 'prefix', suggestion: `${prefix}${baseName}` });
+    }
+    
+    // Add suffixes (append to base name)
+    for (const suffix of suffixes) {
+      allOptions.push({ type: 'suffix', suggestion: `${baseName}${suffix}` });
+    }
+    
+    // Shuffle the entire pool randomly
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+    
+    const shuffledOptions = shuffleArray(allOptions);
+    const categoryTracks = { adjective: 0, prefix: 0, suffix: 0 };
+    
+    // Try suggestions in random order until we have enough
+    for (const option of shuffledOptions) {
+      if (suggestions.length >= count) break;
+      
+      // Skip if already have this suggestion
+      if (suggestions.includes(option.suggestion)) continue;
+      
+      const exists = await this.getPlayerByName(option.suggestion);
+      if (!exists) {
+        suggestions.push(option.suggestion);
+        categoryTracks[option.type]++;
+        console.log(`📝 Name suggestion: ${option.suggestion} (${option.type})`);
+      }
+    }
+    
+    // If still need more, try numbered alternatives
+    if (suggestions.length < count) {
+      const numberStyles = shuffleArray(['X', 'Pro', 'v2', 'Plus', 'Max', 'Neo']);
+      
+      for (const style of numberStyles) {
+        if (suggestions.length >= count) break;
+        const suggestion = `${baseName}${style}`;
+        const exists = await this.getPlayerByName(suggestion);
+        if (!exists && !suggestions.includes(suggestion)) {
+          suggestions.push(suggestion);
+          console.log(`📝 Name suggestion: ${suggestion} (numbered)`);
+        }
+      }
+    }
+    
+    // Last resort: traditional numbers
+    if (suggestions.length < count) {
+      for (let i = 2; i <= count + 10; i++) {
+        if (suggestions.length >= count) break;
+        const suggestion = `${baseName}_${i}`;
+        const exists = await this.getPlayerByName(suggestion);
+        if (!exists && !suggestions.includes(suggestion)) {
+          suggestions.push(suggestion);
+          console.log(`📝 Name suggestion: ${suggestion} (fallback)`);
+        }
+      }
+    }
+    
+    // Log the category distribution for debugging
+    console.log(`📊 Generated ${suggestions.length} suggestions for '${baseName}': adj=${categoryTracks.adjective}, prefix=${categoryTracks.prefix}, suffix=${categoryTracks.suffix}`);
+    
+    return suggestions.slice(0, count);
   }
 
   /**
@@ -229,7 +461,7 @@ class DatabasePlayer {
     try {
       let queryText = `
         SELECT COUNT(*) as count FROM players 
-        WHERE name = $1 AND is_active = true
+        WHERE name = $1
       `;
       let params = [name];
 

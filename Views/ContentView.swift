@@ -138,6 +138,10 @@ struct ContentView: View {
                 gameModel.playerName = player.name
                 gameModel.networkManager = networkManager
                 networkManager.gameModel = gameModel
+            } else {
+                // Player logged out - show registration
+                print("🔴 LOGOUT: Player cleared, showing registration")
+                showingRegistration = true
             }
             
             // Player list updates are handled by NetworkManager's periodic timer
@@ -165,7 +169,7 @@ struct ContentView: View {
             print("✅ Connection test successful - proceeding with registration")
             
             // Register with stored name
-            let success = await networkManager.registerPlayer(name: playerName)
+            let success = await networkManager.registerPlayerBool(name: playerName)
             
             await MainActor.run {
                 showingConnectionTest = false
@@ -220,7 +224,7 @@ struct ContentView: View {
             print("👤 Creating test player: \(randomPlayerName)")
             
             // Register with random name
-            let success = await networkManager.registerPlayer(name: randomPlayerName)
+            let success = await networkManager.registerPlayerBool(name: randomPlayerName)
             
             await MainActor.run {
                 showingConnectionTest = false

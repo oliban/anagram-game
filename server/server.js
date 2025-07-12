@@ -7,7 +7,7 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 
 // Database modules
-const { testConnection, getStats: getDbStats, shutdown: shutdownDb, pool } = require('./database/connection');
+const { testConnection, getStats: getDbStats, shutdown: shutdownDb, pool, query } = require('./database/connection');
 const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const { HintSystem, HintValidationError } = require('./services/hintSystem');
@@ -499,12 +499,18 @@ app.post('/api/players/register', async (req, res) => {
       });
     }
     
-    const { name, socketId } = req.body;
+    const { name, deviceId, socketId } = req.body;
     
     // Validate input
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ 
         error: 'Player name is required and must be a string' 
+      });
+    }
+
+    if (!deviceId || typeof deviceId !== 'string') {
+      return res.status(400).json({ 
+        error: 'Device ID is required and must be a string' 
       });
     }
 
@@ -515,7 +521,56 @@ app.post('/api/players/register', async (req, res) => {
       });
     }
     
-    const player = await DatabasePlayer.createPlayer(name, socketId || null);
+    // Check if this exact player (name + device_id) already exists
+    const existingPlayer = await DatabasePlayer.getPlayerByNameAndDevice(name, deviceId);
+    let player;
+    let isFirstLogin = false;
+    
+    if (existingPlayer) {
+      // Existing player logging back in with same device
+      player = await DatabasePlayer.updatePlayerLogin(existingPlayer.id, socketId || null);
+      isFirstLogin = false;
+      console.log(`👤 Existing player logged back in: ${player.name} (${player.id})`);
+    } else {
+      // Check if name is taken by another device
+      const nameConflict = await DatabasePlayer.getPlayerByName(name);
+      if (nameConflict && nameConflict.deviceId) {
+        // Name exists and is tied to a different device - suggest alternatives
+        const suggestions = await DatabasePlayer.generateNameSuggestions(name);
+        return res.status(409).json({
+          error: 'Player name is already taken by another device',
+          suggestions: suggestions,
+          code: 'NAME_TAKEN_OTHER_DEVICE'
+        });
+      } else if (nameConflict && nameConflict.deviceId === null) {
+        // Name exists but no device associated - claim this player (only if device_id is explicitly NULL)
+        const updatedResult = await query(`
+          UPDATE players 
+          SET device_id = $1, socket_id = $2, is_active = true, last_seen = CURRENT_TIMESTAMP
+          WHERE id = $3 AND device_id IS NULL
+          RETURNING *
+        `, [deviceId, socketId || null, nameConflict.id]);
+        
+        if (updatedResult.rows.length > 0) {
+          player = new DatabasePlayer(updatedResult.rows[0]);
+          isFirstLogin = false; // This is an existing player being claimed
+          console.log(`👤 Player claimed by device: ${player.name} (${player.id})`);
+        } else {
+          // Race condition - someone else claimed this player, suggest alternatives
+          const suggestions = await DatabasePlayer.generateNameSuggestions(name);
+          return res.status(409).json({
+            error: 'Player name is already taken by another device',
+            suggestions: suggestions,
+            code: 'NAME_TAKEN_OTHER_DEVICE'
+          });
+        }
+      } else {
+        // New player registration
+        player = await DatabasePlayer.createPlayerWithDevice(name, deviceId, socketId || null);
+        isFirstLogin = true; // This is a brand new player
+        console.log(`👤 New player registered: ${player.name} (${player.id})`);
+      }
+    }
     console.log(`👤 Player registered: ${player.name} (${player.id})`);
     
     // Broadcast activity to monitoring dashboard
@@ -533,6 +588,7 @@ app.post('/api/players/register', async (req, res) => {
     res.status(201).json({
       success: true,
       player: player.getPublicInfo(),
+      isFirstLogin: isFirstLogin,
       message: 'Player registered successfully'
     });
     
@@ -549,11 +605,26 @@ app.post('/api/players/register', async (req, res) => {
       });
     }
     
-    // Handle database conflicts
-    if (error.message.includes('already taken') || error.message.includes('duplicate')) {
-      return res.status(409).json({ 
-        error: 'Player name is already taken' 
-      });
+    // Handle database conflicts with name suggestions
+    if (error.message.includes('already taken') || 
+        error.message.includes('duplicate') ||
+        error.message.includes('unique constraint') ||
+        error.message.includes('Player name and device combination already exists') ||
+        error.code === '23505') {
+      
+      try {
+        const suggestions = await DatabasePlayer.generateNameSuggestions(name || 'Player');
+        return res.status(409).json({
+          error: 'Player name is already taken by another device',
+          suggestions: suggestions,
+          code: 'NAME_TAKEN_OTHER_DEVICE'
+        });
+      } catch (suggestionError) {
+        console.error('❌ Error generating name suggestions:', suggestionError);
+        return res.status(409).json({ 
+          error: 'Player name is already taken' 
+        });
+      }
     }
     
     res.status(500).json({ 
@@ -634,6 +705,7 @@ app.get('/api/players/online', async (req, res) => {
     });
   }
 });
+
 
 // Get monitoring stats for dashboard
 app.get('/api/stats', async (req, res) => {
