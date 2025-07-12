@@ -56,6 +56,10 @@
       "shortPhraseThreshold": 3,
       "shortPhraseDampening": 0.5
     },
+    "letterRepetition": {
+      "multiplier": 15.0,
+      "description": "Penalty multiplier for repeated letters in anagram difficulty"
+    },
     "minimumScore": 1.0
   },
   

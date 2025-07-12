@@ -107,12 +107,17 @@ function calculateScore({ phrase, language = config.languages.english }) {
         if (letterCount <= config.algorithmParameters.commonality.shortPhraseThreshold) {
             commonalityFactor *= config.algorithmParameters.commonality.shortPhraseDampening;
         }
+
+        // 4. Letter Repetition Factor
+        const uniqueLetters = new Set(normalizedText).size;
+        const repetitionRatio = (letterCount - uniqueLetters) / letterCount;
+        const repetitionFactor = repetitionRatio * config.algorithmParameters.letterRepetition.multiplier;
         
         // Combine factors and clamp the score
-        const rawScore = wordCountFactor + letterCountFactor + commonalityFactor;
+        const rawScore = wordCountFactor + letterCountFactor + commonalityFactor + repetitionFactor;
         const finalScore = Math.round(Math.max(config.algorithmParameters.minimumScore, rawScore));
 
-        console.log(`📊 NEW DIFFICULTY: "${phrase}" (${language}) -> Score: ${finalScore} (words: ${wordCount}, letters: ${letterCount}, commonality: ${commonalityFactor.toFixed(1)})`);
+        console.log(`📊 NEW DIFFICULTY: "${phrase}" (${language}) -> Score: ${finalScore} (words: ${wordCount}, letters: ${letterCount}, commonality: ${commonalityFactor.toFixed(1)}, repetition: ${repetitionFactor.toFixed(1)})`);
 
         return finalScore;
 
