@@ -133,3 +133,8 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 - **Build failures**: Clean derived data, check Info.plist versions, verify simulator UUIDs
 - **Database issues**: Test connection, verify schema, run server test suite
 - **iOS Simulator issues**: Use MCP iOS Simulator tools for UI inspection, screenshots, and interaction testing
+
+### Device-User Association for Testing
+When testing device-based authentication, you may need to associate existing users with specific simulators. See detailed guide: `docs/device-user-association-guide.md`
+
+**Quick Summary**: Use debug logging to capture device IDs during registration attempts, then update the database to associate users with their intended devices.
