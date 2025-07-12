@@ -1333,6 +1333,7 @@ private struct SharedDifficultyConfig: Codable {
         let wordCount: WordCountParams
         let letterCount: LetterCountParams
         let commonality: CommonalityParams
+        let letterRepetition: LetterRepetitionParams
         let minimumScore: Double
         
         struct WordCountParams: Codable {
@@ -1349,6 +1350,11 @@ private struct SharedDifficultyConfig: Codable {
             let multiplier: Double
             let shortPhraseThreshold: Int
             let shortPhraseDampening: Double
+        }
+        
+        struct LetterRepetitionParams: Codable {
+            let multiplier: Double
+            let description: String
         }
     }
     
@@ -1478,8 +1484,13 @@ private struct SharedDifficultyConfig: Codable {
             commonalityFactor *= algorithmParameters.commonality.shortPhraseDampening
         }
         
+        // 4. Letter Repetition Factor
+        let uniqueLetters = Set(normalizedText).count
+        let repetitionRatio = Double(letterCount - uniqueLetters) / Double(letterCount)
+        let repetitionFactor = repetitionRatio * algorithmParameters.letterRepetition.multiplier
+        
         // Combine factors and clamp the score
-        let rawScore = wordCountFactor + letterCountFactor + commonalityFactor
+        let rawScore = wordCountFactor + letterCountFactor + commonalityFactor + repetitionFactor
         return round(max(algorithmParameters.minimumScore, rawScore))
     }
     
