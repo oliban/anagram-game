@@ -83,8 +83,6 @@ class DatabasePhrase {
       const trimmedHint = hint.trim();
       if (trimmedHint.length === 0) {
         errors.push('Hint cannot be empty');
-      } else if (trimmedHint.length < 10) {
-        errors.push('Hint must be at least 10 characters long');
       } else if (trimmedHint.length > 300) {
         errors.push('Hint cannot be longer than 300 characters');
       }
