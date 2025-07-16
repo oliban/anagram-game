@@ -12,7 +12,7 @@ const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const { HintSystem, HintValidationError } = require('./services/hintSystem');
 const ScoringSystem = require('./services/scoringSystem');
-const { detectLanguage } = require('./services/difficultyScorer');
+// Language detection removed - use explicit language parameter
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -347,7 +347,7 @@ app.post('/api/contribution/:token/submit', async (req, res) => {
     const createdPhrase = await DatabasePhrase.createPhrase({
       content: trimmedPhrase,
       hint: finalClue,
-      language: detectLanguage(trimmedPhrase) || language,
+      language: language,
       senderId: null, // External contribution
       targetId: validation.link.requestingPlayerId
     });
@@ -841,16 +841,15 @@ app.post('/api/phrases', async (req, res) => {
       });
     }
     
-    // Auto-detect language if not provided
-    const detectedLanguage = language || detectLanguage(content);
-
+    // Use provided language (no auto-detection)
+    
     // Create phrase in database
     const phrase = await DatabasePhrase.createPhrase({
       content,
       senderId,
       targetId,
       hint: req.body.hint || null, // Optional hint support
-      language: detectedLanguage
+      language: language
     });
     
     console.log(`📝 Phrase created: "${content}" from ${sender.name} to ${target.name}`);
@@ -1078,10 +1077,8 @@ app.post('/api/phrases/create', async (req, res) => {
       }
     }
 
-    // Auto-detect language if not provided
-    console.log(`🔍 DEBUG - Before language detection: language="${language}", content="${content}"`);
-    const detectedLanguage = language || detectLanguage(content);
-    console.log(`🔍 DEBUG - After language detection: detectedLanguage="${detectedLanguage}"`);
+    // Use provided language (no auto-detection)
+    console.log(`🔍 DEBUG - Using provided language: "${language}", content="${content}"`);
 
     // Create enhanced phrase
     const result = await DatabasePhrase.createEnhancedPhrase({
@@ -1091,7 +1088,7 @@ app.post('/api/phrases/create', async (req, res) => {
       targetIds,
       isGlobal,
       phraseType,
-      language: detectedLanguage
+      language: language
     });
 
     const { phrase, targetCount, isGlobal: phraseIsGlobal } = result;

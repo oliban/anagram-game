@@ -1370,17 +1370,36 @@ extension NetworkManager {
     /// Client-side difficulty scorer for real-time UI feedback during phrase creation.
     /// Reads from the shared JSON configuration to ensure identical algorithm with server.
     static func analyzeDifficultyClientSide(phrase: String, language: String = "en") -> DifficultyAnalysis {
-        guard let config = SharedDifficultyConfig.load() else {
+        print("🔍 CLIENT DIFFICULTY: Analyzing '\(phrase)' with language '\(language)'")
+        
+        // Load the shared configuration and use the proper algorithm
+        if let config = SharedDifficultyConfig.load() {
+            print("✅ CLIENT DIFFICULTY: Using shared algorithm from config")
+            return config.calculateDifficulty(phrase: phrase, language: language)
+        } else {
+            print("❌ CLIENT DIFFICULTY: Failed to load shared config, using fallback algorithm")
+            
+            // Fallback algorithm if config loading fails
+            let words = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+                .components(separatedBy: .whitespacesAndNewlines)
+                .filter { !$0.isEmpty }
+            
+            let letterCount = phrase.replacingOccurrences(of: " ", with: "").count
+            
+            // Simple scoring based on length and complexity
+            let baseScore = Double(letterCount * 5 + words.count * 10)
+            let finalScore = min(max(baseScore, 1.0), 100.0)
+            
+            print("⚠️ CLIENT DIFFICULTY: Calculated score \(finalScore) for '\(phrase)' (\(language)) - FALLBACK ALGORITHM")
+            
             return DifficultyAnalysis(
                 phrase: phrase,
                 language: language,
-                score: 1.0,
-                difficulty: "Very Easy",
+                score: finalScore,
+                difficulty: finalScore > 50 ? "Medium" : "Easy",
                 timestamp: ISO8601DateFormatter().string(from: Date())
             )
         }
-        
-        return config.calculateDifficulty(phrase: phrase, language: language)
     }
 }
 
@@ -1458,18 +1477,32 @@ private struct SharedDifficultyConfig: Codable {
     }
     
     static func load() -> SharedDifficultyConfig? {
-        guard let path = Bundle.main.path(forResource: "difficulty-algorithm-config", ofType: "json"),
-              let data = NSData(contentsOfFile: path) as Data? else {
-            print("❌ Could not find difficulty-algorithm-config.json in app bundle")
+        print("🔍 CONFIG: Attempting to load difficulty-algorithm-config.json from bundle")
+        
+        guard let path = Bundle.main.path(forResource: "difficulty-algorithm-config", ofType: "json") else {
+            print("❌ CONFIG: Could not find difficulty-algorithm-config.json in app bundle")
+            print("🔍 CONFIG: Bundle path: \(Bundle.main.bundlePath)")
             return nil
         }
         
+        print("✅ CONFIG: Found config file at path: \(path)")
+        
+        guard let data = NSData(contentsOfFile: path) as Data? else {
+            print("❌ CONFIG: Could not read data from config file")
+            return nil
+        }
+        
+        print("✅ CONFIG: Successfully read \(data.count) bytes from config file")
+        
         do {
             let config = try JSONDecoder().decode(SharedDifficultyConfig.self, from: data)
-            print("✅ Loaded shared difficulty config version \(config.version)")
+            print("✅ CONFIG: Successfully decoded shared difficulty config version \(config.version)")
             return config
         } catch {
-            print("❌ Failed to decode shared config: \(error)")
+            print("❌ CONFIG: Failed to decode shared config: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("🔍 CONFIG: File contents (first 200 chars): \(String(jsonString.prefix(200)))")
+            }
             return nil
         }
     }
@@ -1485,15 +1518,14 @@ private struct SharedDifficultyConfig: Codable {
             )
         }
         
-        let detectedLanguage = language.isEmpty ? detectLanguage(phrase) : language
-        let normalizedText = normalize(phrase: phrase, language: detectedLanguage)
+        let normalizedText = normalize(phrase: phrase, language: language)
         let wordCount = countWords(phrase)
         let letterCount = normalizedText.count
         
         guard letterCount > 0 else {
             return DifficultyAnalysis(
                 phrase: phrase,
-                language: detectedLanguage,
+                language: language,
                 score: algorithmParameters.minimumScore,
                 difficulty: difficultyLabels.veryEasy,
                 timestamp: ISO8601DateFormatter().string(from: Date())
@@ -1504,12 +1536,12 @@ private struct SharedDifficultyConfig: Codable {
             normalizedText: normalizedText,
             wordCount: wordCount,
             letterCount: letterCount,
-            language: detectedLanguage
+            language: language
         )
         
         return DifficultyAnalysis(
             phrase: phrase,
-            language: detectedLanguage,
+            language: language,
             score: score,
             difficulty: getDifficultyLabel(for: score),
             timestamp: ISO8601DateFormatter().string(from: Date())
@@ -1532,17 +1564,6 @@ private struct SharedDifficultyConfig: Codable {
             .count
     }
     
-    private func detectLanguage(_ phrase: String) -> String {
-        guard !phrase.isEmpty else { return languageDetection.defaultLanguage }
-        
-        let text = phrase.lowercased()
-        
-        if text.range(of: languageDetection.swedishCharacters, options: .regularExpression) != nil {
-            return languages.swedish
-        }
-        
-        return languageDetection.defaultLanguage
-    }
     
     private func calculateScore(normalizedText: String, wordCount: Int, letterCount: Int, language: String) -> Double {
         let frequencies = letterFrequencies[language] ?? letterFrequencies[languages.english]!

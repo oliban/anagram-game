@@ -198,6 +198,7 @@ class GameModel: ObservableObject {
         // Reset hint state for new game
         currentHints = []
         currentScore = 0
+        print("🔍 SCORE RESET: Score reset to 0 in startNewGame()")
         hintsUsed = 0
         
         // Set difficulty score based on phrase type
@@ -223,6 +224,7 @@ class GameModel: ObservableObject {
         // Reset hint state
         currentHints = []
         currentScore = 0
+        print("🔍 SCORE RESET: Score reset to 0 in resetGame()")
         hintsUsed = 0
         phraseDifficulty = 0
     }
@@ -243,6 +245,7 @@ class GameModel: ObservableObject {
         return currentSentence.components(separatedBy: " ")
     }
     
+    @MainActor
     func completeGame() {
         gameState = .completed
         
@@ -254,33 +257,44 @@ class GameModel: ObservableObject {
         if let phraseId = currentPhraseId {
             Task {
                 let networkManager = NetworkManager.shared
-                let _ = await networkManager.completePhrase(phraseId: phraseId)
+                let result = await networkManager.completePhrase(phraseId: phraseId)
+                print("🔍 SERVER COMPLETION: Server returned score \(result?.completion.finalScore ?? -1), client calculated \(currentScore)")
             }
         }
     }
     
+    @MainActor
     private func calculateLocalScore() -> Int {
-        guard phraseDifficulty > 0 else { return 0 }
+        // Use the same algorithm as preview and gameplay for consistency
+        let language = currentCustomPhrase?.language ?? "en"
+        let analysis = NetworkManager.analyzeDifficultyClientSide(phrase: currentSentence, language: language)
+        let baseDifficulty = Int(analysis.score)
         
-        var score = phraseDifficulty
+        print("🔍 SCORE: Recalculated base difficulty: \(baseDifficulty) (was stored as: \(phraseDifficulty))")
         
-        if hintsUsed >= 1 { score = Int(round(Double(phraseDifficulty) * 0.90)) }
-        if hintsUsed >= 2 { score = Int(round(Double(phraseDifficulty) * 0.70)) }
-        if hintsUsed >= 3 { score = Int(round(Double(phraseDifficulty) * 0.50)) }
+        guard baseDifficulty > 0 else { 
+            print("❌ SCORE: baseDifficulty is \(baseDifficulty), returning 0")
+            return 0 
+        }
         
+        var score = baseDifficulty
+        
+        if hintsUsed >= 1 { score = Int(round(Double(baseDifficulty) * 0.90)) }
+        if hintsUsed >= 2 { score = Int(round(Double(baseDifficulty) * 0.70)) }
+        if hintsUsed >= 3 { score = Int(round(Double(baseDifficulty) * 0.50)) }
+        
+        print("🔍 SCORE: After hints penalty (hints: \(hintsUsed)): \(score)")
         return score
     }
     
+    @MainActor
     private func calculateDifficultyForPhrase(_ phrase: String) -> Int {
-        // Simple difficulty calculation based on phrase characteristics
-        let words = phrase.components(separatedBy: " ")
-        let totalLetters = phrase.replacingOccurrences(of: " ", with: "").count
+        // Use shared algorithm for consistency
+        let language = currentCustomPhrase?.language ?? "en"
+        let analysis = NetworkManager.analyzeDifficultyClientSide(phrase: phrase, language: language)
         
-        // Base score: 50 + (15 points per word) + (2 points per letter)
-        let baseScore = 50 + (words.count * 15) + (totalLetters * 2)
-        
-        // Cap between 50-200 points
-        return min(max(baseScore, 50), 200)
+        print("🎯 GAME DIFFICULTY: Calculated \(analysis.score) for '\(phrase)' (\(language))")
+        return Int(analysis.score)
     }
     
     func skipCurrentGame() async {
