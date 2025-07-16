@@ -242,17 +242,14 @@ struct PhraseCreationView: View {
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 6) {
-                        TextField("Enter a helpful clue (min 10 characters)...", text: $clueText)
+                        TextField("Enter a helpful clue...", text: $clueText)
                             .padding(12)
                             .background(Color.white)
                             .foregroundColor(.black)
                             .accentColor(.blue)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(
-                                        clueText.count < 10 && !clueText.isEmpty ? Color.orange : Color.gray.opacity(0.5),
-                                        lineWidth: 1
-                                    )
+                                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
                             )
                             .cornerRadius(8)
                             .frame(height: 44)
@@ -270,10 +267,10 @@ struct PhraseCreationView: View {
                             
                             Spacer()
                             
-                            Text("\(clueText.count)/10")
+                            Text("\(clueText.count) characters")
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(clueText.count >= 10 ? .green : (clueText.isEmpty ? .secondary : .orange))
+                                .foregroundColor(.secondary)
                         }
                     }
                 }
@@ -532,7 +529,7 @@ struct PhraseCreationView: View {
     
     private var canSendPhrase: Bool {
         let hasValidTargets = !availableTargets.isEmpty && (isAvailableToAll || !selectedPlayers.isEmpty)
-        let hasValidClue = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 10
+        let hasValidClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         
         return isValidPhrase && hasValidTargets && hasValidClue
     }
