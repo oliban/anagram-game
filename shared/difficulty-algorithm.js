@@ -171,7 +171,7 @@ module.exports = {
     calculateScore,
     analyzePhrases,
     getDifficultyLabel,
-    detectLanguage,
+    // detectLanguage removed - use explicit language parameter
     
     // Export for testing purposes
     normalize,

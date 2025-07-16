@@ -80,6 +80,80 @@ struct PhraseCreationView: View {
                 }
                 .padding(.top, 8)
                 
+                // Language selection section (moved to top)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Language")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    HStack(spacing: 12) {
+                        // English option
+                        Button(action: {
+                            selectedLanguage = "en"
+                        }) {
+                            HStack(spacing: 8) {
+                                Image("flag_england")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 20, height: 15)
+                                
+                                Text("English")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                if selectedLanguage == "en" {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(selectedLanguage == "en" ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(selectedLanguage == "en" ? Color.blue : Color.clear, lineWidth: 2)
+                            )
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Swedish option
+                        Button(action: {
+                            selectedLanguage = "sv"
+                        }) {
+                            HStack(spacing: 8) {
+                                Image("flag_sweden")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 20, height: 15)
+                                
+                                Text("Svenska")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                if selectedLanguage == "sv" {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(selectedLanguage == "sv" ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(selectedLanguage == "sv" ? Color.blue : Color.clear, lineWidth: 2)
+                            )
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                
                 // Phrase input section
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Phrase (2-6 words)")
@@ -202,81 +276,6 @@ struct PhraseCreationView: View {
                                 .foregroundColor(clueText.count >= 10 ? .green : (clueText.isEmpty ? .secondary : .orange))
                         }
                     }
-                }
-                
-                // Language selection section
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Language")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    
-                    HStack(spacing: 12) {
-                        // English option
-                        Button(action: {
-                            selectedLanguage = "en"
-                        }) {
-                            HStack(spacing: 8) {
-                                Image("flag_england")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 24, height: 16)
-                                
-                                Text("English")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                if selectedLanguage == "en" {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(selectedLanguage == "en" ? Color.blue.opacity(0.2) : Color(.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(selectedLanguage == "en" ? Color.blue : Color.clear, lineWidth: 2)
-                            )
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // Swedish option
-                        Button(action: {
-                            selectedLanguage = "sv"
-                        }) {
-                            HStack(spacing: 8) {
-                                Image("flag_sweden")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 24, height: 16)
-                                
-                                Text("Svenska")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                if selectedLanguage == "sv" {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(selectedLanguage == "sv" ? Color.blue.opacity(0.2) : Color(.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(selectedLanguage == "sv" ? Color.blue : Color.clear, lineWidth: 2)
-                            )
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    
                 }
                 
                 // Player availability section
@@ -518,6 +517,12 @@ struct PhraseCreationView: View {
             
             // Use client-side scoring for immediate feedback
             analyzeDifficultyClientSide(newValue)
+        }
+        .onChange(of: selectedLanguage) { _, newLanguage in
+            // Re-analyze difficulty when language changes
+            if isValidPhraseForDifficulty && !phraseText.isEmpty {
+                analyzeDifficultyClientSide(phraseText)
+            }
         }
         .onChange(of: playerSearchText) { _, newValue in
             // Show suggestions when typing, hide when empty
