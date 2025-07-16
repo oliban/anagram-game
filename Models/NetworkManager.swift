@@ -8,11 +8,11 @@ import SocketIO
 struct AppConfig {
     // Server Configuration
     static let serverPort = "8080"  // From server/.env PORT
-    static let baseURL = "http://localhost:\(serverPort)"  // Using localhost for iOS simulator compatibility
+    static let baseURL = "http://192.168.1.201:\(serverPort)"  // Using Mac's IP for physical device compatibility
     
     // Contribution system URLs (different service)
     static let contributionPort = "3001"
-    static let contributionBaseURL = "http://localhost:\(contributionPort)"
+    static let contributionBaseURL = "http://192.168.1.201:\(contributionPort)"
     static let contributionAPIURL = "\(contributionBaseURL)/api/contribution/request"
     
     // Timing Configuration
