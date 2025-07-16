@@ -998,7 +998,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     func spawnMessageTile(message: String) {
         // Create new message tile - width calculated based on text length
-        let newMessageTile = MessageTile(message: message)
+        let newMessageTile = MessageTile(message: message, sceneSize: size)
         
         // Position message tile to fall from the left side (opposite of score tile)
         // Add some randomness to X position to avoid stacking
@@ -2496,35 +2496,93 @@ class ScoreTile: InformationTile {
 }
 
 class MessageTile: InformationTile {
-    private var messageLabel: SKLabelNode?
+    private var messageLabels: [SKLabelNode] = []
     
     var messageText: String {
-        return messageLabel?.text ?? ""
+        return messageLabels.first?.text ?? ""
     }
     
-    init(message: String) {
-        // Calculate tile width based on text length
-        let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
-        tempLabel.fontSize = 24
-        tempLabel.text = message
-        let textWidth = tempLabel.frame.width
+    // Maximum width for notification tiles (80% of shelf width)
+    private static func calculateMaxTileWidth(sceneSize: CGSize) -> CGFloat {
+        let shelfWidth = sceneSize.width * 0.675 - 20  // Actual shelf width
+        return shelfWidth * 0.8
+    }
+    
+    // Helper function to wrap text into lines that fit within maxWidth
+    private static func wrapText(_ text: String, maxWidth: CGFloat, fontSize: CGFloat) -> [String] {
+        let words = text.components(separatedBy: " ")
+        var lines: [String] = []
+        var currentLine = ""
         
-        // Add padding and ensure minimum width
-        let tileWidth = max(textWidth + 20, 80)  // Minimum 80 pixels width
-        let tileHeight: CGFloat = 40  // Standard tile height
-        let calculatedSize = CGSize(width: tileWidth, height: tileHeight)
+        let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        tempLabel.fontSize = fontSize
+        
+        for word in words {
+            let testLine = currentLine.isEmpty ? word : "\(currentLine) \(word)"
+            tempLabel.text = testLine
+            
+            if tempLabel.frame.width <= maxWidth {
+                currentLine = testLine
+            } else {
+                if !currentLine.isEmpty {
+                    lines.append(currentLine)
+                    currentLine = word
+                } else {
+                    // Single word is too long, add it anyway
+                    lines.append(word)
+                }
+            }
+        }
+        
+        if !currentLine.isEmpty {
+            lines.append(currentLine)
+        }
+        
+        return lines.isEmpty ? [text] : lines
+    }
+    
+    init(message: String, sceneSize: CGSize) {
+        // Calculate optimal tile size with text wrapping
+        let fontSize: CGFloat = 24
+        let lineHeight: CGFloat = 28  // Slightly larger than fontSize for readability
+        let padding: CGFloat = 20
+        let minWidth: CGFloat = 80
+        
+        // Calculate single line width first
+        let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        tempLabel.fontSize = fontSize
+        tempLabel.text = message
+        let singleLineWidth = tempLabel.frame.width
+        
+        // Calculate 80% of shelf width as maximum allowed width
+        let maxAllowedWidth = MessageTile.calculateMaxTileWidth(sceneSize: sceneSize)
+        let actualMaxWidth = min(singleLineWidth + padding, maxAllowedWidth)
+        let wrappedLines = MessageTile.wrapText(message, maxWidth: actualMaxWidth - padding, fontSize: fontSize)
+        
+        // Calculate final dimensions
+        let tileWidth = max(min(singleLineWidth + padding, actualMaxWidth), minWidth)
+        let tileHeight = CGFloat(wrappedLines.count) * lineHeight + padding
+        let calculatedSize = CGSize(width: tileWidth, height: max(tileHeight, 40))  // Minimum 40 height
         
         super.init(size: calculatedSize)
         
-        // Create message label
-        messageLabel = SKLabelNode(fontNamed: "Arial-Bold")
-        messageLabel?.fontSize = 24
-        messageLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
-        messageLabel?.verticalAlignmentMode = .center
-        messageLabel?.horizontalAlignmentMode = .center
-        messageLabel?.zPosition = 10.0
-        messageLabel?.text = message
-        addChild(messageLabel!)
+        // Create message labels for each line
+        for (index, line) in wrappedLines.enumerated() {
+            let label = SKLabelNode(fontNamed: "Arial-Bold")
+            label.fontSize = fontSize
+            label.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
+            label.verticalAlignmentMode = .center
+            label.horizontalAlignmentMode = .center
+            label.zPosition = 10.0
+            label.text = line
+            
+            // Position labels vertically
+            let yOffset = CGFloat(wrappedLines.count - 1 - index) * lineHeight - CGFloat(wrappedLines.count - 1) * lineHeight / 2
+            label.position = CGPoint(x: 0, y: yOffset)
+            
+            messageLabels.append(label)
+            addChild(label)
+        }
         
         // Set z-position to match other tiles
         zPosition = 50
