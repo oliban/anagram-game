@@ -586,6 +586,9 @@ struct PhysicsGameView: View {
 // Protocol for tiles that can be respawned when they go off-screen
 protocol RespawnableTile: SKSpriteNode {
     var isBeingDragged: Bool { get set }
+    var isSquashed: Bool { get set }
+    func getTileMass() -> CGFloat
+    func squashTile(intensity: CGFloat, direction: CGVector)
 }
 
 class PhysicsGameScene: SKScene, MessageTileSpawner {
@@ -595,10 +598,20 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     var onJolt: (() -> Void)?
     
     private var bookshelf: SKNode!
+    private var bookshelfOriginalPosition: CGPoint = CGPoint.zero
+    private var shelfOriginalPositions: [SKNode: CGPoint] = [:]
+    private var physicsBodyOriginalPositions: [SKSpriteNode: CGPoint] = [:]
+    private var isBookshelfJolting: Bool = false
     private var floor: SKNode!
     private var tiles: [LetterTile] = []
     private var scoreTile: ScoreTile?
     private var languageTile: LanguageTile?
+    
+    // Debug text area
+    private var debugTextNode: SKLabelNode?
+    private var debugBackground: SKShapeNode?
+    private var debugMessages: [String] = []
+    private let maxDebugMessages = 8
     private var messageTiles: [MessageTile] = []
     
     // Unified collection for respawn tracking
@@ -626,6 +639,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         setupPhysicsWorld()
         setupEnvironment()
+        // setupDebugTextArea()  // Debug display disabled
         
         // Connect this scene as the message tile spawner
         gameModel.messageTileSpawner = self
@@ -647,7 +661,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     private func setupPhysicsWorld() {
-        physicsWorld.gravity = CGVector(dx: 0, dy: -9.8)
+        physicsWorld.gravity = CGVector(dx: 0, dy: -30.0) // Much stronger gravity for heavy feel
         physicsWorld.contactDelegate = self
         
         // Create world boundaries
@@ -655,6 +669,49 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         boundary.friction = 0.1  // Lower friction on screen edges
         boundary.restitution = 0.4  // Higher bounce off screen edges
         physicsBody = boundary
+    }
+    
+    private func setupDebugTextArea() {
+        // FULL WIDTH DEBUG BOX - RIGHT EDGE TO RIGHT EDGE
+        let debugWidth = size.width - 20  // Full width minus small margins (back to original)
+        let debugHeight: CGFloat = 150
+        
+        debugBackground = SKShapeNode(rectOf: CGSize(width: debugWidth, height: debugHeight))
+        debugBackground?.fillColor = UIColor.black.withAlphaComponent(0.95)
+        debugBackground?.strokeColor = .yellow
+        debugBackground?.lineWidth = 3
+        debugBackground?.position = CGPoint(x: 200, y: size.height/2 - debugHeight/2 - 80)  // 200px to the right (back 100px)
+        debugBackground?.zPosition = 1000
+        addChild(debugBackground!)
+        
+        // Text positioned at top-left of debug box
+        debugTextNode = SKLabelNode()
+        debugTextNode?.fontSize = 11
+        debugTextNode?.fontName = "Courier"
+        debugTextNode?.fontColor = .white
+        debugTextNode?.verticalAlignmentMode = .top
+        debugTextNode?.horizontalAlignmentMode = .left
+        debugTextNode?.position = CGPoint(x: 200 - debugWidth/2 + 10, y: size.height/2 - 90)  // 200px to the right (back 100px)
+        debugTextNode?.zPosition = 1001
+        debugTextNode?.numberOfLines = 0
+        debugTextNode?.preferredMaxLayoutWidth = debugWidth - 20
+        addChild(debugTextNode!)
+        
+        // Initial debug message
+        addDebugMessage("=== PHYSICS DEBUG ACTIVE ===")
+        addDebugMessage("Drop heavy (M,W,Q,X,Z) on light (I,L,J,T)")
+        addDebugMessage("Weights: LIGHT=0.15, MED=0.2, HEAVY=0.3")
+        addDebugMessage("Velocity threshold: < -20 for squashing")
+    }
+    
+    private func addDebugMessage(_ message: String) {
+        // Debug messages disabled
+        return
+    }
+    
+    private func updateDebugDisplay() {
+        let displayText = "DEBUG OUTPUT\n" + debugMessages.joined(separator: "\n")
+        debugTextNode?.text = displayText
     }
     
     private func setupEnvironment() {
@@ -683,7 +740,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Create realistic bookshelf
         bookshelf = SKNode()
-        bookshelf.position = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
+        bookshelfOriginalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
+        bookshelf.position = bookshelfOriginalPosition
         addChild(bookshelf)
         
         let shelfWidth: CGFloat = size.width * 0.675  // Reduced by 10% from 0.75 to 0.675
@@ -703,6 +761,18 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             shelf.name = "shelf_\(i)"  // Add identifier for hint system
             bookshelf.addChild(shelf)
             shelves.append(shelf)  // Track shelf for hint system
+            
+            // Store original position for physics body reset
+            shelfOriginalPositions[shelf] = shelf.position
+            
+            // Store original physics body positions in world coordinates
+            for child in shelf.children {
+                if let physicsNode = child as? SKSpriteNode, physicsNode.physicsBody != nil {
+                    // Convert to world coordinates and store
+                    let worldPosition = shelf.convert(physicsNode.position, to: self)
+                    physicsBodyOriginalPositions[physicsNode] = worldPosition
+                }
+            }
         }
         
     }
@@ -1046,7 +1116,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
 
         // Always maintain normal gravity
-        physicsWorld.gravity = CGVector(dx: 0, dy: -9.8)
+        physicsWorld.gravity = CGVector(dx: 0, dy: -30.0) // Much stronger gravity for heavy feel
 
         // ALWAYS show tile positions for debugging (not just when falling)
         let floorY = size.height * 0.25
@@ -1276,18 +1346,18 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     private func joltPlayingField() {
         // Apply brief upward impulse to all tiles to create jolt effect
-        let impulseStrength: CGFloat = 300.0  // Upward impulse force
+        let impulseStrength: CGFloat = 64.0  // Reduced by another 20% (80 * 0.8 = 64)
         
         for tile in allRespawnableTiles {
             // Apply random upward impulse with slight horizontal variation
-            let horizontalVariation = CGFloat.random(in: -50...50)
-            let verticalImpulse = impulseStrength + CGFloat.random(in: -50...50)
+            let horizontalVariation = CGFloat.random(in: -12...12)  // Reduced by 20% (15 * 0.8 = 12)
+            let verticalImpulse = impulseStrength + CGFloat.random(in: -12...12)  // Reduced by 20% (15 * 0.8 = 12)
             let impulse = CGVector(dx: horizontalVariation, dy: verticalImpulse)
             
             tile.physicsBody?.applyImpulse(impulse)
             
             // Also add slight random angular impulse for rotation
-            let angularImpulse = CGFloat.random(in: -2...2)
+            let angularImpulse = CGFloat.random(in: -0.4...0.4)  // Reduced by 20% (0.5 * 0.8 = 0.4)
             tile.physicsBody?.applyAngularImpulse(angularImpulse)
         }
         
@@ -1305,31 +1375,72 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     private func joltBookshelf() {
-        // Create brief shake animation for bookshelf
+        // Stop any existing jolt animation to prevent accumulation
+        bookshelf.removeAction(forKey: "shelfJolt")
+        
+        // Set jolting flag to prevent collision detection during animation
+        isBookshelfJolting = true
+        
+        // Reset to original position first
+        bookshelf.position = bookshelfOriginalPosition
+        
+        // Create brief shake animation using absolute positions
         let shakeDistance: CGFloat = 8.0
         let shakeDuration: TimeInterval = 0.1
         
-        // Create shake sequence: up -> down -> center
-        let shakeUp = SKAction.moveBy(x: 0, y: shakeDistance, duration: shakeDuration)
-        let shakeDown = SKAction.moveBy(x: 0, y: -shakeDistance * 2, duration: shakeDuration)
-        let shakeCenter = SKAction.moveBy(x: 0, y: shakeDistance, duration: shakeDuration)
+        // Calculate shake positions relative to original position
+        let upPosition = CGPoint(x: bookshelfOriginalPosition.x, y: bookshelfOriginalPosition.y + shakeDistance)
+        let downPosition = CGPoint(x: bookshelfOriginalPosition.x, y: bookshelfOriginalPosition.y - shakeDistance)
+        let rightPosition = CGPoint(x: bookshelfOriginalPosition.x + shakeDistance * 0.5, y: bookshelfOriginalPosition.y)
+        let leftPosition = CGPoint(x: bookshelfOriginalPosition.x - shakeDistance * 0.5, y: bookshelfOriginalPosition.y)
         
-        // Also add slight horizontal shake
-        let horizontalShake = SKAction.sequence([
-            SKAction.moveBy(x: shakeDistance * 0.5, y: 0, duration: shakeDuration),
-            SKAction.moveBy(x: -shakeDistance, y: 0, duration: shakeDuration),
-            SKAction.moveBy(x: shakeDistance * 0.5, y: 0, duration: shakeDuration)
+        // Create shake sequence using absolute positions
+        let shakeSequence = SKAction.sequence([
+            SKAction.move(to: upPosition, duration: shakeDuration),
+            SKAction.move(to: downPosition, duration: shakeDuration),
+            SKAction.move(to: rightPosition, duration: shakeDuration),
+            SKAction.move(to: leftPosition, duration: shakeDuration),
+            SKAction.move(to: bookshelfOriginalPosition, duration: shakeDuration)  // Always return to original
         ])
         
-        // Combine vertical and horizontal shakes
-        let verticalShake = SKAction.sequence([shakeUp, shakeDown, shakeCenter])
-        let combinedShake = SKAction.group([verticalShake, horizontalShake])
+        // Apply to bookshelf with unique key
+        bookshelf.run(shakeSequence, withKey: "shelfJolt")
         
-        // Apply to bookshelf
-        bookshelf.run(combinedShake, withKey: "hintJolt")
+        // Force physics body positions to sync with visual positions after animation
+        let delayAction = SKAction.wait(forDuration: 0.5)  // Wait for animation to complete
+        let updateAction = SKAction.run {
+            self.forcePhysicsBodySync()
+            self.isBookshelfJolting = false  // Re-enable collision detection
+        }
+        let sequenceAction = SKAction.sequence([delayAction, updateAction])
+        self.run(sequenceAction)
         
-        print("📚 BOOKSHELF: Applied jolt animation")
+        print("📚 BOOKSHELF: Applied jolt animation with position reset")
     }
+    
+    private func forcePhysicsBodySync() {
+        // Reset bookshelf to original position first
+        bookshelf.position = bookshelfOriginalPosition
+        
+        // Reset all shelf positions to their original positions
+        for shelf in shelves {
+            if let originalPosition = shelfOriginalPositions[shelf] {
+                shelf.position = originalPosition
+            }
+            
+            // Reset physics bodies to their original world positions
+            for child in shelf.children {
+                if let physicsNode = child as? SKSpriteNode, let originalWorldPosition = physicsBodyOriginalPositions[physicsNode] {
+                    // Convert from world coordinates back to shelf coordinates
+                    let shelfPosition = shelf.convert(originalWorldPosition, from: self)
+                    physicsNode.position = shelfPosition
+                }
+            }
+        }
+        
+        print("📚 PHYSICS: Reset bookshelf, shelf positions, and physics body positions")
+    }
+    
     
     private func highlightFirstLetterTiles() {
         let expectedWords = gameModel.getExpectedWords()
@@ -2237,6 +2348,16 @@ class LetterTile: SKSpriteNode, RespawnableTile {
     var isBeingDragged = false
     private var frontFace: SKShapeNode?
     private var originalFrontColor: UIColor = .systemYellow
+    var isSquashed = false
+    private var originalScale: CGFloat = 1.0
+    
+    // Weight based on tile dimensions (width * height)
+    private func getMassForTile() -> CGFloat {
+        let tileArea = size.width * size.height
+        // Base mass proportional to area (40x40 = 1600, so base mass = 1600/1600 = 1.0)
+        return tileArea / 1600.0
+    }
+    
     
     init(letter: String, size: CGSize) {
         self.letter = letter.uppercased()
@@ -2303,7 +2424,7 @@ class LetterTile: SKSpriteNode, RespawnableTile {
         physicsBody?.isDynamic = true
         physicsBody?.friction = 1.0  // Maximum friction
         physicsBody?.restitution = 0.0  // No bouncing at all
-        physicsBody?.mass = 0.2  // Heavy tiles
+        physicsBody?.mass = getMassForTile()  // Dimension-based weight
         physicsBody?.linearDamping = 0.99  // Maximum damping - stops movement immediately
         physicsBody?.angularDamping = 0.99  // Maximum angular damping - stops rotation immediately
         physicsBody?.affectedByGravity = true  // Explicitly enable gravity
@@ -2356,6 +2477,8 @@ class LetterTile: SKSpriteNode, RespawnableTile {
         // Add letter to the main tile node instead of just the surface
         // This ensures it's always visible regardless of shape rendering issues
         self.addChild(letterLabel)
+        
+        // Debug weight labels disabled
     }
     
     // Hint system methods
@@ -2367,6 +2490,82 @@ class LetterTile: SKSpriteNode, RespawnableTile {
         frontFace?.fillColor = originalFrontColor
     }
     
+    // Directional squashing animation based on collision direction
+    func squashTile(intensity: CGFloat = 1.0, direction: CGVector = CGVector(dx: 0, dy: -1)) {
+        guard !isSquashed else { return }
+        
+        isSquashed = true
+        originalScale = 1.0  // Always use 1.0 as the original scale
+        
+        // Calculate squashing based on collision direction
+        let absDirectionX = abs(direction.dx)
+        let absDirectionY = abs(direction.dy)
+        
+        // Determine primary squashing axis based on collision direction
+        let squashFactor = 0.2 + (intensity * 0.3)  // Base squash: 0.2 to 0.5
+        let stretchFactor = 0.1 + (intensity * 0.2)  // Base stretch: 0.1 to 0.3
+        
+        var scaleX: CGFloat = 1.0
+        var scaleY: CGFloat = 1.0
+        
+        // Vertical impact (from above/below) - squash vertically, stretch horizontally
+        if absDirectionY > absDirectionX {
+            scaleY = 1.0 - squashFactor  // Compress vertically
+            scaleX = 1.0 + stretchFactor  // Stretch horizontally
+        }
+        // Horizontal impact (from sides) - squash horizontally, stretch vertically
+        else {
+            scaleX = 1.0 - squashFactor  // Compress horizontally
+            scaleY = 1.0 + stretchFactor  // Stretch vertically
+        }
+        
+        // Debug info will be handled by the collision handler
+        
+        // Quick compression animation with automatic restore
+        let squashAction = SKAction.group([
+            SKAction.scaleX(to: scaleX, duration: 0.1),
+            SKAction.scaleY(to: scaleY, duration: 0.1)
+        ])
+        
+        let restoreAction = SKAction.group([
+            SKAction.scaleX(to: 1.0, duration: 0.15),
+            SKAction.scaleY(to: 1.0, duration: 0.15)
+        ])
+        
+        let sequence = SKAction.sequence([squashAction, SKAction.wait(forDuration: 0.2), restoreAction])
+        
+        run(sequence) {
+            // Reset squashed state after animation completes
+            self.isSquashed = false
+        }
+    }
+    
+    // Bounce back animation with elastic effect
+    func unsquashTile() {
+        guard isSquashed else { return }
+        
+        isSquashed = false
+        
+        // Elastic bounce back with slight overshoot
+        let restoreAction = SKAction.group([
+            SKAction.scaleX(to: originalScale * 1.05, duration: 0.15),
+            SKAction.scaleY(to: originalScale * 1.05, duration: 0.15)
+        ])
+        
+        let settleAction = SKAction.group([
+            SKAction.scaleX(to: originalScale, duration: 0.15),
+            SKAction.scaleY(to: originalScale, duration: 0.15)
+        ])
+        
+        let bounceSequence = SKAction.sequence([restoreAction, settleAction])
+        run(bounceSequence)
+    }
+    
+    // Get the mass of this tile for collision calculations
+    func getTileMass() -> CGFloat {
+        return physicsBody?.mass ?? getMassForTile()
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -2374,7 +2573,303 @@ class LetterTile: SKSpriteNode, RespawnableTile {
 
 extension PhysicsGameScene: SKPhysicsContactDelegate {
     func didBegin(_ contact: SKPhysicsContact) {
-        // Handle tile collisions and word formation
+        let bodyA = contact.bodyA
+        let bodyB = contact.bodyB
+        
+        // Check for tile-on-tile vertical collisions (any RespawnableTile)
+        if let tileA = bodyA.node as? RespawnableTile,
+           let tileB = bodyB.node as? RespawnableTile {
+            
+            handleTileCollision(tileA: tileA, tileB: tileB, contact: contact)
+        }
+        
+        // Check for tile-shelf collisions for jolting effects
+        if (bodyA.categoryBitMask == PhysicsCategories.tile && bodyB.categoryBitMask == PhysicsCategories.shelf) ||
+           (bodyA.categoryBitMask == PhysicsCategories.shelf && bodyB.categoryBitMask == PhysicsCategories.tile) {
+            
+            let tile = bodyA.categoryBitMask == PhysicsCategories.tile ? bodyA.node as? RespawnableTile : bodyB.node as? RespawnableTile
+            handleShelfCollision(tile: tile, contact: contact)
+        }
+        
+        // Handle word formation (existing logic would go here)
+    }
+    
+    private func calculateCollisionDirection(upperTile: RespawnableTile, lowerTile: RespawnableTile, contact: SKPhysicsContact) -> CGVector {
+        // Get collision normal (direction of impact)
+        let collisionNormal = contact.contactNormal
+        
+        // Consider tile rotation - if tile is rotated, adjust the collision direction
+        let tileRotation = lowerTile.zRotation
+        
+        // Calculate the collision direction relative to the tile's orientation
+        let cos = cosf(Float(tileRotation))
+        let sin = sinf(Float(tileRotation))
+        
+        // Rotate the collision normal by the tile's rotation to get local collision direction
+        let localX = collisionNormal.dx * CGFloat(cos) + collisionNormal.dy * CGFloat(sin)
+        let localY = -collisionNormal.dx * CGFloat(sin) + collisionNormal.dy * CGFloat(cos)
+        
+        // Normalize and return the local collision direction
+        let magnitude = sqrt(localX * localX + localY * localY)
+        if magnitude > 0 {
+            return CGVector(dx: localX / magnitude, dy: localY / magnitude)
+        }
+        
+        // Default to vertical collision if calculation fails
+        return CGVector(dx: 0, dy: -1)
+    }
+    
+    private func handleTileCollision(tileA: RespawnableTile, tileB: RespawnableTile, contact: SKPhysicsContact) {
+        // Determine which tile is above and which is below based on vertical position
+        let upperTile = tileA.position.y > tileB.position.y ? tileA : tileB
+        let lowerTile = tileA.position.y > tileB.position.y ? tileB : tileA
+        
+        // Check if this is a vertical collision (falling tile landing on another)
+        let verticalVelocity = upperTile.physicsBody?.velocity.dy ?? 0
+        let upperMass = upperTile.getTileMass()
+        let lowerMass = lowerTile.getTileMass()
+        
+        // Additional checks to prevent squashing loops
+        let yPositionDiff = upperTile.position.y - lowerTile.position.y
+        let isProperVerticalImpact = yPositionDiff > 20  // Upper tile must be significantly above
+        let isUpperTileFalling = verticalVelocity < -15  // Higher threshold for genuine falling
+        
+        // Check if lower tile is already squashed (prevent loops)
+        let isLowerTileSquashed = lowerTile.isSquashed
+        
+        // Debug: Show all tile collisions with detailed weight info
+        let upperTileDesc = (upperTile as? LetterTile)?.letter ?? "SCORE"
+        let lowerTileDesc = (lowerTile as? LetterTile)?.letter ?? "SCORE"
+        addDebugMessage("COLLISION: \(upperTileDesc) (\(upperMass)) -> \(lowerTileDesc) (\(lowerMass)) vel: \(String(format: "%.1f", verticalVelocity))")
+        
+        // Only trigger squashing for proper vertical impacts from above
+        if isProperVerticalImpact && isUpperTileFalling && !isLowerTileSquashed {
+            // Heavy tile landing on light tile = squashing effect
+            if upperMass > lowerMass {
+                let weightDifference = max(upperMass - lowerMass, 0.1) // Minimum intensity of 0.1
+                let intensity = min(weightDifference / 0.5, 1.0) // Scale for new mass ranges
+                
+                // Debug: Show detailed squashing calculation
+                addDebugMessage("WEIGHT DIFF: \(String(format: "%.2f", weightDifference)), intensity: \(String(format: "%.2f", intensity))")
+                addDebugMessage("🔥 SQUASH TRIGGERED!")
+                showDebugMessage("SQUASH! \(upperTileDesc) -> \(lowerTileDesc)", at: upperTile.position)
+                
+                // Calculate collision direction for directional squashing
+                let collisionDirection = calculateCollisionDirection(upperTile: upperTile, lowerTile: lowerTile, contact: contact)
+                
+                // Debug: Show collision direction and tile rotation
+                addDebugMessage("DIR: dx=\(String(format: "%.2f", collisionDirection.dx)), dy=\(String(format: "%.2f", collisionDirection.dy))")
+                addDebugMessage("TILE ROT: \(String(format: "%.2f", lowerTile.zRotation)) rad")
+                
+                // Squash the lower tile with direction
+                lowerTile.squashTile(intensity: intensity, direction: collisionDirection)
+                
+                // Play squash sound effect
+                playSquashSound(intensity: intensity)
+                
+                // Squashing animation includes auto-restore, no need for separate unsquash call
+            } else {
+                addDebugMessage("NO SQUASH: \(upperMass) < \(lowerMass) (not heavy enough)")
+            }
+        } else {
+            addDebugMessage("NO SQUASH: vel \(String(format: "%.1f", verticalVelocity)) >= -3 (too slow)")
+        }
+    }
+    
+    private func handleShelfCollision(tile: RespawnableTile?, contact: SKPhysicsContact) {
+        guard let tile = tile else { return }
+        
+        // Skip collision handling if bookshelf is currently jolting
+        if isBookshelfJolting {
+            return
+        }
+        
+        // Calculate impact force based on mass and velocity
+        let velocity = tile.physicsBody?.velocity.dy ?? 0
+        let mass = tile.getTileMass()
+        let impactForce = abs(velocity) * mass
+        
+        // Much more sensitive to heavy tiles - lower thresholds for score tiles
+        let forceThreshold: CGFloat = mass > 2.0 ? 22.46 : 67.39  // Increased by 30% (17.28→22.46, 51.84→67.39)
+        
+        // Trigger shelf jolting for heavy impacts
+        if impactForce > forceThreshold {
+            let intensity = min(impactForce / 30, 1.0)  // More dramatic jolting
+            
+            // Debug: Show shelf impact info
+            let tileDesc = (tile as? LetterTile)?.letter ?? "SCORE"
+            addDebugMessage("⚡ SHELF: \(tileDesc) (\(String(format: "%.1f", mass))) force: \(String(format: "%.1f", impactForce))")
+            showDebugMessage("SHELF JOLT! \(tileDesc)", at: tile.position)
+            
+            // Use the same dramatic jolting effect as hints
+            joltPlayingField()
+            
+            // Play impact sound effect
+            playImpactSound(intensity: intensity)
+            
+            // Dramatically reduce tile velocity to prevent continuous jolting
+            if let physicsBody = tile.physicsBody {
+                let dampingFactor: CGFloat = 0.1  // Reduce velocity to 10% of original
+                physicsBody.velocity = CGVector(dx: physicsBody.velocity.dx * dampingFactor, 
+                                              dy: physicsBody.velocity.dy * dampingFactor)
+                
+                // Also reduce angular velocity to prevent spinning
+                physicsBody.angularVelocity *= dampingFactor
+            }
+        }
+    }
+    
+    private func triggerShelfJolt(nearPosition: CGPoint, intensity: CGFloat) {
+        // Find the nearest shelf to the impact position
+        var closestShelf: SKNode?
+        var closestDistance: CGFloat = CGFloat.infinity
+        
+        for shelf in shelves {
+            let distance = abs(shelf.position.y - nearPosition.y)
+            if distance < closestDistance {
+                closestDistance = distance
+                closestShelf = shelf
+            }
+        }
+        
+        guard let shelf = closestShelf, closestDistance < 100 else { return }
+        
+        // Create shelf vibration effect - much more dramatic for heavy tiles
+        let joltIntensity = intensity * 15.0  // More dramatic jolting
+        let joltDuration = 0.4 + (intensity * 0.4)  // Much longer jolts for harder impacts
+        
+        // Create rapid oscillation effect
+        let _ = SKAction.moveBy(x: -joltIntensity, y: 0, duration: 0.02)
+        let _ = SKAction.moveBy(x: joltIntensity * 2, y: 0, duration: 0.04)
+        let _ = SKAction.moveBy(x: -joltIntensity, y: 0, duration: 0.02)
+        
+        // Create a sequence of jolts with diminishing intensity
+        var joltSequence: [SKAction] = []
+        let joltCycles = Int(joltDuration / 0.08)  // Number of oscillations
+        
+        for i in 0..<joltCycles {
+            let diminish = CGFloat(joltCycles - i) / CGFloat(joltCycles)  // Decay effect
+            let currentJoltLeft = SKAction.moveBy(x: -joltIntensity * diminish, y: 0, duration: 0.02)
+            let currentJoltRight = SKAction.moveBy(x: joltIntensity * 2 * diminish, y: 0, duration: 0.04)
+            let currentJoltCenter = SKAction.moveBy(x: -joltIntensity * diminish, y: 0, duration: 0.02)
+            
+            joltSequence.append(contentsOf: [currentJoltLeft, currentJoltRight, currentJoltCenter])
+        }
+        
+        // Run the jolting animation
+        let fullJoltSequence = SKAction.sequence(joltSequence)
+        shelf.run(fullJoltSequence)
+        
+        // Create ripple effect on nearby tiles for heavy impacts
+        if intensity > 0.5 {  // Only for significant impacts
+            createShelfRippleEffect(impactPosition: nearPosition, intensity: intensity)
+        }
+        
+        // Create ripple effect on adjacent tiles
+        triggerRippleEffect(nearPosition: nearPosition, intensity: intensity)
+    }
+    
+    private func createShelfRippleEffect(impactPosition: CGPoint, intensity: CGFloat) {
+        // Find tiles near the impact position on the shelf
+        let rippleRadius: CGFloat = 100.0 + (intensity * 50.0)  // Wider ripple for heavier impacts
+        
+        for tile in tiles {
+            let distance = sqrt(pow(tile.position.x - impactPosition.x, 2) + pow(tile.position.y - impactPosition.y, 2))
+            
+            if distance < rippleRadius {
+                // Calculate ripple intensity based on distance (closer = stronger)
+                let rippleIntensity = intensity * (1.0 - distance / rippleRadius)
+                
+                // Apply a brief impulse to the tile
+                let impulseX = CGFloat.random(in: -rippleIntensity...rippleIntensity) * 20.0
+                let impulseY = CGFloat.random(in: 0...rippleIntensity) * 10.0
+                
+                tile.physicsBody?.applyImpulse(CGVector(dx: impulseX, dy: impulseY))
+                
+                // Small bounce animation
+                let bounceScale = 1.0 + (rippleIntensity * 0.1)
+                let bounceAction = SKAction.sequence([
+                    SKAction.scale(to: bounceScale, duration: 0.1),
+                    SKAction.scale(to: 1.0, duration: 0.1)
+                ])
+                tile.run(bounceAction)
+            }
+        }
+    }
+    
+    private func triggerRippleEffect(nearPosition: CGPoint, intensity: CGFloat) {
+        // Find tiles near the impact position
+        let rippleRadius: CGFloat = 100 + (intensity * 50)  // Larger ripples for harder impacts
+        
+        for tile in tiles {
+            // All tiles in the tiles array are LetterTile type
+            
+            let distance = sqrt(pow(tile.position.x - nearPosition.x, 2) + pow(tile.position.y - nearPosition.y, 2))
+            
+            if distance < rippleRadius && distance > 0 {
+                // Calculate ripple force based on distance and intensity
+                let rippleForce = intensity * 200 * (1 - distance / rippleRadius)
+                
+                // Apply radial force away from impact
+                let angle = atan2(tile.position.y - nearPosition.y, tile.position.x - nearPosition.x)
+                let forceX = cos(angle) * rippleForce
+                let forceY = sin(angle) * rippleForce
+                
+                // Apply impulse to tiles
+                DispatchQueue.main.asyncAfter(deadline: .now() + Double(distance / rippleRadius) * 0.1) {
+                    tile.physicsBody?.applyImpulse(CGVector(dx: forceX, dy: forceY))
+                }
+            }
+        }
+    }
+    
+    // MARK: - Sound Effects
+    private func playSquashSound(intensity: CGFloat) {
+        // Play a soft squish sound with volume based on intensity
+        let _ = "squish"  // Would need to add sound file to bundle
+        let _ = Float(0.3 + intensity * 0.4)  // Volume range: 0.3 to 0.7
+        
+        // For now, use system sounds or haptic feedback
+        if intensity > 0.7 {
+            // Heavy squash - strong haptic
+            let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+            impactFeedback.impactOccurred()
+        } else {
+            // Light squash - light haptic
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+        }
+        
+        // Could add: run(SKAction.playSoundFileNamed(soundName, waitForCompletion: false))
+    }
+    
+    private func playImpactSound(intensity: CGFloat) {
+        // Play a wooden impact sound with volume based on intensity
+        let _ = "wood_impact"  // Would need to add sound file to bundle
+        let _ = Float(0.4 + intensity * 0.5)  // Volume range: 0.4 to 0.9
+        
+        // For now, use system sounds or haptic feedback
+        if intensity > 0.8 {
+            // Heavy impact - strong haptic
+            let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+            impactFeedback.impactOccurred(intensity: intensity)
+        } else if intensity > 0.5 {
+            // Medium impact - medium haptic
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred(intensity: intensity)
+        } else {
+            // Light impact - light haptic
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred(intensity: intensity)
+        }
+        
+        // Could add: run(SKAction.playSoundFileNamed(soundName, waitForCompletion: false))
+    }
+    
+    // Debug: Show visual feedback for physics events
+    private func showDebugMessage(_ message: String, at position: CGPoint) {
+        // Debug messages disabled
+        return
     }
 }
 
@@ -2382,6 +2877,7 @@ extension PhysicsGameScene: SKPhysicsContactDelegate {
 class InformationTile: SKSpriteNode, RespawnableTile {
     private var frontFace: SKShapeNode?
     var isBeingDragged = false
+    var isSquashed = false
     
     init(size: CGSize) {
         super.init(texture: nil, color: .clear, size: size)
@@ -2390,6 +2886,55 @@ class InformationTile: SKSpriteNode, RespawnableTile {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    // Get the mass of this tile for collision calculations
+    func getTileMass() -> CGFloat {
+        return physicsBody?.mass ?? {
+            let tileArea = size.width * size.height
+            return tileArea / 1600.0
+        }()
+    }
+    
+    // Squashing animation for information tiles
+    func squashTile(intensity: CGFloat = 1.0, direction: CGVector = CGVector(dx: 0, dy: -1)) {
+        guard !isSquashed else { return }  // Prevent multiple squashing
+        
+        isSquashed = true
+        
+        // Information tiles can be squashed similar to letter tiles
+        let absDirectionX = abs(direction.dx)
+        let absDirectionY = abs(direction.dy)
+        
+        let squashFactor = 0.2 + (intensity * 0.3)
+        let stretchFactor = 0.1 + (intensity * 0.2)
+        
+        var scaleX: CGFloat = 1.0
+        var scaleY: CGFloat = 1.0
+        
+        if absDirectionY > absDirectionX {
+            scaleY = 1.0 - squashFactor
+            scaleX = 1.0 + stretchFactor
+        } else {
+            scaleX = 1.0 - squashFactor
+            scaleY = 1.0 + stretchFactor
+        }
+        
+        let squashAction = SKAction.group([
+            SKAction.scaleX(to: scaleX, duration: 0.1),
+            SKAction.scaleY(to: scaleY, duration: 0.1)
+        ])
+        
+        let restoreAction = SKAction.group([
+            SKAction.scaleX(to: 1.0, duration: 0.15),
+            SKAction.scaleY(to: 1.0, duration: 0.15)
+        ])
+        
+        let sequence = SKAction.sequence([squashAction, SKAction.wait(forDuration: 0.2), restoreAction])
+        run(sequence) {
+            // Reset squashed state after animation completes
+            self.isSquashed = false
+        }
     }
     
     private func setupTileGeometry(size: CGSize) {
@@ -2474,7 +3019,9 @@ class ScoreTile: InformationTile {
         // Create physics body
         physicsBody = SKPhysicsBody(rectangleOf: size)
         physicsBody?.isDynamic = true
-        physicsBody?.mass = 0.1
+        // Double the weight of a normal tile based on dimensions
+        let tileArea = size.width * size.height
+        physicsBody?.mass = (tileArea / 1600.0) * 2.0  // Double weight for score tiles
         physicsBody?.friction = 0.6
         physicsBody?.restitution = 0.3
         physicsBody?.linearDamping = 0.95
@@ -2594,7 +3141,7 @@ class MessageTile: InformationTile {
         // Create physics body - same as ScoreTile
         physicsBody = SKPhysicsBody(rectangleOf: size)
         physicsBody?.isDynamic = true
-        physicsBody?.mass = 0.1
+        physicsBody?.mass = 0.5  // Significantly heavier than letter tiles
         physicsBody?.friction = 0.6
         physicsBody?.restitution = 0.3
         physicsBody?.linearDamping = 0.95
@@ -2658,7 +3205,7 @@ class LanguageTile: InformationTile {
         physicsBody = SKPhysicsBody(rectangleOf: size)
         physicsBody?.isDynamic = true
         physicsBody?.affectedByGravity = true
-        physicsBody?.mass = 0.1
+        physicsBody?.mass = 0.5  // Significantly heavier than letter tiles
         physicsBody?.friction = 0.6
         physicsBody?.restitution = 0.3
         physicsBody?.linearDamping = 0.95
