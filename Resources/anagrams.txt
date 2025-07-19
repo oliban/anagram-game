@@ -1,10 +1,78 @@
-be kind
-hello world
-time flies
-open door
-quick brown fox jumps
-make it count
-lost keys
-coffee break
-bright sunny day
-code works
+star light|Celestial bodies twinkling above
+beach walk|Stroll along the sandy shore
+fresh air|Clean oxygen from nature
+cool water|Refreshing liquid for drinking
+warm fire|Cozy flames for comfort
+bird song|Melodic chirping sounds
+green tree|Tall plant with leaves
+blue sky|Clear atmosphere above
+red rose|Romantic flower bloom
+old book|Aged reading material
+new day|Fresh morning start
+long road|Extended path ahead
+fast car|Speedy vehicle transportation
+slow train|Leisurely rail journey
+big house|Large residential building
+small cat|Tiny feline companion
+happy dog|Joyful canine friend
+calm sea|Peaceful ocean waters
+dark night|Evening without light
+bright sun|Radiant solar star
+cold wind|Chilly air movement
+hot coffee|Warm caffeinated beverage
+sweet cake|Sugary baked dessert
+sour lemon|Tart citrus fruit
+hard work|Difficult physical effort
+soft bed|Comfortable sleeping place
+deep sleep|Restful unconscious state
+high mountain|Tall rocky peak
+low valley|Depressed land area
+clear water|Transparent flowing liquid
+dirty hands|Soiled fingers from work
+clean room|Tidy organized space
+open window|Unsealed glass opening
+closed door|Shut entrance barrier
+full moon|Complete lunar circle
+empty cup|Vacant drinking vessel
+thick book|Heavy reading volume
+thin paper|Lightweight writing material
+loud music|High volume sounds
+quiet room|Silent peaceful space
+strong wind|Powerful air current
+weak signal|Poor communication strength
+quick lunch|Fast midday meal
+slow dinner|Leisurely evening meal
+good food|Delicious nourishing sustenance
+bad weather|Unpleasant atmospheric conditions
+true story|Factual narrative account
+false alarm|Mistaken warning signal
+young child|Small developing person
+old man|Elderly male human
+rich flavor|Intense taste experience
+poor weather|Harsh climate conditions
+wise words|Thoughtful spoken advice
+brave heart|Courageous inner spirit
+kind soul|Compassionate gentle nature
+gentle rain|Soft water drops
+heavy snow|Thick frozen precipitation
+light breeze|Mild air movement
+sharp knife|Keen cutting blade
+dull blade|Blunt edged tool
+smooth stone|Polished rock surface
+rough surface|Uneven textured area
+wet grass|Moist green lawn
+dry sand|Parched granular earth
+fresh bread|Newly baked loaf
+stale cookie|Old hardened biscuit
+bright idea|Brilliant creative thought
+dark secret|Hidden mysterious truth
+white cloud|Pale sky formation
+black cat|Dark feline animal
+silver moon|Metallic colored satellite
+golden sun|Yellow precious star
+purple flower|Violet colored bloom
+orange sunset|Amber evening sky
+yellow bird|Bright colored songbird
+pink rose|Soft colored flower
+brown earth|Rich soil ground
+gray sky|Clouded overcast atmosphere

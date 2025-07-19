@@ -382,6 +382,13 @@ app.post('/api/contribution/:token/submit', async (req, res) => {
   }
 });
 
+// Debug logging endpoint
+app.post('/api/debug/log', (req, res) => {
+  const { message, timestamp, playerId } = req.body;
+  console.log(`🔍 DEBUG [${timestamp}] Player ${playerId}: ${message}`);
+  res.json({ status: 'logged' });
+});
+
 // API Routes
 app.get('/api/status', async (req, res) => {
   try {
