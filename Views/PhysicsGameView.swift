@@ -427,8 +427,8 @@ struct PhysicsGameView: View {
                                     await gameModel.skipCurrentGame()
                                     print("🔥 Finished calling gameModel.skipCurrentGame()")
                                     // The GameModel.startNewGame() will handle scene updates automatically
-                                    // Brief delay to show loading completed
-                                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                                    // Longer delay to ensure tile creation is fully complete
+                                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
                                     isSkipping = false
                                 }
                             }) {
@@ -651,6 +651,31 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Connect this scene as the message tile spawner
         gameModel.messageTileSpawner = self
+        
+        // Debug: Verify connection is made
+        print("🔗 Scene connected to GameModel as messageTileSpawner")
+        Task {
+            let debugMessage = "SCENE_CONNECTED: PhysicsGameScene connected as messageTileSpawner"
+            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let logData = [
+                "message": debugMessage,
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "playerId": "scene-connection"
+            ]
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch {
+                print("Scene connection debug logging failed: \(error)")
+            }
+        }
         
         // Don't create tiles automatically - wait for setupGame() to call resetGame()
         
@@ -1748,25 +1773,112 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     func resetGame() {
         print("🔄 Scene resetGame() called")
         
+        // Add server debug logging - create a simple debug endpoint call
+        Task {
+            let debugMessage = "SCENE_RESET_CALLED: PhysicsGameScene.resetGame() started"
+            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let logData = [
+                "message": debugMessage,
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "playerId": "scene-debug"
+            ]
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch {
+                print("Scene debug logging failed: \(error)")
+            }
+        }
+        
         // Clear any existing celebration or game state
         celebrationText = ""
         
         // Clear hint effects when starting new game
         clearAllHints()
         
-        // CRITICAL: Clear all existing tiles immediately
-        print("🗑️ Clearing \(tiles.count) existing tiles")
+        // COMPREHENSIVE CLEANUP: Remove ALL tiles from scene
+        // This catches any tiles that might not be tracked in our arrays
+        print("🗑️ Starting comprehensive tile cleanup...")
+        
+        // Method 1: Remove tracked tiles from arrays
+        print("🗑️ Clearing \(tiles.count) existing letter tiles")
         for tile in tiles {
             tile.removeFromParent()
         }
         tiles.removeAll()
         
-        // Clear existing message tiles
         print("🗑️ Clearing \(messageTiles.count) existing message tiles")
         for messageTile in messageTiles {
             messageTile.removeFromParent()
         }
         messageTiles.removeAll()
+        
+        // Method 2: Remove score and language tiles specifically
+        if let scoreT = scoreTile {
+            print("🗑️ Removing existing score tile")
+            scoreT.removeFromParent()
+            scoreTile = nil
+        }
+        
+        if let langT = languageTile {
+            print("🗑️ Removing existing language tile")
+            langT.removeFromParent()
+            languageTile = nil
+        }
+        
+        // Method 3: Scan entire scene for any remaining tile nodes and remove them
+        print("🗑️ Scanning scene for any remaining tile nodes...")
+        print("🗑️ Total scene children before cleanup: \(children.count)")
+        var removedCount = 0
+        var childrenToRemove: [SKNode] = []
+        
+        for child in children {
+            // Remove any LetterTile, ScoreTile, LanguageTile, or MessageTile that might have been missed
+            if child is LetterTile || child is ScoreTile || child is LanguageTile || child is MessageTile {
+                print("🗑️ Found orphaned tile of type \(type(of: child)), removing...")
+                childrenToRemove.append(child)
+                removedCount += 1
+            }
+        }
+        
+        // Remove all found tiles
+        for child in childrenToRemove {
+            child.removeFromParent()
+        }
+        
+        print("🗑️ Removed \(removedCount) orphaned tiles from scene")
+        print("🗑️ Total scene children after cleanup: \(children.count)")
+        
+        // Debug: Send tile cleanup details to server
+        Task {
+            let debugMessage = "SCENE_CLEANUP: Removed \(removedCount) orphaned tiles, scene now has \(children.count) children"
+            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let logData = [
+                "message": debugMessage,
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "playerId": "scene-cleanup"
+            ]
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch {
+                print("Scene cleanup debug logging failed: \(error)")
+            }
+        }
         
         // Stop any ongoing physics effects
         removeAction(forKey: "quakeForces")
@@ -1787,6 +1899,30 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
         
         print("✅ Scene reset complete - \(tiles.count) new tiles created")
+        
+        // Notify that scene reset is completely finished
+        Task {
+            let debugMessage = "SCENE_RESET_COMPLETE: Scene reset and tile creation finished, \(tiles.count) tiles created"
+            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let logData = [
+                "message": debugMessage,
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "playerId": "scene-complete"
+            ]
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch {
+                print("Scene complete debug logging failed: \(error)")
+            }
+        }
     }
     
     
@@ -2152,11 +2288,10 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         clearAllHints()
         
         // Reset game model to get new sentence
+        // GameModel.startNewGame will automatically call resetGame() through messageTileSpawner
         Task {
             await gameModel.startNewGame(isUserInitiated: true)
-            
-            // Reset scene using the improved resetGame method
-            resetGame()
+            // No need to call resetGame() here - it's already called by GameModel.startNewGame()
         }
     }
     
@@ -2519,7 +2654,7 @@ class LetterTile: SKSpriteNode, RespawnableTile {
         // Create main letter with good contrast
         let letterLabel = SKLabelNode(text: letter)
         letterLabel.fontSize = 24
-        letterLabel.fontName = "Arial-Bold"
+        letterLabel.fontName = "HelveticaNeue-Bold"
         letterLabel.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)  // Dark text
         letterLabel.verticalAlignmentMode = .center
         letterLabel.horizontalAlignmentMode = .center
@@ -3050,7 +3185,7 @@ class ScoreTile: InformationTile {
         super.init(size: size)
         
         // Create score label (top line)
-        scoreLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        scoreLabel = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
         scoreLabel?.fontSize = 18
         scoreLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
         scoreLabel?.verticalAlignmentMode = .center
@@ -3145,7 +3280,7 @@ class MessageTile: InformationTile {
         var lines: [String] = []
         var currentLine = ""
         
-        let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        let tempLabel = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
         tempLabel.fontSize = fontSize
         
         for word in words {
@@ -3180,7 +3315,7 @@ class MessageTile: InformationTile {
         let minWidth: CGFloat = 80
         
         // Calculate single line width first
-        let tempLabel = SKLabelNode(fontNamed: "Arial-Bold")
+        let tempLabel = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
         tempLabel.fontSize = fontSize
         tempLabel.text = message
         let singleLineWidth = tempLabel.frame.width
@@ -3199,7 +3334,7 @@ class MessageTile: InformationTile {
         
         // Create message labels for each line
         for (index, line) in wrappedLines.enumerated() {
-            let label = SKLabelNode(fontNamed: "Arial-Bold")
+            let label = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
             label.fontSize = fontSize
             label.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
             label.verticalAlignmentMode = .center

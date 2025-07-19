@@ -51,6 +51,7 @@ class GameModel: ObservableObject {
     private var lobbyDisplayQueue: [CustomPhrase] = [] // Separate queue for lobby display only
     private var isStartingNewGame = false
     private var isCheckingPhrases = false
+    private var isSkipping = false // Prevent concurrent skip operations
     
     // Computed property to get current language for LanguageTile display
     var currentLanguage: String {
@@ -275,11 +276,16 @@ class GameModel: ObservableObject {
         
         // Trigger scene reset after all game model updates are complete
         await MainActor.run {
+            print("🔄 About to trigger scene reset - messageTileSpawner: \(messageTileSpawner != nil ? "connected" : "nil")")
             messageTileSpawner?.resetGame()
             print("🔄 Triggered scene reset from GameModel")
             // Reset flag to allow future phrase checks
             isCheckingPhrases = false
         }
+        
+        // Send debug messages after MainActor.run
+        await sendDebugToServer("SCENE_RESET: messageTileSpawner is \(messageTileSpawner != nil ? "connected" : "nil")")
+        await sendDebugToServer("SCENE_RESET: resetGame() called on scene")
     }
     
     private func scrambleLetters() {
@@ -375,6 +381,15 @@ class GameModel: ObservableObject {
     func skipCurrentGame() async {
         print("🚀🚀🚀 SKIP BUTTON PRESSED - skipCurrentGame() CALLED 🚀🚀🚀")
         await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame()")
+        
+        // Prevent concurrent skip operations to avoid race conditions
+        guard !isSkipping else {
+            await sendDebugToServer("SKIP_BLOCKED: Already skipping, ignoring concurrent request")
+            print("⚠️ Skip already in progress, ignoring concurrent request")
+            return
+        }
+        
+        isSkipping = true
         print("🚀 Skip button pressed")
         
         // If we have a current custom phrase, skip it on the server
@@ -413,6 +428,9 @@ class GameModel: ObservableObject {
         await sendDebugToServer("SKIP_STARTING_NEW_GAME: About to call startNewGame")
         print("🚀 Starting new game after skip")
         await startNewGame(isUserInitiated: true)
+        
+        // Reset skip flag to allow future skip operations
+        isSkipping = false
         await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished")
     }
     
