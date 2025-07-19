@@ -88,6 +88,9 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - **When context gets long**: Re-read this CLAUDE.md file, summarize progress in PROGRESS.md, document current state before major changes
 - **REMINDER**: If this file hasn't been referenced in 30+ minutes, RE-READ IT!
 
+## BUILD WARNINGS
+- **Never build the apps with clean flag if there is not a very good reason for it!**
+
 ---
 
 ## REFERENCE COMMANDS
