@@ -2,8 +2,20 @@ import Foundation
 import SwiftData
 import Combine
 
+// Data structure for local phrases with clues
+struct LocalPhrase {
+    let content: String
+    let clue: String?
+    
+    init(content: String, clue: String? = nil) {
+        self.content = content
+        self.clue = clue
+    }
+}
+
 protocol MessageTileSpawner: AnyObject {
     func spawnMessageTile(message: String)
+    func resetGame()
 }
 
 @Observable
@@ -33,11 +45,12 @@ class GameModel: ObservableObject {
     var playerName: String? = nil
     var networkManager: NetworkManager? = nil
     
-    private var sentences: [String] = []
+    private var localPhrases: [LocalPhrase] = []
     var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
     private var phraseQueue: [CustomPhrase] = [] // Queue for incoming phrases
     private var lobbyDisplayQueue: [CustomPhrase] = [] // Separate queue for lobby display only
     private var isStartingNewGame = false
+    private var isCheckingPhrases = false
     
     // Computed property to get current language for LanguageTile display
     var currentLanguage: String {
@@ -79,23 +92,41 @@ class GameModel: ObservableObject {
             return
         }
         
-        sentences = content.components(separatedBy: .newlines)
+        localPhrases = content.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+            .map { line in
+                // Parse pipe-separated format: "phrase|clue"
+                let components = line.components(separatedBy: "|")
+                if components.count == 2 {
+                    let phrase = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                    let clue = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    return LocalPhrase(content: phrase, clue: clue.isEmpty ? nil : clue)
+                } else {
+                    // Backwards compatibility: treat as phrase-only
+                    return LocalPhrase(content: line, clue: nil)
+                }
+            }
         
-        if sentences.isEmpty {
+        if localPhrases.isEmpty {
             gameState = .error
         }
     }
     
     func startNewGame(isUserInitiated: Bool = false) async {
         
+        // Debug: Log entry to startNewGame
+        await sendDebugToServer("ENTERING_startNewGame: isUserInitiated=\(isUserInitiated)")
+        
         // Clear notification tracking for new game session
-        activeNotifications.removeAll()
-        print("📢 NOTIFICATION: Cleared notification tracking for new game session")
+        await MainActor.run {
+            activeNotifications.removeAll()
+            print("📢 NOTIFICATION: Cleared notification tracking for new game session")
+        }
         
         // Prevent multiple concurrent calls
         guard !isStartingNewGame else {
+            await sendDebugToServer("STARTGAME_BLOCKED: already starting new game")
             return
         }
         
@@ -112,7 +143,17 @@ class GameModel: ObservableObject {
     
     @MainActor
     private func checkForCustomPhrases(isUserInitiated: Bool = false) async {
+        // Prevent multiple simultaneous phrase checks
+        guard !isCheckingPhrases else {
+            await sendDebugToServer("PHRASE_CHECK_BLOCKED: already checking phrases")
+            return
+        }
+        
+        isCheckingPhrases = true
         gameState = .loading
+        
+        // Debug: Log entry to checkForCustomPhrases
+        await sendDebugToServer("ENTERING_checkForCustomPhrases: isUserInitiated=\(isUserInitiated)")
         
         let networkManager = NetworkManager.shared
         
@@ -155,7 +196,11 @@ class GameModel: ObservableObject {
             } else {
                 // FALLBACK: Fetch from server if no queued or push-delivered phrase
                 print("🔍 GAME: No queued or push-delivered phrase, fetching from server")
+                await sendDebugToServer("SERVER_FETCH_STARTING: fetching phrases from server")
                 let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer()
+                
+                // Debug: Log what we got from server
+                await sendDebugToServer("SERVER_FETCH_RESULT: got \(customPhrases.count) phrases")
                 
                 if let firstPhrase = customPhrases.first {
                     print("✅ GAME: Got phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
@@ -176,17 +221,35 @@ class GameModel: ObservableObject {
                 } else {
                     print("🎯 GAME: No custom phrases available, using default sentence")
                     
+                    // Debug: Log that we're using local phrases
+                    await sendDebugToServer("USING_LOCAL_PHRASES: localPhrases.count=\(localPhrases.count)")
+                    
                     // Use a random sentence from the default collection
-                    guard !sentences.isEmpty else {
+                    guard !localPhrases.isEmpty else {
                         gameState = .error
+                        isCheckingPhrases = false
                         return
                     }
                     
                     currentCustomPhrase = nil
-                    currentSentence = sentences.randomElement() ?? "The cat sat on the mat"
+                    let selectedPhrase = localPhrases.randomElement()?.content ?? "The cat sat on the mat"
+                    currentSentence = selectedPhrase
                     customPhraseInfo = ""
                     // Create a session-based phrase ID for local sentences
                     currentPhraseId = "local-\(UUID().uuidString)"
+                    print("🔍 DEBUG: Selected local phrase: '\(selectedPhrase)'")
+                    print("🔍 DEBUG: Total local phrases available: \(localPhrases.count)")
+                    
+                    // Log calculated difficulty for debugging
+                    let calculatedDifficulty = calculateDifficultyForPhrase(selectedPhrase)
+                    print("🔍 DEBUG: LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
+                    
+                    // Send debug info to server
+                    await sendDebugToServer("LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
+                    
+                    // CRITICAL: Set phraseDifficulty for local phrases
+                    phraseDifficulty = calculatedDifficulty
+                    await sendDebugToServer("LOCAL_PHRASE_DIFFICULTY_SET: phraseDifficulty=\(phraseDifficulty)")
                 }
             }
         }
@@ -206,8 +269,16 @@ class GameModel: ObservableObject {
             // For custom phrases, use a default difficulty score or analyze the phrase
             phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
         } else {
-            // For default local phrases, use a standard difficulty
-            phraseDifficulty = 100 // Default score for local phrases
+            // For default local phrases, calculate the actual difficulty score
+            phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
+        }
+        
+        // Trigger scene reset after all game model updates are complete
+        await MainActor.run {
+            messageTileSpawner?.resetGame()
+            print("🔄 Triggered scene reset from GameModel")
+            // Reset flag to allow future phrase checks
+            isCheckingPhrases = false
         }
     }
     
@@ -216,6 +287,7 @@ class GameModel: ObservableObject {
         scrambledLetters = Array(letters).map { String($0) }.shuffled()
     }
     
+    @MainActor
     func resetGame() {
         scrambleLetters()
         gameState = .playing
@@ -226,7 +298,9 @@ class GameModel: ObservableObject {
         currentScore = 0
         print("🔍 SCORE RESET: Score reset to 0 in resetGame()")
         hintsUsed = 0
-        phraseDifficulty = 0
+        
+        // Recalculate difficulty for current phrase
+        phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
     }
     
     func validateWordCompletion(formedWords: [String]) -> Bool {
@@ -294,17 +368,24 @@ class GameModel: ObservableObject {
         let analysis = NetworkManager.analyzeDifficultyClientSide(phrase: phrase, language: language)
         
         print("🎯 GAME DIFFICULTY: Calculated \(analysis.score) for '\(phrase)' (\(language))")
+        print("🔍 DEBUG: Phrase source - isCustom: \(currentCustomPhrase != nil), phraseId: \(currentPhraseId ?? "nil")")
         return Int(analysis.score)
     }
     
     func skipCurrentGame() async {
+        print("🚀🚀🚀 SKIP BUTTON PRESSED - skipCurrentGame() CALLED 🚀🚀🚀")
+        await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame()")
         print("🚀 Skip button pressed")
         
         // If we have a current custom phrase, skip it on the server
         if let customPhrase = currentCustomPhrase {
+            await sendDebugToServer("SKIP_SERVER_PHRASE: Skipping custom phrase: \(customPhrase.content)")
             print("⏭️ Skipping custom phrase: \(customPhrase.content)")
+            
             let networkManager = NetworkManager.shared
+            await sendDebugToServer("SKIP_CALLING_SKIP_PHRASE: About to call skipPhrase")
             let skipSuccess = await networkManager.skipPhrase(phraseId: customPhrase.id)
+            await sendDebugToServer("SKIP_PHRASE_RESULT: skipSuccess=\(skipSuccess)")
             
             if skipSuccess {
                 print("✅ Successfully skipped phrase on server")
@@ -313,6 +394,7 @@ class GameModel: ObservableObject {
             }
             
             // Clear cached phrase data to prevent reuse
+            await sendDebugToServer("SKIP_CLEARING_LOCAL_DATA: Clearing currentCustomPhrase")
             await MainActor.run {
                 currentCustomPhrase = nil
                 customPhraseInfo = ""
@@ -320,17 +402,56 @@ class GameModel: ObservableObject {
             }
             
             // Clear any cached phrases from NetworkManager
+            await sendDebugToServer("SKIP_CLEARING_CACHE: About to call clearCachedPhrase")
             await networkManager.clearCachedPhrase()
+            await sendDebugToServer("SKIP_CACHE_CLEARED: clearCachedPhrase completed")
+        } else {
+            await sendDebugToServer("SKIP_NO_CUSTOM_PHRASE: No custom phrase to skip")
         }
         
         // Start a new game regardless of skip result
+        await sendDebugToServer("SKIP_STARTING_NEW_GAME: About to call startNewGame")
         print("🚀 Starting new game after skip")
         await startNewGame(isUserInitiated: true)
+        await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished")
     }
     
     func addHint(_ hint: String) {
         currentHints.append(hint)
         hintsUsed += 1
+    }
+    
+    // Get the clue for the current local phrase (if available)
+    func getCurrentLocalClue() -> String? {
+        // Only provide clue for local phrases, not custom phrases
+        guard currentCustomPhrase == nil else { return nil }
+        
+        // Find the current sentence in localPhrases and return its clue
+        let currentPhrase = localPhrases.first { $0.content == currentSentence }
+        return currentPhrase?.clue
+    }
+    
+    // Send debug message to server
+    private func sendDebugToServer(_ message: String) async {
+        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let logData = [
+            "message": message,
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "playerId": playerId ?? "unknown"
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: logData)
+            request.httpBody = jsonData
+            let _ = try await URLSession.shared.data(for: request)
+        } catch {
+            print("Debug logging failed: \(error)")
+        }
     }
     
     // Network notification setup

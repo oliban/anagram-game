@@ -115,13 +115,16 @@ struct HintButtonView: View {
             // Handle local phrases differently
             if phraseId.hasPrefix("local-") {
                 await MainActor.run {
-                    // Create a basic hint status for local phrases with simple scoring
+                    // Get the actual difficulty score from gameModel
+                    let actualScore = gameModel.phraseDifficulty
+                    
+                    // Create a basic hint status for local phrases with actual scoring
                     self.hintStatus = HintStatus(
                         hintsUsed: [],
                         nextHintLevel: 1,
                         hintsRemaining: 3,
-                        currentScore: 100, // Default score for local phrases
-                        nextHintScore: 90, // 90% for hint 1
+                        currentScore: actualScore,
+                        nextHintScore: Int(round(Double(actualScore) * 0.90)), // 90% for hint 1
                         canUseNextHint: true
                     )
                     self.isLoading = false
@@ -174,8 +177,9 @@ struct HintButtonView: View {
                     }
                     
                     // Update hint status for local phrases with proper scoring
-                    let newScore = calculateLocalScore(currentLevel: nextLevel, originalScore: 100)
-                    let nextHintScore = nextLevel < 3 ? calculateLocalScore(currentLevel: nextLevel + 1, originalScore: 100) : nil
+                    let actualScore = gameModel.phraseDifficulty
+                    let newScore = calculateLocalScore(currentLevel: nextLevel, originalScore: actualScore)
+                    let nextHintScore = nextLevel < 3 ? calculateLocalScore(currentLevel: nextLevel + 1, originalScore: actualScore) : nil
                     
                     let updatedStatus = HintStatus(
                         hintsUsed: hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())],
@@ -281,7 +285,7 @@ struct HintButtonView: View {
             scene.showHint2()
             return "First letter tiles highlighted in blue"
         case 3:
-            // Hint 3: Show text hint (generate meaningful hint for local phrases)
+            // Hint 3: Show text hint (use clue from local phrases or generate fallback)
             scene.showHint3()
             return generateLocalTextHint(sentence: sentence)
         default:
@@ -290,10 +294,14 @@ struct HintButtonView: View {
     }
     
     private func generateLocalTextHint(sentence: String) -> String {
+        // First, try to get the clue from the GameModel
+        if let clue = gameModel.getCurrentLocalClue() {
+            return clue
+        }
+        
+        // Fallback to generic hint if no clue is available
         let words = sentence.components(separatedBy: " ")
         let wordCount = words.count
-        
-        // Generate meaningful hints based on content analysis
         let totalLetters = sentence.replacingOccurrences(of: " ", with: "").count
         
         if wordCount == 1 {
@@ -412,13 +420,13 @@ struct PhysicsGameView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             // Skip button
                             Button(action: {
+                                print("🔥🔥🔥 SKIP BUTTON TAPPED IN UI 🔥🔥🔥")
                                 Task {
                                     isSkipping = true
+                                    print("🔥 About to call gameModel.skipCurrentGame()")
                                     await gameModel.skipCurrentGame()
-                                    // CRITICAL: Reset the scene after model updates
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.resetGame()
-                                    }
+                                    print("🔥 Finished calling gameModel.skipCurrentGame()")
+                                    // The GameModel.startNewGame() will handle scene updates automatically
                                     // Brief delay to show loading completed
                                     try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
                                     isSkipping = false
@@ -1003,12 +1011,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Update score and add to scene with delay
         if let scoreTile = scoreTile {
-            scoreTile.updateScore(calculateCurrentScore())
+            let currentScore = calculateCurrentScore()
+            let difficulty = gameModel.phraseDifficulty
+            scoreTile.updateScore(currentScore, difficulty: difficulty)
             
             let delayAction = SKAction.wait(forDuration: 1.0)  // Wait 1 second after tiles
             let addAction = SKAction.run { [weak self] in
                 self?.addChild(scoreTile)
-                print("Score tile spawned with score: \(self?.calculateCurrentScore() ?? 0)")
+                print("Score tile spawned with score: \(currentScore) (difficulty: \(difficulty))")
             }
             
             run(SKAction.sequence([delayAction, addAction]))
@@ -1056,14 +1066,56 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     func updateScoreTile() {
-        scoreTile?.updateScore(calculateCurrentScore())
-        print("Score tile updated to: \(calculateCurrentScore())")
+        let currentScore = calculateCurrentScore()
+        let difficulty = gameModel.phraseDifficulty
+        scoreTile?.updateScore(currentScore, difficulty: difficulty)
+        print("Score tile updated to: \(currentScore) (difficulty: \(difficulty))")
+        
+        // Debug logging for difficulty issues
+        let actualDifficulty = NetworkManager.analyzeDifficultyClientSide(phrase: gameModel.currentSentence, language: "en").score
+        print("🔍 DEBUG: SCORE_TILE_UPDATE: phrase='\(gameModel.currentSentence)' displayed_difficulty=\(difficulty) actual_difficulty=\(actualDifficulty) current_score=\(currentScore)")
+        
+        // Send debug to server
+        Task {
+            await sendDebugToServer("SCORE_TILE_UPDATE: phrase='\(gameModel.currentSentence)' displayed_difficulty=\(difficulty) actual_difficulty=\(actualDifficulty) current_score=\(currentScore)")
+        }
+        
+        // Special logging for 100-point bugs
+        if difficulty == 100 {
+            print("🔍 DEBUG: BUG_100_POINTS: '\(gameModel.currentSentence)' showing 100pts but should be \(actualDifficulty)")
+            Task {
+                await sendDebugToServer("BUG_100_POINTS: '\(gameModel.currentSentence)' showing 100pts but should be \(actualDifficulty)")
+            }
+        }
     }
     
     func updateLanguageTile() {
         let newLanguage = getCurrentPhraseLanguage()
         languageTile?.updateFlag(language: newLanguage)
         print("Language tile updated to: \(newLanguage)")
+    }
+    
+    // Send debug message to server
+    private func sendDebugToServer(_ message: String) async {
+        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let logData = [
+            "message": message,
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "playerId": gameModel.playerId ?? "unknown"
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: logData)
+            request.httpBody = jsonData
+            let _ = try await URLSession.shared.data(for: request)
+        } catch {
+            print("Debug logging failed: \(error)")
+        }
     }
     
     func spawnMessageTile(message: String) {
@@ -2992,18 +3044,30 @@ class InformationTile: SKSpriteNode, RespawnableTile {
 
 class ScoreTile: InformationTile {
     private var scoreLabel: SKLabelNode?
+    private var difficultyLabel: SKLabelNode?
     
     override init(size: CGSize) {
         super.init(size: size)
         
-        // Create score label
+        // Create score label (top line)
         scoreLabel = SKLabelNode(fontNamed: "Arial-Bold")
-        scoreLabel?.fontSize = 24
+        scoreLabel?.fontSize = 18
         scoreLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
         scoreLabel?.verticalAlignmentMode = .center
         scoreLabel?.horizontalAlignmentMode = .center
+        scoreLabel?.position = CGPoint(x: 0, y: 8)
         scoreLabel?.zPosition = 10.0
         addChild(scoreLabel!)
+        
+        // Create difficulty label (bottom line)
+        difficultyLabel = SKLabelNode(fontNamed: "Arial")
+        difficultyLabel?.fontSize = 12
+        difficultyLabel?.fontColor = UIColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1.0)
+        difficultyLabel?.verticalAlignmentMode = .center
+        difficultyLabel?.horizontalAlignmentMode = .center
+        difficultyLabel?.position = CGPoint(x: 0, y: -8)
+        difficultyLabel?.zPosition = 10.0
+        addChild(difficultyLabel!)
         
         // Set z-position to match other tiles
         zPosition = 50
@@ -3011,8 +3075,28 @@ class ScoreTile: InformationTile {
         setupPhysics()
     }
     
-    func updateScore(_ score: Int) {
+    func updateScore(_ score: Int, difficulty: Int? = nil) {
         scoreLabel?.text = "\(score) pts"
+        
+        if let difficulty = difficulty {
+            let level = getDifficultyLevel(for: difficulty)
+            difficultyLabel?.text = "\(level) (\(difficulty))"
+        }
+    }
+    
+    private func getDifficultyLevel(for score: Int) -> String {
+        switch score {
+        case 0..<20:
+            return "Very Easy"
+        case 20..<40:
+            return "Easy"
+        case 40..<60:
+            return "Medium"
+        case 60..<80:
+            return "Hard"
+        default:
+            return "Very Hard"
+        }
     }
     
     private func setupPhysics() {

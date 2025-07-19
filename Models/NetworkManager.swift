@@ -8,7 +8,7 @@ import SocketIO
 struct AppConfig {
     // Server Configuration
     static let serverPort = "8080"  // From server/.env PORT
-    static let baseURL = "http://192.168.1.201:\(serverPort)"  // Using Mac's IP for physical device compatibility
+    static let baseURL = "http://127.0.0.1:\(serverPort)"  // Use localhost for simulator testing
     
     // Contribution system URLs (different service)
     static let contributionPort = "3001"
@@ -930,6 +930,7 @@ class NetworkManager: ObservableObject {
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 10.0 // 10 second timeout for skip operations
             
             // Add playerId in request body as required by server
             let requestBody = ["playerId": currentPlayer.id]
@@ -1618,6 +1619,7 @@ private struct SharedDifficultyConfig: Codable {
             return difficultyLabels.veryHard
         }
     }
+    
 }
 
 // MARK: - Lobby Data Models
