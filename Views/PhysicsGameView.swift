@@ -193,7 +193,7 @@ struct HintButtonView: View {
                     
                     // Update score and language tiles when hint is used
                     if let scene = gameScene {
-                        scene.updateScoreTile()
+                        scene.updateScoreTile(hintsUsed: updatedStatus.hintsUsed.count)
                         scene.updateLanguageTile()
                     }
                     
@@ -244,7 +244,7 @@ struct HintButtonView: View {
                         
                         // Update score and language tiles when hint is used
                         if let scene = gameScene {
-                            scene.updateScoreTile()
+                            scene.updateScoreTile(hintsUsed: updatedStatus.hintsUsed.count)
                             scene.updateLanguageTile()
                         }
                     } else {
@@ -1074,14 +1074,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
     }
     
-    private func calculateCurrentScore() -> Int {
+    private func calculateCurrentScore(hintsUsed: Int? = nil) -> Int {
         guard gameModel.phraseDifficulty > 0 else { return 0 }
         
+        let actualHintsUsed = hintsUsed ?? gameModel.hintsUsed
         var score = gameModel.phraseDifficulty
         
-        if gameModel.hintsUsed >= 1 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.90)) }
-        if gameModel.hintsUsed >= 2 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.70)) }
-        if gameModel.hintsUsed >= 3 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.50)) }
+        if actualHintsUsed >= 1 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.90)) }
+        if actualHintsUsed >= 2 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.70)) }
+        if actualHintsUsed >= 3 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.50)) }
         
         return score
     }
@@ -1090,11 +1091,12 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         return gameModel.currentCustomPhrase?.language ?? "en"
     }
     
-    func updateScoreTile() {
-        let currentScore = calculateCurrentScore()
+    func updateScoreTile(hintsUsed: Int? = nil) {
+        let currentScore = calculateCurrentScore(hintsUsed: hintsUsed)
+        let actualHintsUsed = hintsUsed ?? gameModel.hintsUsed
         let difficulty = gameModel.phraseDifficulty
         scoreTile?.updateScore(currentScore, difficulty: difficulty)
-        print("Score tile updated to: \(currentScore) (difficulty: \(difficulty))")
+        print("Score tile updated to: \(currentScore) (difficulty: \(difficulty), hints: \(actualHintsUsed))")
         
         // Debug logging for difficulty issues
         let actualDifficulty = NetworkManager.analyzeDifficultyClientSide(phrase: gameModel.currentSentence, language: "en").score
