@@ -14,21 +14,63 @@ struct LocalPhrase {
 }
 
 // Level system configuration structure
+struct SkillLevel: Codable {
+    let id: Int
+    let title: String
+    let pointsRequired: Int
+    let maxDifficulty: Int
+}
+
+struct LevelMilestone: Codable {
+    let level: Int
+    let bonus: Int
+    let description: String
+}
+
 struct LevelConfig: Codable {
-    let pointsPerLevel: Int
-    let difficultyPerLevel: Int
-    let maxLevel: Int?
-    let levelBonuses: [String: Int]? // Optional bonus points at specific levels
+    let version: String
+    let progressionMultiplier: Double
+    let baseDifficultyPerLevel: Int
+    let skillLevels: [SkillLevel]
+    let milestones: [LevelMilestone]
     
     static let `default` = LevelConfig(
-        pointsPerLevel: 1000,
-        difficultyPerLevel: 50,
-        maxLevel: nil,
-        levelBonuses: nil
+        version: "2.0.0",
+        progressionMultiplier: 1.3,
+        baseDifficultyPerLevel: 50,
+        skillLevels: [
+            SkillLevel(id: 0, title: "non-existent", pointsRequired: 0, maxDifficulty: 0),
+            SkillLevel(id: 1, title: "disastrous", pointsRequired: 100, maxDifficulty: 50)
+        ],
+        milestones: []
     )
     
-    private enum CodingKeys: String, CodingKey {
-        case pointsPerLevel, difficultyPerLevel, maxLevel, levelBonuses
+    /// Get current skill level based on total points
+    func getSkillLevel(for points: Int) -> SkillLevel {
+        let level = skillLevels
+            .sorted { $0.pointsRequired > $1.pointsRequired }
+            .first { points >= $0.pointsRequired } ?? skillLevels.first!
+        return level
+    }
+    
+    /// Calculate progress to next skill level (0.0 to 1.0)
+    func getProgressToNext(for points: Int) -> Double {
+        let currentLevel = getSkillLevel(for: points)
+        
+        guard let nextLevel = skillLevels.first(where: { $0.id == currentLevel.id + 1 }) else {
+            return 1.0 // Already at max level
+        }
+        
+        let pointsInCurrentLevel = points - currentLevel.pointsRequired
+        let pointsNeededForNext = nextLevel.pointsRequired - currentLevel.pointsRequired
+        
+        return min(1.0, max(0.0, Double(pointsInCurrentLevel) / Double(pointsNeededForNext)))
+    }
+    
+    /// Get the next skill level title, or nil if at max level
+    func getNextSkillLevel(for points: Int) -> SkillLevel? {
+        let currentLevel = getSkillLevel(for: points)
+        return skillLevels.first { $0.id == currentLevel.id + 1 }
     }
 }
 
@@ -64,16 +106,16 @@ class GameModel: ObservableObject {
     var networkManager: NetworkManager? = nil
     
     // Level system configuration (fetched from server)
-    private var levelConfig: LevelConfig = LevelConfig.default
-    private var previousLevel: Int = 0 // Track previous level for level-up detection
+    var levelConfig: LevelConfig = LevelConfig.default // Made public for UI access
+    private var previousSkillLevelId: Int = 0 // Track previous skill level for level-up detection
     
     var playerTotalScore: Int = 0 {
         didSet {
-            // Check for level up before persisting
-            let newLevel = currentLevel
-            if newLevel > previousLevel {
-                handleLevelUp(from: previousLevel, to: newLevel)
-                previousLevel = newLevel
+            // Check for skill level up before persisting
+            let newSkillLevel = levelConfig.getSkillLevel(for: playerTotalScore)
+            if newSkillLevel.id > previousSkillLevelId {
+                handleSkillLevelUp(from: previousSkillLevelId, to: newSkillLevel.id, newTitle: newSkillLevel.title)
+                previousSkillLevelId = newSkillLevel.id
             }
             
             // Persist total score to UserDefaults when it changes
@@ -84,17 +126,22 @@ class GameModel: ObservableObject {
         }
     }
     
-    // Level system computed properties
+    // Skill level system computed properties
+    var currentSkillLevel: SkillLevel {
+        return levelConfig.getSkillLevel(for: playerTotalScore)
+    }
+    
+    var progressToNextSkillLevel: Double {
+        return levelConfig.getProgressToNext(for: playerTotalScore)
+    }
+    
+    var nextSkillLevel: SkillLevel? {
+        return levelConfig.getNextSkillLevel(for: playerTotalScore)
+    }
+    
+    // Legacy computed property for backward compatibility
     var currentLevel: Int {
-        return max(1, playerTotalScore / levelConfig.pointsPerLevel + 1)
-    }
-    
-    var progressToNextLevel: Int {
-        return playerTotalScore % levelConfig.pointsPerLevel
-    }
-    
-    var pointsUntilNextLevel: Int {
-        return levelConfig.pointsPerLevel - progressToNextLevel
+        return currentSkillLevel.id
     }
     
     // Level-up animation state
@@ -244,7 +291,7 @@ class GameModel: ObservableObject {
             
             // Calculate and log difficulty score for debugging
             let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: firstPhrase.content, language: "en")
-            let maxAllowedDifficulty = currentLevel * levelConfig.difficultyPerLevel
+            let maxAllowedDifficulty = currentSkillLevel.maxDifficulty
             
             print("🔍 PHRASE_DEBUG: Selected phrase '\(firstPhrase.content)'")
             print("🔍 PHRASE_DEBUG: Difficulty score: \(difficultyAnalysis.score)")
@@ -343,7 +390,7 @@ class GameModel: ObservableObject {
                 currentCustomPhrase = nil
                 
                 // Filter local phrases by current level (same logic as server filtering)
-                let maxDifficulty = currentLevel * levelConfig.difficultyPerLevel
+                let maxDifficulty = currentSkillLevel.maxDifficulty
                 let levelAppropriatePhrases = localPhrases.filter { phrase in
                     let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: phrase.content, language: "en")
                     return difficultyAnalysis.score <= Double(maxDifficulty)
@@ -720,16 +767,16 @@ class GameModel: ObservableObject {
     
     // MARK: - Level System Methods
     
-    /// Handle level up animation and effects
-    private func handleLevelUp(from oldLevel: Int, to newLevel: Int) {
-        print("🎉 LEVEL UP: Player leveled up from \(oldLevel) to \(newLevel)")
+    /// Handle skill level up animation and effects
+    private func handleSkillLevelUp(from oldLevelId: Int, to newLevelId: Int, newTitle: String) {
+        print("🎉 SKILL LEVEL UP: Player advanced from level \(oldLevelId) to \(newLevelId) (\(newTitle))")
         
         // Trigger dramatic level-up animation sequence
         isLevelingUp = true
         
         // Optional: Spawn celebration message in game scene
         if let spawner = messageTileSpawner {
-            spawner.spawnMessageTile(message: "🎉 LEVEL \(newLevel)! 🎉")
+            spawner.spawnMessageTile(message: "🎉 \(newTitle.uppercased())! 🎉")
         }
         
         // Reset animation after longer dramatic duration
@@ -738,10 +785,10 @@ class GameModel: ObservableObject {
         }
     }
     
-    /// Initialize previousLevel when loading saved score
+    /// Initialize previousSkillLevelId when loading saved score
     private func initializeLevelTracking() {
-        previousLevel = currentLevel
-        print("🎯 LEVEL: Initialized level tracking at level \(previousLevel)")
+        previousSkillLevelId = currentSkillLevel.id
+        print("🎯 LEVEL: Initialized skill level tracking at level \(previousSkillLevelId) (\(currentSkillLevel.title))")
     }
     
     /// Load level configuration from server
@@ -750,14 +797,14 @@ class GameModel: ObservableObject {
             // Try to load from server first
             if let serverConfig = await fetchLevelConfigFromServer() {
                 levelConfig = serverConfig 
-                print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.pointsPerLevel) points per level")
+                print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
             } else {
                 // Fall back to local config file if available
                 if let localConfig = loadLocalLevelConfig() {
                     levelConfig = localConfig
-                    print("⚙️ LEVEL CONFIG: Loaded from local file - \(localConfig.pointsPerLevel) points per level")
+                    print("⚙️ LEVEL CONFIG: Loaded from local file - \(localConfig.skillLevels.count) skill levels")
                 } else {
-                    print("⚙️ LEVEL CONFIG: Using default - \(levelConfig.pointsPerLevel) points per level")
+                    print("⚙️ LEVEL CONFIG: Using default - \(levelConfig.skillLevels.count) skill levels")
                 }
             }
         }
