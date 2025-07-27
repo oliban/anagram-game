@@ -138,6 +138,9 @@ struct ContentView: View {
                 gameModel.playerName = player.name
                 gameModel.networkManager = networkManager
                 networkManager.gameModel = gameModel
+                
+                // Load total score from local storage and then refresh from server
+                gameModel.loadTotalScore()
             } else {
                 // Player logged out - show registration
                 print("🔴 LOGOUT: Player cleared, showing registration")

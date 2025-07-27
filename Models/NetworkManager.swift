@@ -8,7 +8,7 @@ import SocketIO
 struct AppConfig {
     // Server Configuration
     static let serverPort = "8080"  // From server/.env PORT
-    static let baseURL = "http://127.0.0.1:\(serverPort)"  // Use localhost for simulator testing
+    static let baseURL = "http://192.168.1.133:\(serverPort)"  // Use Mac IP for device testing
     
     // Contribution system URLs (different service)
     static let contributionPort = "3001"
