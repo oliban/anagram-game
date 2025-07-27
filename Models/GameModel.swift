@@ -44,6 +44,15 @@ class GameModel: ObservableObject {
     var playerId: String? = nil
     var playerName: String? = nil
     var networkManager: NetworkManager? = nil
+    var playerTotalScore: Int = 0 {
+        didSet {
+            // Persist total score to UserDefaults when it changes
+            if let playerId = playerId {
+                UserDefaults.standard.set(playerTotalScore, forKey: "totalScore_\(playerId)")
+                print("💾 PERSISTENCE: Saved total score \(playerTotalScore) for player \(playerId)")
+            }
+        }
+    }
     
     private var localPhrases: [LocalPhrase] = []
     var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
@@ -236,9 +245,31 @@ class GameModel: ObservableObject {
                     let selectedPhrase = localPhrases.randomElement()?.content ?? "The cat sat on the mat"
                     currentSentence = selectedPhrase
                     customPhraseInfo = ""
-                    // Create a session-based phrase ID for local sentences
-                    currentPhraseId = "local-\(UUID().uuidString)"
-                    print("🔍 DEBUG: Selected local phrase: '\(selectedPhrase)'")
+                    
+                    // Create local phrase on server so it can be properly completed for leaderboard
+                    let matchingLocalPhrase = localPhrases.first { $0.content == selectedPhrase }
+                    let hint = matchingLocalPhrase?.clue ?? ""
+                    
+                    // Create on server to get real phrase ID
+                    print("🔍 LOCAL_PHRASE: Attempting to create '\(selectedPhrase)' on server...")
+                    let creationSuccess = await networkManager.createGlobalPhrase(content: selectedPhrase, hint: hint)
+                    print("🔍 LOCAL_PHRASE: Creation result: \(creationSuccess)")
+                    if creationSuccess {
+                        // Get the newly created phrase to get its real ID
+                        let phrases = await networkManager.fetchPhrasesForCurrentPlayer()
+                        if let createdPhrase = phrases.first(where: { $0.content == selectedPhrase }) {
+                            currentPhraseId = createdPhrase.id
+                            print("✅ LOCAL PHRASE: Created on server with ID: \(createdPhrase.id)")
+                        } else {
+                            currentPhraseId = "local-\(UUID().uuidString)"
+                            print("⚠️  LOCAL PHRASE: Created on server but couldn't retrieve ID, using fallback")
+                        }
+                    } else {
+                        currentPhraseId = "local-\(UUID().uuidString)"
+                        print("⚠️  LOCAL PHRASE: Server creation failed, using fallback ID")
+                    }
+                    
+                    print("🔍 DEBUG: Selected local phrase: '\(selectedPhrase)' with ID: \(currentPhraseId ?? "none")")
                     print("🔍 DEBUG: Total local phrases available: \(localPhrases.count)")
                     
                     // Log calculated difficulty for debugging
@@ -333,38 +364,65 @@ class GameModel: ObservableObject {
         currentScore = calculateLocalScore()
         print("✅ COMPLETION: Calculated local score: \(currentScore) points (difficulty: \(phraseDifficulty), hints: \(hintsUsed))")
         
-        // Also complete phrase on server (async, no need to wait)
+        // Update total score immediately for UI feedback
+        let oldTotalScore = playerTotalScore
+        playerTotalScore += currentScore
+        print("🏆 TOTAL SCORE: Updated from \(oldTotalScore) to \(playerTotalScore) (+\(currentScore))")
+        
+        // Complete phrase on server (critical for leaderboard updates)
         if let phraseId = currentPhraseId {
+            print("🔍 SERVER_COMPLETION: Attempting to complete phraseId: '\(phraseId)'")
             Task {
                 let networkManager = NetworkManager.shared
-                let result = await networkManager.completePhrase(phraseId: phraseId)
-                print("🔍 SERVER COMPLETION: Server returned score \(result?.completion.finalScore ?? -1), client calculated \(currentScore)")
+                if let result = await networkManager.completePhrase(phraseId: phraseId) {
+                    if result.success {
+                        print("✅ SERVER COMPLETION: Success! Server score: \(result.completion.finalScore), client: \(currentScore)")
+                        
+                        // Refresh total score to get server's accurate total
+                        Task { @MainActor in
+                            await refreshTotalScoreFromServer()
+                        }
+                    } else {
+                        print("❌ SERVER COMPLETION: Server reported failure")
+                    }
+                } else {
+                    print("❌ SERVER COMPLETION: No result returned (network error or server issue)")
+                    print("⚠️  LEADERBOARD: Score may not be updated due to server error")
+                }
             }
+        } else {
+            print("⚠️  SERVER COMPLETION: No phraseId - server won't be notified")
         }
+    }
+    
+    // MARK: - Centralized Hint Penalty Logic
+    
+    /// Apply hint penalty to a base score - SINGLE SOURCE OF TRUTH
+    static func applyHintPenalty(baseScore: Int, hintsUsed: Int) -> Int {
+        guard baseScore > 0 else { return 0 }
+        
+        var score = baseScore
+        if hintsUsed >= 1 { score = Int(round(Double(baseScore) * 0.90)) }
+        if hintsUsed >= 2 { score = Int(round(Double(baseScore) * 0.70)) }
+        if hintsUsed >= 3 { score = Int(round(Double(baseScore) * 0.50)) }
+        
+        return score
     }
     
     @MainActor
     private func calculateLocalScore() -> Int {
-        // Use the same algorithm as preview and gameplay for consistency
-        let language = currentCustomPhrase?.language ?? "en"
-        let analysis = NetworkManager.analyzeDifficultyClientSide(phrase: currentSentence, language: language)
-        let baseDifficulty = Int(analysis.score)
+        // Use stored difficulty if available, otherwise calculate
+        let baseDifficulty = phraseDifficulty > 0 ? phraseDifficulty : {
+            let language = currentCustomPhrase?.language ?? "en"
+            let analysis = NetworkManager.analyzeDifficultyClientSide(phrase: currentSentence, language: language)
+            return Int(analysis.score)
+        }()
         
-        print("🔍 SCORE: Recalculated base difficulty: \(baseDifficulty) (was stored as: \(phraseDifficulty))")
+        print("🔍 SCORE: Using base difficulty: \(baseDifficulty) (hints: \(hintsUsed))")
         
-        guard baseDifficulty > 0 else { 
-            print("❌ SCORE: baseDifficulty is \(baseDifficulty), returning 0")
-            return 0 
-        }
-        
-        var score = baseDifficulty
-        
-        if hintsUsed >= 1 { score = Int(round(Double(baseDifficulty) * 0.90)) }
-        if hintsUsed >= 2 { score = Int(round(Double(baseDifficulty) * 0.70)) }
-        if hintsUsed >= 3 { score = Int(round(Double(baseDifficulty) * 0.50)) }
-        
-        print("🔍 SCORE: After hints penalty (hints: \(hintsUsed)): \(score)")
-        return score
+        let finalScore = GameModel.applyHintPenalty(baseScore: baseDifficulty, hintsUsed: hintsUsed)
+        print("🔍 SCORE: Final calculated score: \(finalScore) (base: \(baseDifficulty), hints: \(hintsUsed))")
+        return finalScore
     }
     
     @MainActor
@@ -447,6 +505,53 @@ class GameModel: ObservableObject {
         // Find the current sentence in localPhrases and return its clue
         let currentPhrase = localPhrases.first { $0.content == currentSentence }
         return currentPhrase?.clue
+    }
+    
+    // Load total score from local storage or server
+    @MainActor
+    func loadTotalScore() {
+        guard let playerId = playerId else {
+            print("❌ LOAD_SCORE: Cannot load total score: missing playerId")
+            return
+        }
+        
+        print("💾 LOAD_SCORE_START: Loading total score for player \(playerId)")
+        
+        // Load from UserDefaults first (instant)
+        let savedScore = UserDefaults.standard.integer(forKey: "totalScore_\(playerId)")
+        print("💾 LOAD_SCORE_USERDEFAULTS: Found saved score: \(savedScore)")
+        
+        if savedScore > 0 {
+            playerTotalScore = savedScore
+            print("💾 LOAD_SCORE_SUCCESS: Loaded total score \(savedScore) from storage for player \(playerId)")
+        } else {
+            print("💾 LOAD_SCORE_EMPTY: No saved score found, keeping current: \(playerTotalScore)")
+        }
+        
+        // Then refresh from server in background (to get latest)
+        Task {
+            await refreshTotalScoreFromServer()
+        }
+    }
+    
+    // Refresh total score from server to ensure accuracy
+    @MainActor
+    func refreshTotalScoreFromServer() async {
+        guard let playerId = playerId,
+              let networkManager = networkManager else {
+            print("❌ Cannot refresh total score: missing playerId or networkManager")
+            return
+        }
+        
+        do {
+            let stats = try await networkManager.getPlayerStats(playerId: playerId)
+            playerTotalScore = stats.totalScore
+            print("🔄 TOTAL SCORE: Refreshed from server to \(playerTotalScore)")
+        } catch {
+            print("❌ Failed to refresh total score from server: \(error)")
+            // Keep local score if server fails
+            print("💾 PERSISTENCE: Keeping local score due to server error")
+        }
     }
     
     // Send debug message to server

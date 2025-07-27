@@ -9,6 +9,32 @@ import SwiftUI
 import SpriteKit
 import CoreMotion
 
+// Total Score Display Component
+struct TotalScoreView: View {
+    let totalScore: Int
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "trophy.fill")
+                .foregroundColor(.yellow)
+                .font(.system(size: 12))
+            Text("\(totalScore)")
+                .foregroundColor(.white)
+                .font(.system(size: 14, weight: .semibold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(Color.black.opacity(0.7))
+                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+        )
+        .onChange(of: totalScore) { oldValue, newValue in
+            print("🏆 UI: TotalScoreView updated from \(oldValue) to \(newValue)")
+        }
+    }
+}
+
 // Hint Button Component embedded in PhysicsGameView
 struct HintButtonView: View {
     let phraseId: String
@@ -124,7 +150,7 @@ struct HintButtonView: View {
                         nextHintLevel: 1,
                         hintsRemaining: 3,
                         currentScore: actualScore,
-                        nextHintScore: Int(round(Double(actualScore) * 0.90)), // 90% for hint 1
+                        nextHintScore: GameModel.applyHintPenalty(baseScore: actualScore, hintsUsed: 1),
                         canUseNextHint: true
                     )
                     self.isLoading = false
@@ -258,16 +284,7 @@ struct HintButtonView: View {
     }
     
     private func calculateLocalScore(currentLevel: Int, originalScore: Int) -> Int {
-        switch currentLevel {
-        case 1:
-            return Int(round(Double(originalScore) * 0.9)) // 90% for hint 1
-        case 2:
-            return Int(round(Double(originalScore) * 0.7)) // 70% for hint 2  
-        case 3:
-            return Int(round(Double(originalScore) * 0.5)) // 50% for hint 3
-        default:
-            return originalScore
-        }
+        return GameModel.applyHintPenalty(baseScore: originalScore, hintsUsed: currentLevel)
     }
     
     private func generateLocalHint(level: Int, sentence: String) -> String {
@@ -374,20 +391,26 @@ struct PhysicsGameView: View {
                         .padding(.leading, 20)
                         .padding(.top, 10)
                         
-                        Spacer() // Push version to the right
+                        Spacer() // Push right elements to the right
                         
-                        // Version number
-                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .fontWeight(.bold)
-                            .onTapGesture {
-                                if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                    scene.triggerQuake()
+                        // Score and Version Stack
+                        VStack(spacing: 2) {
+                            // Total Score Display
+                            TotalScoreView(totalScore: gameModel.playerTotalScore)
+                            
+                            // Version number - directly below score
+                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .fontWeight(.bold)
+                                .onTapGesture {
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.triggerQuake()
+                                    }
                                 }
-                            }
-                            .padding(.trailing, 20)
-                            .padding(.top, 10)
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.top, 10)
                     }
                     
                     // MIDDLE - Game content and overlays
@@ -1075,16 +1098,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     private func calculateCurrentScore(hintsUsed: Int? = nil) -> Int {
-        guard gameModel.phraseDifficulty > 0 else { return 0 }
-        
         let actualHintsUsed = hintsUsed ?? gameModel.hintsUsed
-        var score = gameModel.phraseDifficulty
-        
-        if actualHintsUsed >= 1 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.90)) }
-        if actualHintsUsed >= 2 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.70)) }
-        if actualHintsUsed >= 3 { score = Int(round(Double(gameModel.phraseDifficulty) * 0.50)) }
-        
-        return score
+        return GameModel.applyHintPenalty(baseScore: gameModel.phraseDifficulty, hintsUsed: actualHintsUsed)
     }
     
     private func getCurrentPhraseLanguage() -> String {
@@ -2068,7 +2083,10 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             print("🎉 VICTORY TRIGGERED!")
             if !celebrationText.contains("🎉") { // Only celebrate once
                 gameModel.completeGame() // Calculate score immediately
-                triggerCelebration() // Celebrate with score
+                // Trigger celebration on next run loop to ensure score is updated
+                DispatchQueue.main.async {
+                    self.triggerCelebration() // Celebrate with updated score
+                }
             }
             celebrationText = "🎉 VICTORY! All words complete: \(allFoundWords.joined(separator: " + "))"
         } else {
@@ -2253,6 +2271,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         ]
         
         let randomMessage = messages.randomElement() ?? "Congratulations!"
+        print("🎊 DEBUG: gameModel.currentScore = \(gameModel.currentScore)")
+        print("🎊 DEBUG: gameModel.phraseDifficulty = \(gameModel.phraseDifficulty)")
+        print("🎊 DEBUG: gameModel.hintsUsed = \(gameModel.hintsUsed)")
         let scoreText = gameModel.currentScore > 0 ? "\n\(gameModel.currentScore) points!" : ""
         let fullMessage = "\(randomMessage)\(scoreText)"
         print("🎉 \(fullMessage)")
