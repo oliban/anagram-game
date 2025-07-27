@@ -1,0 +1,10 @@
+{
+  "pointsPerLevel": 1000,
+  "maxLevel": null,
+  "levelBonuses": {
+    "5": 500,
+    "10": 1000,
+    "25": 2500,
+    "50": 5000
+  }
+}

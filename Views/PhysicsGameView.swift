@@ -9,15 +9,30 @@ import SwiftUI
 import SpriteKit
 import CoreMotion
 
-// Total Score Display Component
+// Total Score Display Component with Level Integration
 struct TotalScoreView: View {
     let totalScore: Int
+    let currentLevel: Int
+    let isLevelingUp: Bool
     
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "trophy.fill")
-                .foregroundColor(.yellow)
-                .font(.system(size: 12))
+            // Level indicator (replaces trophy)
+            Text("L\(currentLevel)")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.black)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(levelBadgeColor)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.black.opacity(0.3), lineWidth: 0.5)
+                        )
+                )
+            
+            // Score display
             Text("\(totalScore)")
                 .foregroundColor(.white)
                 .font(.system(size: 14, weight: .semibold))
@@ -27,11 +42,69 @@ struct TotalScoreView: View {
         .background(
             Capsule()
                 .fill(Color.black.opacity(0.7))
-                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                .stroke(levelBorderColor, lineWidth: isLevelingUp ? 3 : 2)
         )
+        .scaleEffect(isLevelingUp ? 1.3 : 1.0)
+        .rotationEffect(.degrees(isLevelingUp ? 360 : 0))
+        .shadow(color: isLevelingUp ? .yellow : .clear, radius: isLevelingUp ? 10 : 0)
+        .overlay(
+            // Sparkle effect during level up
+            Group {
+                if isLevelingUp {
+                    ForEach(0..<8, id: \.self) { index in
+                        Circle()
+                            .fill(sparkleColor(for: index))
+                            .frame(width: 6, height: 6)
+                            .offset(
+                                x: cos(Double(index) * .pi / 4) * 50,
+                                y: sin(Double(index) * .pi / 4) * 50
+                            )
+                            .scaleEffect(isLevelingUp ? 2.0 : 0)
+                            .opacity(isLevelingUp ? 0.9 : 0)
+                            .animation(
+                                .spring(response: 0.8, dampingFraction: 0.4)
+                                .delay(Double(index) * 0.1),
+                                value: isLevelingUp
+                            )
+                    }
+                }
+            }
+        )
+        .animation(.spring(response: 0.8, dampingFraction: 0.6), value: isLevelingUp)
         .onChange(of: totalScore) { oldValue, newValue in
             print("🏆 UI: TotalScoreView updated from \(oldValue) to \(newValue)")
         }
+    }
+    
+    // Dynamic colors based on level
+    private var levelBorderColor: Color {
+        if isLevelingUp {
+            // Bright, intense glow during level up
+            return .orange
+        }
+        return Color.yellow.opacity(levelBasedOpacity)
+    }
+    
+    private var levelBadgeColor: Color {
+        if isLevelingUp {
+            // Rainbow effect during level up
+            return .orange
+        } else if currentLevel >= 10 {
+            return .orange
+        } else if currentLevel >= 5 {
+            return .yellow
+        }
+        return Color.yellow.opacity(0.8)
+    }
+    
+    private var levelBasedOpacity: Double {
+        return min(1.0, 0.3 + Double(currentLevel) * 0.1)
+    }
+    
+    // Dynamic sparkle colors for animation
+    private func sparkleColor(for index: Int) -> Color {
+        let colors: [Color] = [.yellow, .orange, .white, .yellow.opacity(0.8)]
+        return colors[index % colors.count]
     }
 }
 
@@ -395,19 +468,48 @@ struct PhysicsGameView: View {
                         
                         // Score and Version Stack
                         VStack(spacing: 2) {
-                            // Total Score Display
-                            TotalScoreView(totalScore: gameModel.playerTotalScore)
+                            // Total Score Display with Level
+                            TotalScoreView(
+                                totalScore: gameModel.playerTotalScore,
+                                currentLevel: gameModel.currentLevel,
+                                isLevelingUp: gameModel.isLevelingUp
+                            )
                             
-                            // Version number - directly below score
-                            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .fontWeight(.bold)
-                                .onTapGesture {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.triggerQuake()
-                                    }
+                            // Debug Controls
+                            VStack(spacing: 2) {
+                                // Debug +100 Points Button
+                                Button("+100") {
+                                    gameModel.addDebugPoints(100)
                                 }
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.red.opacity(0.2))
+                                        .stroke(Color.red.opacity(0.5), lineWidth: 1)
+                                )
+                                
+                                // Solution Display
+                                Text("\(gameModel.currentSentence)")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(.red.opacity(0.8))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .frame(maxWidth: 80)
+                                
+                                // Version number - at bottom
+                                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .fontWeight(.bold)
+                                    .onTapGesture {
+                                        if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                            scene.triggerQuake()
+                                        }
+                                    }
+                            }
                         }
                         .padding(.trailing, 20)
                         .padding(.top, 10)

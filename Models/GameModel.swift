@@ -13,6 +13,23 @@ struct LocalPhrase {
     }
 }
 
+// Level system configuration structure
+struct LevelConfig: Codable {
+    let pointsPerLevel: Int
+    let maxLevel: Int?
+    let levelBonuses: [String: Int]? // Optional bonus points at specific levels
+    
+    static let `default` = LevelConfig(
+        pointsPerLevel: 1000,
+        maxLevel: nil,
+        levelBonuses: nil
+    )
+    
+    private enum CodingKeys: String, CodingKey {
+        case pointsPerLevel, maxLevel, levelBonuses
+    }
+}
+
 protocol MessageTileSpawner: AnyObject {
     func spawnMessageTile(message: String)
     func resetGame()
@@ -43,8 +60,20 @@ class GameModel: ObservableObject {
     var playerId: String? = nil
     var playerName: String? = nil
     var networkManager: NetworkManager? = nil
+    
+    // Level system configuration (fetched from server)
+    private var levelConfig: LevelConfig = LevelConfig.default
+    private var previousLevel: Int = 0 // Track previous level for level-up detection
+    
     var playerTotalScore: Int = 0 {
         didSet {
+            // Check for level up before persisting
+            let newLevel = currentLevel
+            if newLevel > previousLevel {
+                handleLevelUp(from: previousLevel, to: newLevel)
+                previousLevel = newLevel
+            }
+            
             // Persist total score to UserDefaults when it changes
             if let playerId = playerId {
                 UserDefaults.standard.set(playerTotalScore, forKey: "totalScore_\(playerId)")
@@ -52,6 +81,22 @@ class GameModel: ObservableObject {
             }
         }
     }
+    
+    // Level system computed properties
+    var currentLevel: Int {
+        return max(1, playerTotalScore / levelConfig.pointsPerLevel + 1)
+    }
+    
+    var progressToNextLevel: Int {
+        return playerTotalScore % levelConfig.pointsPerLevel
+    }
+    
+    var pointsUntilNextLevel: Int {
+        return levelConfig.pointsPerLevel - progressToNextLevel
+    }
+    
+    // Level-up animation state
+    var isLevelingUp: Bool = false
     
     private var localPhrases: [LocalPhrase] = []
     var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
@@ -96,6 +141,8 @@ class GameModel: ObservableObject {
         loadSentences()
         Task { @MainActor in
             setupNetworkNotifications()
+            // Load level configuration from server
+            await loadLevelConfig()
             // Remove automatic startNewGame() - let it be triggered after registration
         }
     }
@@ -602,6 +649,9 @@ class GameModel: ObservableObject {
             print("💾 LOAD_SCORE_EMPTY: No saved score found, keeping current: \(playerTotalScore)")
         }
         
+        // Initialize level tracking after loading score
+        initializeLevelTracking()
+        
         // Then refresh from server in background (to get latest)
         Task {
             await refreshTotalScoreFromServer()
@@ -621,11 +671,107 @@ class GameModel: ObservableObject {
             let stats = try await networkManager.getPlayerStats(playerId: playerId)
             playerTotalScore = stats.totalScore
             print("🔄 TOTAL SCORE: Refreshed from server to \(playerTotalScore)")
+            
+            // Re-initialize level tracking after server refresh
+            initializeLevelTracking()
         } catch {
             print("❌ Failed to refresh total score from server: \(error)")
             // Keep local score if server fails
             print("💾 PERSISTENCE: Keeping local score due to server error")
         }
+    }
+    
+    // MARK: - Level System Methods
+    
+    /// Handle level up animation and effects
+    private func handleLevelUp(from oldLevel: Int, to newLevel: Int) {
+        print("🎉 LEVEL UP: Player leveled up from \(oldLevel) to \(newLevel)")
+        
+        // Trigger dramatic level-up animation sequence
+        isLevelingUp = true
+        
+        // Optional: Spawn celebration message in game scene
+        if let spawner = messageTileSpawner {
+            spawner.spawnMessageTile(message: "🎉 LEVEL \(newLevel)! 🎉")
+        }
+        
+        // Reset animation after longer dramatic duration
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            self.isLevelingUp = false
+        }
+    }
+    
+    /// Initialize previousLevel when loading saved score
+    private func initializeLevelTracking() {
+        previousLevel = currentLevel
+        print("🎯 LEVEL: Initialized level tracking at level \(previousLevel)")
+    }
+    
+    /// Load level configuration from server
+    func loadLevelConfig() async {
+        do {
+            // Try to load from server first
+            if let serverConfig = await fetchLevelConfigFromServer() {
+                levelConfig = serverConfig 
+                print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.pointsPerLevel) points per level")
+            } else {
+                // Fall back to local config file if available
+                if let localConfig = loadLocalLevelConfig() {
+                    levelConfig = localConfig
+                    print("⚙️ LEVEL CONFIG: Loaded from local file - \(localConfig.pointsPerLevel) points per level")
+                } else {
+                    print("⚙️ LEVEL CONFIG: Using default - \(levelConfig.pointsPerLevel) points per level")
+                }
+            }
+        }
+    }
+    
+    /// Fetch level config from server endpoint
+    private func fetchLevelConfigFromServer() async -> LevelConfig? {
+        guard let url = URL(string: "\(AppConfig.baseURL)/api/config/levels") else { 
+            print("❌ LEVEL CONFIG: Invalid server URL")
+            return nil 
+        }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ LEVEL CONFIG: Server request failed with status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return nil
+            }
+            
+            let config = try JSONDecoder().decode(LevelConfig.self, from: data)
+            return config
+        } catch {
+            print("❌ LEVEL CONFIG: Failed to fetch from server: \(error)")
+            return nil
+        }
+    }
+    
+    /// Load level config from local JSON file
+    private func loadLocalLevelConfig() -> LevelConfig? {
+        guard let path = Bundle.main.path(forResource: "level-config", ofType: "json"),
+              let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            print("⚠️ LEVEL CONFIG: No local config file found")
+            return nil
+        }
+        
+        do {
+            let config = try JSONDecoder().decode(LevelConfig.self, from: data)
+            return config
+        } catch {
+            print("❌ LEVEL CONFIG: Failed to parse local config: \(error)")
+            return nil
+        }
+    }
+    
+    // MARK: - Debug Methods
+    
+    /// Debug method to add points for testing
+    func addDebugPoints(_ points: Int = 100) {
+        playerTotalScore += points
+        print("🐛 DEBUG: Added \(points) points, total now: \(playerTotalScore)")
     }
     
     // Send debug message to server
