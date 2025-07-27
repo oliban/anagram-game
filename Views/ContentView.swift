@@ -141,6 +141,11 @@ struct ContentView: View {
                 
                 // Load total score from local storage and then refresh from server
                 gameModel.loadTotalScore()
+                
+                // Start the first game after registration is complete
+                Task { @MainActor in
+                    await gameModel.startNewGame()
+                }
             } else {
                 // Player logged out - show registration
                 print("🔴 LOGOUT: Player cleared, showing registration")

@@ -34,9 +34,10 @@ class DatabasePhrase {
       language: this.language,
       phraseType: this.phraseType,
       usageCount: this.usageCount,
-      createdAt: this.createdAt,
+      createdAt: this.createdAt ? this.createdAt.toISOString() : new Date().toISOString(),
       // Legacy fields for backward compatibility
-      senderId: this.senderId || this.createdByPlayerId,
+      senderId: this.senderId || this.createdByPlayerId || 'system',
+      senderName: this.senderName || 'Unknown Player',
       targetId: this.targetId,
       isConsumed: this.isConsumed || false
     };
@@ -207,11 +208,12 @@ class DatabasePhrase {
 
   /**
    * Get phrases for a player (backward compatible with old PhraseStore API)
+   * Returns targeted phrases first, then global phrases if no targeted phrases available
    */
   static async getPhrasesForPlayer(playerId) {
     try {
-      // Get all available phrases for the player using the smart selection function
-      const result = await query(`
+      // First, get targeted phrases
+      const targetedResult = await query(`
         SELECT 
           p.id,
           p.content,
@@ -231,7 +233,7 @@ class DatabasePhrase {
         LIMIT 10
       `, [playerId]);
 
-      const phrases = result.rows.map(row => {
+      let phrases = targetedResult.rows.map(row => {
         const phrase = new DatabasePhrase({
           id: row.id,
           content: row.content,
@@ -239,7 +241,8 @@ class DatabasePhrase {
           difficulty_level: row.difficulty_level,
           is_global: row.is_global,
           created_by_player_id: row.senderId,
-          phrase_type: row.phrase_type
+          phrase_type: row.phrase_type,
+          language: row.language
         });
         
         // Add legacy properties for backward compatibility
@@ -250,7 +253,58 @@ class DatabasePhrase {
         return phrase;
       });
 
-      console.log(`📋 DATABASE: Found ${phrases.length} phrases for player ${playerId}`);
+      // If no targeted phrases, get global phrases
+      if (phrases.length === 0) {
+        const globalResult = await query(`
+          SELECT 
+            p.id,
+            p.content,
+            p.hint,
+            p.difficulty_level,
+            p.is_global,
+            p.language,
+            p.created_by_player_id as "senderId",
+            COALESCE(pl.name, 'Unknown Player') as "senderName",
+            null as "targetId",
+            false as "isConsumed",
+            'global' as phrase_type
+          FROM phrases p
+          LEFT JOIN players pl ON p.created_by_player_id = pl.id
+          WHERE p.is_global = true 
+            AND p.is_approved = true
+            AND (p.created_by_player_id IS NULL OR p.created_by_player_id != $1)
+            AND p.id NOT IN (SELECT phrase_id FROM completed_phrases WHERE player_id = $1)
+            AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
+          ORDER BY RANDOM()
+          LIMIT 10
+        `, [playerId]);
+
+        phrases = globalResult.rows.map(row => {
+          const phrase = new DatabasePhrase({
+            id: row.id,
+            content: row.content,
+            hint: row.hint,
+            difficulty_level: row.difficulty_level,
+            is_global: row.is_global,
+            created_by_player_id: row.senderId,
+            phrase_type: row.phrase_type,
+            language: row.language
+          });
+          
+          // Add legacy properties for backward compatibility
+          phrase.senderId = row.senderId;
+          phrase.senderName = row.senderName;
+          phrase.targetId = row.targetId;
+          phrase.isConsumed = row.isConsumed;
+          
+          return phrase;
+        });
+
+        console.log(`📋 DATABASE: Found ${phrases.length} global phrases for player ${playerId} (no targeted phrases available)`);
+      } else {
+        console.log(`📋 DATABASE: Found ${phrases.length} targeted phrases for player ${playerId}`);
+      }
+
       return phrases;
     } catch (error) {
       console.error('❌ DATABASE: Error getting phrases for player:', error.message);

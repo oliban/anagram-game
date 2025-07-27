@@ -60,7 +60,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     let id: String
     let content: String
     let senderId: String
-    let targetId: String
+    let targetId: String?  // Made optional to handle null values for global phrases
     let createdAt: Date
     let isConsumed: Bool
     let senderName: String
@@ -75,15 +75,18 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
         id = try container.decode(String.self, forKey: .id)
         content = try container.decode(String.self, forKey: .content)
         senderId = try container.decode(String.self, forKey: .senderId)
-        targetId = try container.decode(String.self, forKey: .targetId)
+        targetId = try container.decodeIfPresent(String.self, forKey: .targetId)  // Handle null values
         isConsumed = try container.decode(Bool.self, forKey: .isConsumed)
-        senderName = try container.decode(String.self, forKey: .senderName)
+        senderName = try container.decodeIfPresent(String.self, forKey: .senderName) ?? "Unknown Player"
         language = try container.decodeIfPresent(String.self, forKey: .language) ?? "en" // Default to English
         
-        // Handle date parsing
-        let dateString = try container.decode(String.self, forKey: .createdAt)
-        let formatter = ISO8601DateFormatter()
-        createdAt = formatter.date(from: dateString) ?? Date()
+        // Handle date parsing - make optional since server might not include it
+        if let dateString = try container.decodeIfPresent(String.self, forKey: .createdAt) {
+            let formatter = ISO8601DateFormatter()
+            createdAt = formatter.date(from: dateString) ?? Date()
+        } else {
+            createdAt = Date() // Default to current date
+        }
     }
 }
 
@@ -865,16 +868,43 @@ class NetworkManager: ObservableObject {
                 return []
             }
             
-            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let phrasesData = jsonResponse["phrases"] {
-                let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
-                let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
-                return phrases
+            // Debug: Log the raw response
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🔍 PHRASE: Raw server response: \(responseString)")
+            }
+            
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                print("🔍 PHRASE: Parsed JSON keys: \(jsonResponse.keys)")
+                
+                if let phrasesData = jsonResponse["phrases"] {
+                    print("🔍 PHRASE: Found phrases data, attempting to decode...")
+                    print("🔍 PHRASE: First phrase sample: \(phrasesData)")
+                    
+                    do {
+                        let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
+                        let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
+                        print("🔍 PHRASE: Successfully decoded \(phrases.count) phrases")
+                        return phrases
+                    } catch {
+                        print("❌ PHRASE: JSON decoding failed: \(error)")
+                        if let decodingError = error as? DecodingError {
+                            print("❌ PHRASE: Detailed decoding error: \(decodingError)")
+                        }
+                        return []
+                    }
+                } else {
+                    print("❌ PHRASE: No 'phrases' key found in JSON response")
+                }
+            } else {
+                print("❌ PHRASE: Failed to parse JSON response")
             }
             
             return []
         } catch {
-            print("❌ PHRASE: Error fetching phrases: \(error.localizedDescription)")
+            print("❌ PHRASE: Error fetching phrases: \(error)")
+            if let decodingError = error as? DecodingError {
+                print("❌ PHRASE: Decoding error details: \(decodingError)")
+            }
             return []
         }
     }

@@ -677,6 +677,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Debug: Verify connection is made
         print("🔗 Scene connected to GameModel as messageTileSpawner")
+        
+        // Notify GameModel that connection is established (for pending debug tiles)
+        gameModel.onMessageTileSpawnerConnected()
         Task {
             let debugMessage = "SCENE_CONNECTED: PhysicsGameScene connected as messageTileSpawner"
             guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
@@ -1071,6 +1074,11 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             
             run(SKAction.sequence([delayAction, addAction]))
         }
+        
+        // Spawn debug tile showing phrase source (after cleanup, persists with score tile)
+        let debugMessage = "Source: \(gameModel.debugPhraseSource)"
+        spawnMessageTile(message: debugMessage)
+        print("🐛 Spawned debug tile in resetGame: \(debugMessage)")
         
         // Create language tile - same size as letter tiles (40x40)
         let languageTileSize = CGSize(width: 40, height: 40)  // Same as letter tiles
@@ -3085,6 +3093,11 @@ extension PhysicsGameScene: SKPhysicsContactDelegate {
 
 // Base class for information tiles (ScoreTile, MessageTile, LanguageTile) with consistent green color scheme
 class InformationTile: SKSpriteNode, RespawnableTile {
+    // Standard font sizes for all information tiles
+    static let primaryFontSize: CGFloat = 18
+    static let secondaryFontSize: CGFloat = 12
+    static let primaryLineHeight: CGFloat = 22
+    
     private var frontFace: SKShapeNode?
     var isBeingDragged = false
     var isSquashed = false
@@ -3209,7 +3222,7 @@ class ScoreTile: InformationTile {
         
         // Create score label (top line)
         scoreLabel = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
-        scoreLabel?.fontSize = 18
+        scoreLabel?.fontSize = InformationTile.primaryFontSize
         scoreLabel?.fontColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
         scoreLabel?.verticalAlignmentMode = .center
         scoreLabel?.horizontalAlignmentMode = .center
@@ -3219,7 +3232,7 @@ class ScoreTile: InformationTile {
         
         // Create difficulty label (bottom line)
         difficultyLabel = SKLabelNode(fontNamed: "Arial")
-        difficultyLabel?.fontSize = 12
+        difficultyLabel?.fontSize = InformationTile.secondaryFontSize
         difficultyLabel?.fontColor = UIColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1.0)
         difficultyLabel?.verticalAlignmentMode = .center
         difficultyLabel?.horizontalAlignmentMode = .center
@@ -3332,8 +3345,8 @@ class MessageTile: InformationTile {
     
     init(message: String, sceneSize: CGSize) {
         // Calculate optimal tile size with text wrapping
-        let fontSize: CGFloat = 24
-        let lineHeight: CGFloat = 28  // Slightly larger than fontSize for readability
+        let fontSize = InformationTile.primaryFontSize
+        let lineHeight = InformationTile.primaryLineHeight
         let padding: CGFloat = 20
         let minWidth: CGFloat = 80
         

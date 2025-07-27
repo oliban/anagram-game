@@ -61,10 +61,16 @@ class GameModel: ObservableObject {
     private var isStartingNewGame = false
     private var isCheckingPhrases = false
     private var isSkipping = false // Prevent concurrent skip operations
+    private var currentPhraseSource: String = "Unknown"
     
     // Computed property to get current language for LanguageTile display
     var currentLanguage: String {
         return currentCustomPhrase?.language ?? "en"
+    }
+    
+    // Public getter for current phrase source (for debug tile)
+    var debugPhraseSource: String {
+        return currentPhraseSource
     }
     
     // Computed properties for phrase queue status (public for UI access)
@@ -91,7 +97,7 @@ class GameModel: ObservableObject {
         loadSentences()
         Task { @MainActor in
             setupNetworkNotifications()
-            await startNewGame()
+            // Remove automatic startNewGame() - let it be triggered after registration
         }
     }
     
@@ -166,14 +172,22 @@ class GameModel: ObservableObject {
         await sendDebugToServer("ENTERING_checkForCustomPhrases: isUserInitiated=\(isUserInitiated)")
         
         let networkManager = NetworkManager.shared
+        var phraseSource = "Unknown"
         
         // PRIORITY 1: Check phrase queue first
         if let queuedPhrase = getNextPhraseFromQueue() {
-            print("📤 GAME: Using queued phrase: '\(queuedPhrase.content)' from \(queuedPhrase.senderName)")
+            // Distinguish between targeted custom phrases and global phrases
+            if queuedPhrase.targetId != nil {
+                phraseSource = "Targeted (\(queuedPhrase.senderName))"
+                customPhraseInfo = "Custom phrase from \(queuedPhrase.senderName)"
+            } else {
+                phraseSource = "Global"
+                customPhraseInfo = "" // No sender info for global phrases
+            }
+            print("📤 GAME: Using cached server phrase: '\(queuedPhrase.content)' from \(queuedPhrase.senderName)")
             
             currentCustomPhrase = queuedPhrase
             currentSentence = queuedPhrase.content
-            customPhraseInfo = "Custom phrase from \(queuedPhrase.senderName)"
             currentPhraseId = queuedPhrase.id
             
             // Mark as consumed on server
@@ -187,11 +201,18 @@ class GameModel: ObservableObject {
         } else {
             // PRIORITY 2: Check for push-delivered phrase (for user-initiated actions)
             if isUserInitiated && networkManager.hasNewPhrase, let pushedPhrase = networkManager.lastReceivedPhrase {
+                // Distinguish between targeted and global push-delivered phrases
+                if pushedPhrase.targetId != nil {
+                    phraseSource = "Push-Targeted (\(pushedPhrase.senderName))"
+                    customPhraseInfo = "Custom phrase from \(pushedPhrase.senderName)"
+                } else {
+                    phraseSource = "Push-Global"
+                    customPhraseInfo = "" // No sender info for global phrases
+                }
                 print("⚡ GAME: Using push-delivered phrase: '\(pushedPhrase.content)' (user-initiated)")
                 
                 currentCustomPhrase = pushedPhrase
                 currentSentence = pushedPhrase.content
-                customPhraseInfo = "Custom phrase from \(pushedPhrase.senderName)"
                 currentPhraseId = pushedPhrase.id
                 
                 // Mark as consumed and clear the push flag
@@ -213,11 +234,18 @@ class GameModel: ObservableObject {
                 await sendDebugToServer("SERVER_FETCH_RESULT: got \(customPhrases.count) phrases")
                 
                 if let firstPhrase = customPhrases.first {
-                    print("✅ GAME: Got phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
+                    // Distinguish between targeted and global server phrases
+                    if firstPhrase.targetId != nil {
+                        phraseSource = "Server-Targeted (\(firstPhrase.senderName))"
+                        customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
+                    } else {
+                        phraseSource = "Server-Global"
+                        customPhraseInfo = "" // No sender info for global phrases
+                    }
+                    print("✅ GAME: Got fresh phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
                     
                     currentCustomPhrase = firstPhrase
                     currentSentence = firstPhrase.content
-                    customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
                     currentPhraseId = firstPhrase.id
                     
                     // Mark the phrase as consumed on server IMMEDIATELY
@@ -229,7 +257,8 @@ class GameModel: ObservableObject {
                         print("❌ GAME: Failed to consume server phrase \(firstPhrase.id)")
                     }
                 } else {
-                    print("🎯 GAME: No custom phrases available, using default sentence")
+                    phraseSource = "Local-File"
+                    print("🎯 GAME: No custom phrases available, using local file sentence")
                     
                     // Debug: Log that we're using local phrases
                     await sendDebugToServer("USING_LOCAL_PHRASES: localPhrases.count=\(localPhrases.count)")
@@ -310,6 +339,11 @@ class GameModel: ObservableObject {
             print("🔄 About to trigger scene reset - messageTileSpawner: \(messageTileSpawner != nil ? "connected" : "nil")")
             messageTileSpawner?.resetGame()
             print("🔄 Triggered scene reset from GameModel")
+            
+            // Store phrase source for later spawning in resetGame
+            currentPhraseSource = phraseSource
+            print("🐛 Stored phrase source: \(phraseSource) for debug tile spawning")
+            
             // Reset flag to allow future phrase checks
             isCheckingPhrases = false
         }
@@ -317,6 +351,12 @@ class GameModel: ObservableObject {
         // Send debug messages after MainActor.run
         await sendDebugToServer("SCENE_RESET: messageTileSpawner is \(messageTileSpawner != nil ? "connected" : "nil")")
         await sendDebugToServer("SCENE_RESET: resetGame() called on scene")
+    }
+    
+    // Called when messageTileSpawner connection is established
+    @MainActor
+    func onMessageTileSpawnerConnected() {
+        print("🔗 messageTileSpawner connection established")
     }
     
     private func scrambleLetters() {
@@ -598,20 +638,21 @@ class GameModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
-    // Method to refresh phrase queue for lobby display
+    // Method to refresh phrase queue for lobby display and game play
     func refreshPhrasesForLobby() async {
         let networkManager = NetworkManager.shared
         
         let phrases = await networkManager.fetchPhrasesForCurrentPlayer()
         
         await MainActor.run {
-            print("📥 LOBBY: BEFORE REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count)")
+            print("📥 LOBBY: BEFORE REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count), phraseQueue: \(phraseQueue.count)")
             
             // Only update if the server data is different from what we have
             let serverPhraseIds = Set(phrases.map { $0.id })
-            let currentPhraseIds = Set(lobbyDisplayQueue.map { $0.id })
+            let currentLobbyPhraseIds = Set(lobbyDisplayQueue.map { $0.id })
+            let currentGamePhraseIds = Set(phraseQueue.map { $0.id })
             
-            if serverPhraseIds != currentPhraseIds {
+            if serverPhraseIds != currentLobbyPhraseIds {
                 print("📥 LOBBY: Server data changed, updating lobby display queue")
                 lobbyDisplayQueue.removeAll()
                 lobbyDisplayQueue.append(contentsOf: phrases)
@@ -619,8 +660,17 @@ class GameModel: ObservableObject {
                 print("📥 LOBBY: Server data unchanged, keeping current lobby display queue")
             }
             
-            print("📥 LOBBY: AFTER REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count)")
-            print("📥 LOBBY: Loaded \(phrases.count) phrases for lobby display")
+            // CRITICAL FIX: Also populate phraseQueue for first game access
+            if serverPhraseIds != currentGamePhraseIds {
+                print("📥 GAME: Server data changed, updating game phrase queue")
+                phraseQueue.removeAll()
+                phraseQueue.append(contentsOf: phrases)
+            } else {
+                print("📥 GAME: Server data unchanged, keeping current game phrase queue")
+            }
+            
+            print("📥 LOBBY: AFTER REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count), phraseQueue: \(phraseQueue.count)")
+            print("📥 LOBBY: Loaded \(phrases.count) phrases for lobby display and game queue")
             if !phrases.isEmpty {
                 print("📥 LOBBY: Phrase senders: \(phrases.map { $0.senderName })")
             }
