@@ -25,7 +25,7 @@ class DatabasePhrase {
    * Includes backward compatibility fields
    */
   getPublicInfo() {
-    return {
+    const publicInfo = {
       id: this.id,
       content: this.content,
       hint: this.hint,
@@ -41,6 +41,11 @@ class DatabasePhrase {
       targetId: this.targetId,
       isConsumed: this.isConsumed || false
     };
+    
+    // Debug logging to see what targetId is being sent
+    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${this.senderName || 'Unknown Player'}`);
+    
+    return publicInfo;
   }
 
   /**
@@ -222,11 +227,13 @@ class DatabasePhrase {
           p.is_global,
           p.language,
           p.created_by_player_id as "senderId",
+          COALESCE(pl.name, 'Unknown Player') as "senderName",
           pp.target_player_id as "targetId",
           false as "isConsumed",
           'targeted' as phrase_type
         FROM phrases p
         JOIN player_phrases pp ON p.id = pp.phrase_id
+        LEFT JOIN players pl ON p.created_by_player_id = pl.id
         WHERE pp.target_player_id = $1 
           AND pp.is_delivered = false
         ORDER BY p.created_at ASC
@@ -247,6 +254,7 @@ class DatabasePhrase {
         
         // Add legacy properties for backward compatibility
         phrase.senderId = row.senderId;
+        phrase.senderName = row.senderName;
         phrase.targetId = row.targetId;
         phrase.isConsumed = row.isConsumed;
         

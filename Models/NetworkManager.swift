@@ -559,7 +559,21 @@ class NetworkManager: ObservableObject {
                 self.justReceivedPhrase = phrase
             }
         } catch {
+            // Add senderName to the phrase data for decoding
+            var mutablePhraseData = phraseData
+            mutablePhraseData["senderName"] = senderName
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: mutablePhraseData)
+                if let jsonString = String(data: jsonData, encoding: .utf8) {
+                    print("❌ SOCKET: JSON string: \(jsonString)")
+                }
+            } catch {
+                print("❌ SOCKET: Failed to serialize debug data")
+            }
+            
             print("❌ SOCKET: Failed to decode new phrase: \(error.localizedDescription)")
+            print("❌ SOCKET: Phrase data was: \(mutablePhraseData)")
         }
     }
     
@@ -884,6 +898,17 @@ class NetworkManager: ObservableObject {
                         let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
                         let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
                         print("🔍 PHRASE: Successfully decoded \(phrases.count) phrases")
+                        
+                        // CRITICAL DEBUG: Log targetId values for each phrase
+                        for (index, phrase) in phrases.enumerated() {
+                            print("🐛 DEBUG: Phrase[\(index)] - content: '\(phrase.content)', senderName: '\(phrase.senderName)', targetId: '\(phrase.targetId ?? "nil")'")
+                            
+                            // EXTRA DEBUG: If this phrase has a sender name but no targetId, investigate further
+                            if phrase.senderName == "Harry" && phrase.targetId == nil {
+                                print("🚨 CRITICAL: Harry's phrase has no targetId - this is the bug!")
+                            }
+                        }
+                        
                         return phrases
                     } catch {
                         print("❌ PHRASE: JSON decoding failed: \(error)")
