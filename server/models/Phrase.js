@@ -52,7 +52,7 @@ class Phrase {
     }
 
     // Validate each word contains only letters, numbers, and basic punctuation
-    const validWordPattern = /^[a-zA-Z0-9\-']+$/;
+    const validWordPattern = /^[\p{L}\p{N}\-']+$/u;
     for (let word of words) {
       if (!validWordPattern.test(word)) {
         return { valid: false, error: 'Words can only contain letters, numbers, hyphens, and apostrophes' };

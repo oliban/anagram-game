@@ -471,11 +471,15 @@ struct PhraseCreationView: View {
             }
             .navigationBarHidden(true)
             .background(Color(.systemBackground))
-            .onTapGesture {
-                // Dismiss keyboard when tapping outside
-                dismissKeyboard()
-                showingSuggestions = false
-            }
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Dismiss keyboard when tapping outside
+                        dismissKeyboard()
+                        showingSuggestions = false
+                    }
+            )
             .alert(isPresented: $showingAlert) {
                 Alert(
                     title: Text(successMessage.isEmpty ? "Error" : "Success"),
