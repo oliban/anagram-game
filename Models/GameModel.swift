@@ -16,17 +16,19 @@ struct LocalPhrase {
 // Level system configuration structure
 struct LevelConfig: Codable {
     let pointsPerLevel: Int
+    let difficultyPerLevel: Int
     let maxLevel: Int?
     let levelBonuses: [String: Int]? // Optional bonus points at specific levels
     
     static let `default` = LevelConfig(
         pointsPerLevel: 1000,
+        difficultyPerLevel: 50,
         maxLevel: nil,
         levelBonuses: nil
     )
     
     private enum CodingKeys: String, CodingKey {
-        case pointsPerLevel, maxLevel, levelBonuses
+        case pointsPerLevel, difficultyPerLevel, maxLevel, levelBonuses
     }
 }
 
@@ -118,16 +120,17 @@ class GameModel: ObservableObject {
     }
     
     // Computed properties for phrase queue status (public for UI access)
+    // Only count targeted phrases (sent by other players), not global fallback phrases
     var waitingPhrasesCount: Int {
-        return lobbyDisplayQueue.count
+        return lobbyDisplayQueue.filter { $0.targetId != nil }.count
     }
     
     var waitingPhrasesSenders: [String] {
-        return lobbyDisplayQueue.map { $0.senderName }
+        return lobbyDisplayQueue.filter { $0.targetId != nil }.map { $0.senderName }
     }
     
     var hasWaitingPhrases: Bool {
-        return !lobbyDisplayQueue.isEmpty
+        return lobbyDisplayQueue.contains { $0.targetId != nil }
     }
     
     enum GameState {
@@ -223,7 +226,7 @@ class GameModel: ObservableObject {
         // PRIORITY 1: Fetch fresh phrases from server first (bypasses WebSocket queue issues)
         print("🔍 GAME: Fetching fresh phrases from server")
         await sendDebugToServer("SERVER_FETCH_STARTING: fetching phrases from server")
-        let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer()
+        let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
         
         // Debug: Log what we got from server
         await sendDebugToServer("SERVER_FETCH_RESULT: got \(customPhrases.count) phrases")
@@ -238,6 +241,19 @@ class GameModel: ObservableObject {
                 customPhraseInfo = "" // No sender info for global phrases
             }
             print("✅ GAME: Got fresh phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
+            
+            // Calculate and log difficulty score for debugging
+            let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: firstPhrase.content, language: "en")
+            let maxAllowedDifficulty = currentLevel * levelConfig.difficultyPerLevel
+            
+            print("🔍 PHRASE_DEBUG: Selected phrase '\(firstPhrase.content)'")
+            print("🔍 PHRASE_DEBUG: Difficulty score: \(difficultyAnalysis.score)")
+            print("🔍 PHRASE_DEBUG: Player level: \(currentLevel), max allowed: \(maxAllowedDifficulty)")
+            print("🔍 PHRASE_DEBUG: Source: \(firstPhrase.targetId != nil ? "Targeted" : "Global")")
+            print("🔍 PHRASE_DEBUG: Sender: \(firstPhrase.senderName)")
+            
+            // Send debug info to server
+            await sendDebugToServer("PHRASE_DEBUG: phrase='\(firstPhrase.content)', difficulty=\(difficultyAnalysis.score), level=\(currentLevel), maxAllowed=\(maxAllowedDifficulty)")
             
             currentCustomPhrase = firstPhrase
             currentSentence = firstPhrase.content
@@ -325,7 +341,28 @@ class GameModel: ObservableObject {
                 }
                 
                 currentCustomPhrase = nil
-                let selectedPhrase = localPhrases.randomElement()?.content ?? "The cat sat on the mat"
+                
+                // Filter local phrases by current level (same logic as server filtering)
+                let maxDifficulty = currentLevel * levelConfig.difficultyPerLevel
+                let levelAppropriatePhrases = localPhrases.filter { phrase in
+                    let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: phrase.content, language: "en")
+                    return difficultyAnalysis.score <= Double(maxDifficulty)
+                }
+                
+                print("🎯 LOCAL_PHRASE_FILTER: Level \(currentLevel), max difficulty: \(maxDifficulty)")
+                print("🎯 LOCAL_PHRASE_FILTER: Filtered \(localPhrases.count) phrases to \(levelAppropriatePhrases.count) level-appropriate phrases")
+                
+                // Select from level-appropriate phrases, fallback to all if none match
+                let phrasesToChooseFrom = levelAppropriatePhrases.isEmpty ? localPhrases : levelAppropriatePhrases
+                let selectedPhrase = phrasesToChooseFrom.randomElement()?.content ?? "The cat sat on the mat"
+                
+                // Debug the selected local phrase
+                let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: selectedPhrase, language: "en")
+                print("🔍 LOCAL_PHRASE_DEBUG: Selected local phrase '\(selectedPhrase)'")
+                print("🔍 LOCAL_PHRASE_DEBUG: Difficulty score: \(difficultyAnalysis.score)")
+                print("🔍 LOCAL_PHRASE_DEBUG: Used filtered list: \(!levelAppropriatePhrases.isEmpty)")
+                await sendDebugToServer("LOCAL_PHRASE_DEBUG: phrase='\(selectedPhrase)', difficulty=\(difficultyAnalysis.score), filtered=\(!levelAppropriatePhrases.isEmpty)")
+                
                 currentSentence = selectedPhrase
                 customPhraseInfo = ""
                 
@@ -339,7 +376,7 @@ class GameModel: ObservableObject {
                 print("🔍 LOCAL_PHRASE: Creation result: \(creationSuccess)")
                 if creationSuccess {
                     // Get the newly created phrase to get its real ID
-                    let phrases = await networkManager.fetchPhrasesForCurrentPlayer()
+                    let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
                     if let createdPhrase = phrases.first(where: { $0.content == selectedPhrase }) {
                         currentPhraseId = createdPhrase.id
                         print("✅ LOCAL PHRASE: Created on server with ID: \(createdPhrase.id)")
@@ -822,7 +859,7 @@ class GameModel: ObservableObject {
     func refreshPhrasesForLobby() async {
         let networkManager = NetworkManager.shared
         
-        let phrases = await networkManager.fetchPhrasesForCurrentPlayer()
+        let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
         
         await MainActor.run {
             print("📥 LOBBY: BEFORE REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count), phraseQueue: \(phraseQueue.count)")

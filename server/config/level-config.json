@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-07-27",
+  "description": "Server-side level configuration for anagram game progression",
+  
+  "pointsPerLevel": 1000,
+  "difficultyPerLevel": 50,
+  
+  "levelThresholds": [
+    { "level": 1, "maxDifficulty": 50 },
+    { "level": 2, "maxDifficulty": 100 },
+    { "level": 3, "maxDifficulty": 150 },
+    { "level": 4, "maxDifficulty": 200 },
+    { "level": 5, "maxDifficulty": 250 },
+    { "level": 6, "maxDifficulty": 300 },
+    { "level": 7, "maxDifficulty": 350 },
+    { "level": 8, "maxDifficulty": 400 },
+    { "level": 9, "maxDifficulty": 450 },
+    { "level": 10, "maxDifficulty": 500 }
+  ],
+  
+  "milestones": [
+    { "level": 5, "bonus": 500, "description": "Welcome to intermediate level!" },
+    { "level": 10, "bonus": 1000, "description": "Advanced player bonus!" },
+    { "level": 15, "bonus": 1500, "description": "Expert level reached!" },
+    { "level": 20, "bonus": 2000, "description": "Master anagram solver!" }
+  ]
+}

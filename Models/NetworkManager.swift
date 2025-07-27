@@ -863,13 +863,20 @@ class NetworkManager: ObservableObject {
         }
     }
     
-    func fetchPhrasesForCurrentPlayer() async -> [CustomPhrase] {
+    func fetchPhrasesForCurrentPlayer(level: Int? = nil) async -> [CustomPhrase] {
         guard let currentPlayer = currentPlayer else {
             print("❌ PHRASE: No current player registered")
             return []
         }
         
-        guard let url = URL(string: "\(baseURL)/api/phrases/for/\(currentPlayer.id)") else {
+        // Build URL with optional level parameter
+        var urlString = "\(baseURL)/api/phrases/for/\(currentPlayer.id)"
+        if let level = level {
+            urlString += "?level=\(level)"
+            print("🎯 PHRASE: Fetching phrases for player level \(level)")
+        }
+        
+        guard let url = URL(string: urlString) else {
             print("❌ PHRASE: Invalid URL for fetching phrases")
             return []
         }
