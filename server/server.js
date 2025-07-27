@@ -429,6 +429,41 @@ app.get('/api/status', async (req, res) => {
   }
 });
 
+// Level configuration endpoint
+app.get('/api/config/levels', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    const configPath = path.join(__dirname, 'config', 'level-config.json');
+    const configData = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configData);
+    
+    res.json(config);
+  } catch (error) {
+    console.error('❌ LEVEL CONFIG: Error loading level configuration:', error.message);
+    
+    // Return default configuration if file doesn't exist or can't be read
+    const defaultConfig = {
+      version: "1.0.0",
+      pointsPerLevel: 1000,
+      difficultyPerLevel: 50,
+      levelThresholds: [
+        { level: 1, maxDifficulty: 50 },
+        { level: 2, maxDifficulty: 100 },
+        { level: 3, maxDifficulty: 150 },
+        { level: 4, maxDifficulty: 200 },
+        { level: 5, maxDifficulty: 250 }
+      ],
+      milestones: [
+        { level: 5, bonus: 500, description: "Welcome to intermediate level!" }
+      ]
+    };
+    
+    res.json(defaultConfig);
+  }
+});
+
 /**
  * @swagger
  * /api/players/register:
@@ -1424,6 +1459,7 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
     }
     
     const { playerId } = req.params;
+    const { level } = req.query; // Get player level from query parameters
     
     // Validate that player exists in database
     const player = await DatabasePlayer.getPlayerById(playerId);
@@ -1433,8 +1469,29 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
       });
     }
     
-    // Get phrases for player from database
-    const phrases = await DatabasePhrase.getPhrasesForPlayer(playerId);
+    // Determine max difficulty based on player level
+    let maxDifficulty = null;
+    if (level) {
+      try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const configPath = path.join(__dirname, 'config', 'level-config.json');
+        const configData = await fs.readFile(configPath, 'utf8');
+        const levelConfig = JSON.parse(configData);
+        
+        const playerLevel = parseInt(level);
+        if (playerLevel > 0) {
+          // Calculate max difficulty based on level (level * difficultyPerLevel)
+          maxDifficulty = playerLevel * levelConfig.difficultyPerLevel;
+          console.log(`🎯 LEVEL FILTER: Player level ${playerLevel}, max difficulty: ${maxDifficulty}`);
+        }
+      } catch (configError) {
+        console.error('❌ LEVEL CONFIG: Error loading level config, using no filtering:', configError.message);
+      }
+    }
+    
+    // Get phrases for player from database (with optional difficulty filtering)
+    const phrases = await DatabasePhrase.getPhrasesForPlayer(playerId, maxDifficulty);
     
     const phrasesData = phrases.map(p => p.getPublicInfo());
     

@@ -215,9 +215,9 @@ class DatabasePhrase {
    * Get phrases for a player (backward compatible with old PhraseStore API)
    * Returns targeted phrases first, then global phrases if no targeted phrases available
    */
-  static async getPhrasesForPlayer(playerId) {
+  static async getPhrasesForPlayer(playerId, maxDifficulty = null) {
     try {
-      // First, get targeted phrases
+      // First, get targeted phrases (NO difficulty filtering - targeted phrases should always be delivered)
       const targetedResult = await query(`
         SELECT 
           p.id,
@@ -263,6 +263,10 @@ class DatabasePhrase {
 
       // If no targeted phrases, get global phrases
       if (phrases.length === 0) {
+        // For global phrases, $1 appears 3 times, so difficulty parameter is $2
+        // Include NULL check to exclude phrases without difficulty scores
+        const globalDifficultyFilter = maxDifficulty ? `AND p.difficulty_level IS NOT NULL AND p.difficulty_level <= $2` : '';
+        const globalParams = maxDifficulty ? [playerId, maxDifficulty] : [playerId];
         const globalResult = await query(`
           SELECT 
             p.id,
@@ -283,9 +287,10 @@ class DatabasePhrase {
             AND (p.created_by_player_id IS NULL OR p.created_by_player_id != $1)
             AND p.id NOT IN (SELECT phrase_id FROM completed_phrases WHERE player_id = $1)
             AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
+            ${globalDifficultyFilter}
           ORDER BY RANDOM()
           LIMIT 10
-        `, [playerId]);
+        `, globalParams);
 
         phrases = globalResult.rows.map(row => {
           const phrase = new DatabasePhrase({
@@ -309,8 +314,20 @@ class DatabasePhrase {
         });
 
         console.log(`📋 DATABASE: Found ${phrases.length} global phrases for player ${playerId} (no targeted phrases available)`);
+        
+        // Debug: Log difficulty levels of returned phrases if level filtering was applied
+        if (maxDifficulty && phrases.length > 0) {
+          const difficulties = phrases.map(p => p.difficultyLevel || 'NULL').join(', ');
+          console.log(`🔍 DATABASE_DEBUG: Returned phrase difficulties: [${difficulties}] (max allowed: ${maxDifficulty})`);
+        }
       } else {
         console.log(`📋 DATABASE: Found ${phrases.length} targeted phrases for player ${playerId}`);
+        
+        // Debug: Log difficulty levels of targeted phrases (no filtering applied)
+        if (phrases.length > 0) {
+          const difficulties = phrases.map(p => p.difficultyLevel || 'NULL').join(', ');
+          console.log(`🎯 TARGETED_DEBUG: Targeted phrase difficulties: [${difficulties}] (no level filtering - all delivered)`);
+        }
       }
 
       return phrases;
