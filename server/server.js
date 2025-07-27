@@ -445,18 +445,15 @@ app.get('/api/config/levels', async (req, res) => {
     
     // Return default configuration if file doesn't exist or can't be read
     const defaultConfig = {
-      version: "1.0.0",
-      pointsPerLevel: 1000,
-      difficultyPerLevel: 50,
-      levelThresholds: [
-        { level: 1, maxDifficulty: 50 },
-        { level: 2, maxDifficulty: 100 },
-        { level: 3, maxDifficulty: 150 },
-        { level: 4, maxDifficulty: 200 },
-        { level: 5, maxDifficulty: 250 }
+      version: "2.0.0",
+      progressionMultiplier: 1.3,
+      baseDifficultyPerLevel: 50,
+      skillLevels: [
+        { id: 0, title: "non-existent", pointsRequired: 0, maxDifficulty: 0 },
+        { id: 1, title: "disastrous", pointsRequired: 100, maxDifficulty: 50 }
       ],
       milestones: [
-        { level: 5, bonus: 500, description: "Welcome to intermediate level!" }
+        { level: 1, bonus: 0, description: "First skill level reached!" }
       ]
     };
     
@@ -1481,9 +1478,16 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
         
         const playerLevel = parseInt(level);
         if (playerLevel > 0) {
-          // Calculate max difficulty based on level (level * difficultyPerLevel)
-          maxDifficulty = playerLevel * levelConfig.difficultyPerLevel;
-          console.log(`🎯 LEVEL FILTER: Player level ${playerLevel}, max difficulty: ${maxDifficulty}`);
+          // Find the skill level that matches the player's level
+          const skillLevel = levelConfig.skillLevels?.find(sl => sl.id === playerLevel);
+          if (skillLevel) {
+            maxDifficulty = skillLevel.maxDifficulty;
+            console.log(`🎯 LEVEL FILTER: Player skill level ${playerLevel} (${skillLevel.title}), max difficulty: ${maxDifficulty}`);
+          } else {
+            // Fallback to legacy calculation if skill level not found
+            maxDifficulty = playerLevel * (levelConfig.baseDifficultyPerLevel || 50);
+            console.log(`🎯 LEVEL FILTER: Legacy calculation for level ${playerLevel}, max difficulty: ${maxDifficulty}`);
+          }
         }
       } catch (configError) {
         console.error('❌ LEVEL CONFIG: Error loading level config, using no filtering:', configError.message);

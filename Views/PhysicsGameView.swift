@@ -9,104 +9,151 @@ import SwiftUI
 import SpriteKit
 import CoreMotion
 
-// Total Score Display Component with Level Integration
-struct TotalScoreView: View {
+// Skill Level Color System - Unique color for each level
+extension Color {
+    static func skillLevelColor(for levelId: Int) -> Color {
+        switch levelId {
+        case 0: return Color(red: 0.4, green: 0.4, blue: 0.4) // non-existent - dark gray
+        case 1: return Color(red: 0.8, green: 0.2, blue: 0.2) // disastrous - dark red
+        case 2: return Color(red: 0.9, green: 0.3, blue: 0.3) // wretched - red
+        case 3: return Color(red: 1.0, green: 0.4, blue: 0.4) // poor - light red
+        case 4: return Color(red: 1.0, green: 0.5, blue: 0.0) // weak - dark orange
+        case 5: return Color(red: 1.0, green: 0.6, blue: 0.2) // inadequate - orange
+        case 6: return Color(red: 1.0, green: 0.7, blue: 0.3) // passable - light orange
+        case 7: return Color(red: 1.0, green: 0.8, blue: 0.0) // solid - gold
+        case 8: return Color(red: 1.0, green: 0.9, blue: 0.2) // excellent - yellow
+        case 9: return Color(red: 0.9, green: 1.0, blue: 0.3) // formidable - yellow-green
+        case 10: return Color(red: 0.6, green: 1.0, blue: 0.4) // outstanding - light green
+        case 11: return Color(red: 0.4, green: 0.9, blue: 0.4) // brilliant - green
+        case 12: return Color(red: 0.2, green: 0.8, blue: 0.6) // magnificent - teal
+        case 13: return Color(red: 0.0, green: 0.7, blue: 0.8) // world class - cyan
+        case 14: return Color(red: 0.2, green: 0.6, blue: 1.0) // supernatural - light blue
+        case 15: return Color(red: 0.4, green: 0.5, blue: 1.0) // titanic - blue
+        case 16: return Color(red: 0.6, green: 0.4, blue: 1.0) // extra-terrestrial - blue-purple
+        case 17: return Color(red: 0.7, green: 0.3, blue: 0.9) // mythical - purple
+        case 18: return Color(red: 0.8, green: 0.2, blue: 0.8) // magical - magenta
+        case 19: return Color(red: 0.9, green: 0.4, blue: 0.7) // utopian - pink-purple
+        case 20: return Color(red: 1.0, green: 0.6, blue: 0.8) // divine - pink
+        case 21: return Color(red: 1.0, green: 0.8, blue: 0.9) // legendary - light pink
+        default: return .white
+        }
+    }
+}
+
+// Unified Skill Level Display - Combines score and progress bar
+struct UnifiedSkillLevelView: View {
+    let levelConfig: LevelConfig
     let totalScore: Int
-    let currentLevel: Int
     let isLevelingUp: Bool
     
+    private var currentSkillLevel: SkillLevel {
+        levelConfig.getSkillLevel(for: totalScore)
+    }
+    
+    private var progressToNext: Double {
+        levelConfig.getProgressToNext(for: totalScore)
+    }
+    
+    private var nextSkillLevel: SkillLevel? {
+        levelConfig.getNextSkillLevel(for: totalScore)
+    }
+    
+    private var skillColor: Color {
+        Color.skillLevelColor(for: currentSkillLevel.id)
+    }
+    
     var body: some View {
-        HStack(spacing: 4) {
-            // Level indicator (replaces trophy)
-            Text("L\(currentLevel)")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.black)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(
-                    Capsule()
-                        .fill(levelBadgeColor)
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.black.opacity(0.3), lineWidth: 0.5)
-                        )
-                )
+        VStack(spacing: 8) {
+            // Skill Title Header
+            HStack {
+                Text(currentSkillLevel.title.uppercased())
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(skillColor)
+                    .textCase(.none)
+                
+                Spacer()
+                
+                // Level indicator
+                Text("L\(currentSkillLevel.id)")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(skillColor.opacity(0.9))
+                    )
+            }
             
-            // Score display
-            Text("\(totalScore)")
-                .foregroundColor(.white)
-                .font(.system(size: 14, weight: .semibold))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            Capsule()
-                .fill(Color.black.opacity(0.7))
-                .stroke(levelBorderColor, lineWidth: isLevelingUp ? 3 : 2)
-        )
-        .scaleEffect(isLevelingUp ? 1.3 : 1.0)
-        .rotationEffect(.degrees(isLevelingUp ? 360 : 0))
-        .shadow(color: isLevelingUp ? .yellow : .clear, radius: isLevelingUp ? 10 : 0)
-        .overlay(
-            // Sparkle effect during level up
-            Group {
-                if isLevelingUp {
-                    ForEach(0..<8, id: \.self) { index in
-                        Circle()
-                            .fill(sparkleColor(for: index))
-                            .frame(width: 6, height: 6)
-                            .offset(
-                                x: cos(Double(index) * .pi / 4) * 50,
-                                y: sin(Double(index) * .pi / 4) * 50
-                            )
-                            .scaleEffect(isLevelingUp ? 2.0 : 0)
-                            .opacity(isLevelingUp ? 0.9 : 0)
-                            .animation(
-                                .spring(response: 0.8, dampingFraction: 0.4)
-                                .delay(Double(index) * 0.1),
-                                value: isLevelingUp
-                            )
+            // Progress Bar with Score Inside
+            GeometryReader { geometry in
+                ZStack {
+                    // Background track
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.black.opacity(0.3))
+                        .frame(height: 24)
+                    
+                    // Progress fill
+                    HStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(skillGradient)
+                            .frame(width: geometry.size.width * progressToNext, height: 24)
+                            .animation(.easeInOut(duration: 0.4), value: progressToNext)
+                        
+                        Spacer(minLength: 0)
+                    }
+                    
+                    // Score text overlay
+                    HStack {
+                        Text("\(totalScore) pts")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 1)
+                        
+                        Spacer()
+                        
+                        if let nextLevel = nextSkillLevel {
+                            Text("→ \(nextLevel.title)")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.8))
+                                .shadow(color: .black, radius: 1)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    
+                    // Glow effect during level up
+                    if isLevelingUp {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(skillColor.opacity(0.3))
+                            .frame(height: 24)
+                            .blur(radius: 4)
+                            .animation(.easeInOut(duration: 0.5).repeatCount(3, autoreverses: true), value: isLevelingUp)
                     }
                 }
             }
+            .frame(height: 24)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.black.opacity(0.8))
+                .stroke(skillColor.opacity(isLevelingUp ? 1.0 : 0.6), lineWidth: isLevelingUp ? 3 : 2)
         )
-        .animation(.spring(response: 0.8, dampingFraction: 0.6), value: isLevelingUp)
-        .onChange(of: totalScore) { oldValue, newValue in
-            print("🏆 UI: TotalScoreView updated from \(oldValue) to \(newValue)")
-        }
+        .scaleEffect(isLevelingUp ? 1.08 : 1.0)
+        .shadow(color: isLevelingUp ? skillColor : .clear, radius: isLevelingUp ? 8 : 0)
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: isLevelingUp)
     }
     
-    // Dynamic colors based on level
-    private var levelBorderColor: Color {
-        if isLevelingUp {
-            // Bright, intense glow during level up
-            return .orange
-        }
-        return Color.yellow.opacity(levelBasedOpacity)
-    }
-    
-    private var levelBadgeColor: Color {
-        if isLevelingUp {
-            // Rainbow effect during level up
-            return .orange
-        } else if currentLevel >= 10 {
-            return .orange
-        } else if currentLevel >= 5 {
-            return .yellow
-        }
-        return Color.yellow.opacity(0.8)
-    }
-    
-    private var levelBasedOpacity: Double {
-        return min(1.0, 0.3 + Double(currentLevel) * 0.1)
-    }
-    
-    // Dynamic sparkle colors for animation
-    private func sparkleColor(for index: Int) -> Color {
-        let colors: [Color] = [.yellow, .orange, .white, .yellow.opacity(0.8)]
-        return colors[index % colors.count]
+    private var skillGradient: LinearGradient {
+        LinearGradient(
+            colors: [skillColor.opacity(0.8), skillColor],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 }
+
 
 // Hint Button Component embedded in PhysicsGameView
 struct HintButtonView: View {
@@ -469,9 +516,9 @@ struct PhysicsGameView: View {
                         // Score and Version Stack
                         VStack(spacing: 2) {
                             // Total Score Display with Level
-                            TotalScoreView(
+                            UnifiedSkillLevelView(
+                                levelConfig: gameModel.levelConfig,
                                 totalScore: gameModel.playerTotalScore,
-                                currentLevel: gameModel.currentLevel,
                                 isLevelingUp: gameModel.isLevelingUp
                             )
                             
