@@ -1436,8 +1436,16 @@ app.get('/api/phrases/for/:playerId', async (req, res) => {
     // Get phrases for player from database
     const phrases = await DatabasePhrase.getPhrasesForPlayer(playerId);
     
+    const phrasesData = phrases.map(p => p.getPublicInfo());
+    
+    // CRITICAL DEBUG: Log the exact JSON being sent to iOS client
+    if (phrasesData.length > 0 && phrasesData[0].targetId) {
+      console.log('🔍 SERVER: Sending targeted phrase to iOS client:');
+      console.log('🔍 SERVER: First phrase data:', JSON.stringify(phrasesData[0], null, 2));
+    }
+    
     res.json({
-      phrases: phrases.map(p => p.getPublicInfo()),
+      phrases: phrasesData,
       count: phrases.length,
       timestamp: new Date().toISOString()
     });
