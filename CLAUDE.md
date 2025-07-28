@@ -115,6 +115,20 @@ psql -d anagram_game -f server/database/schema.sql
 # API Documentation
 npm run docs  # Generate automated API docs at /api-docs endpoint
 
+# Phrase Generation (AI-Powered with Clever Clues)
+# Interactive workflow - generates phrases and shows immediate preview
+./server/scripts/generate-and-preview.sh "0-50:15"      # 15 English phrases (easy)
+./server/scripts/generate-and-preview.sh "0-50:15" sv   # 15 Swedish phrases (easy)
+./server/scripts/generate-and-preview.sh "0-100:50" sv  # 50 Swedish phrases (easy-medium)
+./server/scripts/generate-and-preview.sh "101-150:20"   # 20 English phrases (hard)
+
+# Advanced multi-range generation
+./server/scripts/generate-phrases.sh "0-50:100,51-100:100" --no-import  # Generate only
+./server/scripts/generate-phrases.sh "200-250:25"                       # Generate and import
+
+# Generated files use format: analyzed-{lang}-{range}-{count}-{timestamp}.json
+# Example: analyzed-sv-0-100-50-2025-07-28T11-11-08.json
+
 # Shared Algorithm Testing
 node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.calculateScore({phrase: 'test phrase', language: 'en'}));"
 ```
