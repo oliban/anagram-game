@@ -79,7 +79,12 @@ struct LobbyView: View {
             refreshTimer?.invalidate()
             refreshTimer = nil
         }
-        .fullScreenCover(isPresented: $showingGame) {
+        .fullScreenCover(isPresented: $showingGame, onDismiss: {
+            // Refresh data when returning from game
+            Task {
+                await refreshData()
+            }
+        }) {
             PhysicsGameView(gameModel: gameModel, showingGame: $showingGame)
         }
         .sheet(isPresented: $showingLegends) {
