@@ -20,12 +20,18 @@ struct LobbyView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Logo
+                    Image("anagram_logo_full")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 60)
+                        .padding(.top, 10)
+                    
                     // Mission statement
                     Text("Do you have what it takes to become a Legend?")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
-                        .padding(.top, 8)
                     
                     // Header with welcome message
                     headerSection
@@ -55,15 +61,7 @@ struct LobbyView: View {
             }
             .navigationTitle("")
             .navigationBarHidden(false)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Anagram Game")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .multilineTextAlignment(.center)
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
             .refreshable {
                 await refreshData()
             }
