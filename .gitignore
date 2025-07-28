@@ -146,6 +146,15 @@ server/server_output.log
 server/server_log.txt
 *.log
 
+# Generated phrase data (auto-generated, should not be committed)
+server/data/generated-*.json
+server/data/analyzed-*.json
+server/data/analyzed-*-preview.txt
+server/data/phrases-*.json
+server/data/generation-*.json
+server/data/generation-*.log
+server/data/import-*.json
+
 # Temporary files
 *.tmp
 *.temp
