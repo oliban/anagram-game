@@ -11,8 +11,7 @@ struct AppConfig {
     static let baseURL = "http://192.168.1.133:\(serverPort)"  // Use Mac IP for device testing
     
     // Contribution system URLs (different service)
-    static let contributionPort = "3001"
-    static let contributionBaseURL = "http://192.168.1.201:\(contributionPort)"
+    static let contributionBaseURL = "http://192.168.1.133:\(serverPort)"
     static let contributionAPIURL = "\(contributionBaseURL)/api/contribution/request"
     
     // Timing Configuration
@@ -1303,6 +1302,31 @@ class NetworkManager: ObservableObject {
         }
     }
     
+    func getLegendPlayers() async throws -> [LegendPlayer] {
+        guard let url = URL(string: "\(baseURL)/api/players/legends") else {
+            throw NetworkError.invalidURL
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ LEGENDS: Failed to get legend players. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                throw NetworkError.serverOffline
+            }
+            
+            let decoder = JSONDecoder()
+            let legendResponse = try decoder.decode(LegendPlayersResponse.self, from: data)
+            
+            print("👑 LEGENDS: Successfully loaded \(legendResponse.players.count) legend players")
+            return legendResponse.players
+            
+        } catch {
+            print("❌ LEGENDS: Error getting legend players: \(error.localizedDescription)")
+            throw NetworkError.connectionFailed
+        }
+    }
+    
     // MARK: - Legacy API for compatibility
     
     func testConnection() async -> Result<Bool, NetworkError> {
@@ -1701,6 +1725,22 @@ public struct LeaderboardEntry: Codable {
     let playerName: String
     let totalScore: Int
     let phrasesCompleted: Int
+}
+
+public struct LegendPlayer: Codable, Identifiable {
+    public let id: String
+    public let name: String
+    public let totalScore: Int
+    public let skillLevel: Int
+    public let skillTitle: String
+    public let phrasesCompleted: Int
+}
+
+struct LegendPlayersResponse: Codable {
+    let players: [LegendPlayer]
+    let minimumSkillLevel: Int
+    let minimumSkillTitle: String
+    let count: Int
 }
 
 // MARK: - Helper extensions (can be in a separate file)

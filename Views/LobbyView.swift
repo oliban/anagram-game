@@ -14,11 +14,19 @@ struct LobbyView: View {
     @State private var contributionLink: String = ""
     @State private var isGeneratingLink = false
     @State private var showingShareSheet = false
+    @State private var showingLegends = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Mission statement
+                    Text("Do you have what it takes to become a Legend?")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 8)
+                    
                     // Header with welcome message
                     headerSection
                     
@@ -28,14 +36,14 @@ struct LobbyView: View {
                     // Custom phrases waiting section
                     customPhrasesWaitingSection
                     
-                    // Contribution link generator
-                    contributionLinkSection
+                    // Start Playing button
+                    startPlayingButton
                     
                     // Personal statistics
                     personalStatsSection
                     
-                    // Start Playing button
-                    startPlayingButton
+                    // Contribution link generator
+                    contributionLinkSection
                     
                     // Leaderboards
                     leaderboardsSection
@@ -45,8 +53,17 @@ struct LobbyView: View {
                 .padding()
                 .frame(maxWidth: .infinity, minHeight: 0)
             }
-            .navigationTitle("🏆 Anagram Game")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("")
+            .navigationBarHidden(false)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Anagram Game")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                }
+            }
             .refreshable {
                 await refreshData()
             }
@@ -66,6 +83,9 @@ struct LobbyView: View {
         }
         .fullScreenCover(isPresented: $showingGame) {
             PhysicsGameView(gameModel: gameModel, showingGame: $showingGame)
+        }
+        .sheet(isPresented: $showingLegends) {
+            LegendsView(gameModel: gameModel)
         }
     }
     
@@ -216,6 +236,25 @@ struct LobbyView: View {
                     )
                 }
             }
+            
+            // Meet the Legends link
+            HStack {
+                Spacer()
+                Button(action: {
+                    showingLegends = true
+                }) {
+                    HStack {
+                        Image(systemName: "crown.fill")
+                            .font(.caption)
+                        Text("Meet the Legends")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.orange)
+                }
+                Spacer()
+            }
+            .padding(.top, 8)
         }
         .padding()
         .background(Color(.systemGray6))
@@ -249,7 +288,7 @@ struct LobbyView: View {
             HStack {
                 Image(systemName: "link.badge.plus")
                     .foregroundColor(.blue)
-                Text("Share Your Challenge")
+                Text("Get Custom Phrases")
                     .font(.headline)
                     .fontWeight(.semibold)
                 Spacer()

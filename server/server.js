@@ -824,19 +824,19 @@ app.get('/api/players/legends', async (req, res) => {
 
     console.log(`👑 LEGENDS: Looking for players with ${minimumPoints}+ points (${minimumSkillTitle} level)`);
 
-    // Query for players with total scores >= minimum points required for wretched level
+    // Query for players with total scores >= minimum points required for wretched level  
+    // Use same scoring logic as leaderboard system, get max score per player
     const query = `
       SELECT 
         p.id,
         p.name,
-        COALESCE(SUM(cp.score), 0) as total_score,
-        COUNT(cp.id) as phrases_completed
+        MAX(ps.total_score) as total_score,
+        MAX(ps.phrases_completed) as phrases_completed
       FROM players p
-      LEFT JOIN completed_phrases cp ON p.id = cp.player_id
-      WHERE p.is_active = true
+      JOIN player_scores ps ON p.id = ps.player_id
+      WHERE ps.total_score >= $1
       GROUP BY p.id, p.name
-      HAVING COALESCE(SUM(cp.score), 0) >= $1
-      ORDER BY total_score DESC
+      ORDER BY MAX(ps.total_score) DESC
       LIMIT 50
     `;
 
