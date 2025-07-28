@@ -66,7 +66,7 @@ struct UnifiedSkillLevelView: View {
         VStack(spacing: 8) {
             // Skill Title Header
             HStack {
-                Text(currentSkillLevel.title.uppercased())
+                Text("Your skill: \(currentSkillLevel.title.prefix(1).capitalized + currentSkillLevel.title.dropFirst())")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(skillColor)
                     .textCase(.none)
@@ -105,7 +105,7 @@ struct UnifiedSkillLevelView: View {
                     
                     // Score text overlay
                     HStack {
-                        Text("\(totalScore) pts")
+                        Text("\(totalScore) p")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.white)
                             .shadow(color: .black, radius: 1)
@@ -167,60 +167,78 @@ struct HintButtonView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var level3ClueText: String? = nil
+    @State private var showSmokeEffect = false
     @StateObject private var networkManager = NetworkManager.shared
     
     var body: some View {
-        Group {
-            if let clueText = level3ClueText {
-                // Show persistent clue text after Level 3 is used
-                HStack(spacing: 8) {
-                    Image(systemName: "lightbulb.fill")
-                        .foregroundColor(.yellow)
-                    
-                    Text("Clue: \(clueText)")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.black)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.yellow, lineWidth: 2)
-                )
-                .cornerRadius(20)
-            } else {
-                // Show hint button when Level 3 hasn't been used yet
-                Button(action: useNextHint) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "lightbulb.fill")
-                            .foregroundColor(.yellow)
-                        
-                        Text(buttonText)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.purple]),
-                            startPoint: .leading,
-                            endPoint: .trailing
+        ZStack {
+            // Main button or empty state
+            Group {
+                if let _ = level3ClueText {
+                    // After level 3 hint is used, show nothing (complete disappearance)
+                    EmptyView()
+                } else {
+                    // Show hint button always (for now) - debug the hint status issue
+                    let _ = print("🔍 HINT DEBUG: hintStatus=\(String(describing: hintStatus)), level3ClueText=\(String(describing: level3ClueText))")
+                    Button(action: useNextHint) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundColor(.yellow)
+                            
+                            Text(buttonText)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .cornerRadius(20)
-                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        .cornerRadius(20)
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                    }
+                    .disabled(isLoading || !canUseHint)
+                    .opacity(showSmokeEffect ? 0.0 : (canUseHint ? 1.0 : 0.6))
+                    .animation(.easeOut(duration: 0.3), value: showSmokeEffect)
                 }
-                .disabled(isLoading || !canUseHint)
-                .opacity(canUseHint ? 1.0 : 0.6)
+            }
+            
+            // Smoke puff effect - always available regardless of button state
+            if showSmokeEffect {
+                ZStack {
+                    // Multiple smoke circles for puff effect - more lively!
+                    ForEach(0..<12, id: \.self) { i in
+                        Circle()
+                            .fill(Color.gray.opacity(0.6 + CGFloat.random(in: 0...0.3)))
+                            .frame(width: 15 + CGFloat(i) * 4, height: 15 + CGFloat(i) * 4)
+                            .offset(
+                                x: showSmokeEffect ? CGFloat.random(in: -30...30) : CGFloat.random(in: -2...2),
+                                y: showSmokeEffect ? CGFloat.random(in: -30...10) : CGFloat.random(in: -2...2)
+                            )
+                            .scaleEffect(showSmokeEffect ? CGFloat.random(in: 1.5...3.0) : 0.1)
+                            .opacity(showSmokeEffect ? (1.0 - Double(i) * 0.07) : 0.0)
+                            .rotationEffect(.degrees(showSmokeEffect ? Double.random(in: -180...180) : 0))
+                            .animation(
+                                .spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0.05)
+                                .delay(Double(i) * 0.03), 
+                                value: showSmokeEffect
+                            )
+                    }
+                }
             }
         }
         .onAppear {
+            print("🔍 HINT DEBUG onAppear: phraseId=\(phraseId)")
             loadHintStatus()
         }
         .onChange(of: phraseId) { _, _ in
+            print("🔍 HINT DEBUG onChange: phraseId=\(phraseId)")
             level3ClueText = nil // Reset clue text for new phrase
+            showSmokeEffect = false // Reset smoke effect for new phrase
             loadHintStatus()
         }
     }
@@ -245,7 +263,7 @@ struct HintButtonView: View {
         // Calculate point cost (difference between current and next score)
         let pointCost = currentScore - nextScore
         
-        return "Hint \(nextLevel) (-\(pointCost) pts)"
+        return "Hint \(nextLevel) (-\(pointCost) p)"
     }
     
     private var canUseHint: Bool {
@@ -265,7 +283,8 @@ struct HintButtonView: View {
                     let actualScore = gameModel.phraseDifficulty
                     
                     // Create a basic hint status for local phrases with actual scoring
-                    self.hintStatus = HintStatus(
+                    // Always start with fresh hints for each game session
+                    let newHintStatus = HintStatus(
                         hintsUsed: [],
                         nextHintLevel: 1,
                         hintsRemaining: 3,
@@ -273,6 +292,8 @@ struct HintButtonView: View {
                         nextHintScore: GameModel.applyHintPenalty(baseScore: actualScore, hintsUsed: 1),
                         canUseNextHint: true
                     )
+                    print("🔍 HINT DEBUG local phrase - fresh hints: \(newHintStatus)")
+                    self.hintStatus = newHintStatus
                     self.isLoading = false
                 }
             } else {
@@ -284,7 +305,24 @@ struct HintButtonView: View {
                     let preview = await previewTask
                     
                     await MainActor.run {
-                        self.hintStatus = status
+                        print("🔍 HINT DEBUG server phrase: original status=\(String(describing: status))")
+                        
+                        // Override server hint status to always provide fresh hints for each game
+                        if let originalStatus = status {
+                            let freshHintStatus = HintStatus(
+                                hintsUsed: [],
+                                nextHintLevel: 1,
+                                hintsRemaining: 3,
+                                currentScore: originalStatus.currentScore,
+                                nextHintScore: originalStatus.nextHintScore,
+                                canUseNextHint: true
+                            )
+                            print("🔍 HINT DEBUG server phrase - fresh hints: \(freshHintStatus)")
+                            self.hintStatus = freshHintStatus
+                        } else {
+                            self.hintStatus = status
+                        }
+                        
                         self.scorePreview = preview?.phrase.scorePreview
                         
                         // Store difficulty in GameModel for local score calculation
@@ -313,14 +351,24 @@ struct HintButtonView: View {
                 let hint = generateLocalHint(level: nextLevel, sentence: gameModel.currentSentence)
                 
                 await MainActor.run {
-                    // For text hints (level 3), store clue text for persistent display
-                    // For visual hints (levels 1 & 2), don't show notification
+                    // Show smoke effect only on final hint (level 3)
                     if nextLevel == 3 {
-                        level3ClueText = hint
+                        // Hide button immediately, then show smoke
+                        level3ClueText = hint // This triggers button disappearance immediately
+                        showSmokeEffect = true
+                        // Drop information tile only for level 3 (text hint)
+                        if let scene = gameScene {
+                            scene.spawnMessageTile(message: hint)
+                        }
+                        // Hide smoke effect after animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            showSmokeEffect = false
+                        }
                     } else {
-                        // Don't show notification for visual hints
-                        gameModel.addHint(hint)
+                        // For levels 1 & 2, don't show notification tiles (visual hints only)
                     }
+                    
+                    gameModel.addHint(hint)
                     
                     // Update hint status for local phrases with proper scoring
                     let actualScore = gameModel.phraseDifficulty
@@ -360,20 +408,20 @@ struct HintButtonView: View {
                                 scene.showHint2()
                             case 3:
                                 scene.showHint3()
+                                // Hide button immediately, then show smoke effect and drop information tile
+                                level3ClueText = response.hint.content // This triggers button disappearance immediately
+                                showSmokeEffect = true
+                                scene.spawnMessageTile(message: response.hint.content)
+                                // Hide smoke effect after animation
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                    showSmokeEffect = false
+                                }
                             default:
                                 break
                             }
                         }
                         
-                        // For text hints (level 3), store clue text for persistent display
-                        // For visual hints (levels 1 & 2), don't show text notification
-                        if nextLevel == 3 {
-                            level3ClueText = response.hint.content
-                            gameModel.addHint(response.hint.content) // Also track hint usage for scoring
-                        } else {
-                            // Don't show notification for visual hints
-                            gameModel.addHint(response.hint.content)
-                        }
+                        gameModel.addHint(response.hint.content)
                         
                         // Update hint status based on response
                         let updatedStatus = HintStatus(
@@ -487,33 +535,46 @@ struct PhysicsGameView: View {
                 
                 // UI Layout - Clean and Simple
                 VStack {
-                    // TOP ROW
-                    HStack {
-                        // Back to Lobby button - moved to top-left
-                        Button(action: {
-                            Task {
-                                await gameModel.skipCurrentGame()
-                                showingGame = false
+                    // TOP ROW - Lobby/Hint buttons on left, progression bar on right
+                    HStack(alignment: .top) {
+                        // Left group: Lobby + Hint buttons (stacked)
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Back to Lobby button
+                            Button(action: {
+                                Task {
+                                    await gameModel.skipCurrentGame()
+                                    showingGame = false
+                                }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.left")
+                                    Text("Lobby")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
                             }
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.left")
-                                Text("Lobby")
+                            
+                            // Hint button aligned to left edge of lobby button
+                            HStack {
+                                HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
+                                    print("🔍 HINT DEBUG: Creating HintButtonView for phraseId: \(gameModel.currentPhraseId ?? "local-fallback")")
+                                    // No longer used - clue is now displayed persistently
+                                }
+                                .scaleEffect(0.85, anchor: .leading) // Scale from leading edge to maintain left alignment
+                                Spacer()
                             }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
                         }
-                        .padding(.leading, 20)
-                        .padding(.top, 10)
+                        .padding(.leading, 16)
+                        .padding(.top, 10) // Match progress bar's top padding
                         
-                        Spacer() // Push right elements to the right
+                        Spacer(minLength: 2) // Minimal space for progress bar
                         
-                        // Score and Version Stack
+                        // Score and Version Stack - using more width
                         VStack(spacing: 2) {
                             // Total Score Display with Level
                             UnifiedSkillLevelView(
@@ -521,36 +582,15 @@ struct PhysicsGameView: View {
                                 totalScore: gameModel.playerTotalScore,
                                 isLevelingUp: gameModel.isLevelingUp
                             )
+                            .frame(maxWidth: .infinity) // Use maximum available width
                             
-                            // Debug Controls
-                            VStack(spacing: 2) {
-                                // Debug +100 Points Button
-                                Button("+100") {
-                                    gameModel.addDebugPoints(100)
-                                }
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.red)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.red.opacity(0.2))
-                                        .stroke(Color.red.opacity(0.5), lineWidth: 1)
-                                )
-                                
-                                // Solution Display
-                                Text("\(gameModel.currentSentence)")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(.red.opacity(0.8))
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                                    .frame(maxWidth: 80)
-                                
-                                // Version number - at bottom
+                            // Version number aligned to the right
+                            HStack {
+                                Spacer()
                                 Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                                     .font(.caption)
-                                    .foregroundColor(.red)
-                                    .fontWeight(.bold)
+                                    .foregroundColor(.gray)
+                                    .fontWeight(.medium)
                                     .onTapGesture {
                                         if let scene = gameScene ?? PhysicsGameView.sharedScene {
                                             scene.triggerQuake()
@@ -558,7 +598,7 @@ struct PhysicsGameView: View {
                                     }
                             }
                         }
-                        .padding(.trailing, 20)
+                        .padding(.trailing, 10)
                         .padding(.top, 10)
                     }
                     
@@ -584,79 +624,70 @@ struct PhysicsGameView: View {
                     }
                     
                     
+                    
                     Spacer() // Push bottom controls down
                     
                     // BOTTOM ROW - Clean layout inside ZStack
                     HStack(alignment: .bottom) {
-                        // Bottom-left group: Skip + Send Phrase (stacked, left-aligned)
-                        VStack(alignment: .leading, spacing: 10) {
-                            // Skip button
-                            Button(action: {
-                                print("🔥🔥🔥 SKIP BUTTON TAPPED IN UI 🔥🔥🔥")
-                                Task {
-                                    isSkipping = true
-                                    print("🔥 About to call gameModel.skipCurrentGame()")
-                                    await gameModel.skipCurrentGame()
-                                    print("🔥 Finished calling gameModel.skipCurrentGame()")
-                                    // The GameModel.startNewGame() will handle scene updates automatically
-                                    // Longer delay to ensure tile creation is fully complete
-                                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                                    isSkipping = false
-                                }
-                            }) {
-                                HStack {
-                                    if isSkipping {
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                        Text("Loading...")
-                                    } else {
-                                        Image(systemName: "forward.fill")
-                                        Text("Skip")
-                                    }
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color.orange.opacity(0.8))
-                                .cornerRadius(20)
-                                .shadow(radius: 4)
+                        // Bottom-left: Send Phrase button 
+                        Button(action: {
+                            showingPhraseCreation = true
+                        }) {
+                            HStack {
+                                Image(systemName: "square.and.pencil")
+                                Text("Send Phrase")
                             }
-                            .disabled(isSkipping)
-                            .opacity(isSkipping ? 0.6 : 1.0)
-                            .offset(y: isJolting ? -8 : 0)
-                            .animation(.easeInOut(duration: 0.15), value: isJolting)
-                            
-                            // Send Phrase button
-                            Button(action: {
-                                showingPhraseCreation = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "square.and.pencil")
-                                    Text("Send Phrase")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color.blue.opacity(0.8))
-                                .cornerRadius(20)
-                                .shadow(radius: 4)
-                            }
-                            .offset(y: isJolting ? -8 : 0)
-                            .animation(.easeInOut(duration: 0.15), value: isJolting)
-                        }
-                        .padding(.leading, 20)
-                        
-                        Spacer() // Push hint button to the right
-                        
-                        // Bottom-right: Hint button (aligned with Send Phrase button)
-                        HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
-                            // No longer used - clue is now displayed persistently
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
                         }
                         .offset(y: isJolting ? -8 : 0)
                         .animation(.easeInOut(duration: 0.15), value: isJolting)
-                        .padding(.trailing, 20)
+                        .padding(.leading, 20)
+                        
+                        Spacer() // Push skip button to the right
+                        
+                        // Bottom-right: Skip button (moved from left)
+                        Button(action: {
+                            print("🔥🔥🔥 SKIP BUTTON TAPPED IN UI 🔥🔥🔥")
+                            Task {
+                                isSkipping = true
+                                print("🔥 About to call gameModel.skipCurrentGame()")
+                                await gameModel.skipCurrentGame()
+                                print("🔥 Finished calling gameModel.skipCurrentGame()")
+                                // The GameModel.startNewGame() will handle scene updates automatically
+                                // Longer delay to ensure tile creation is fully complete
+                                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                                isSkipping = false
+                            }
+                        }) {
+                            HStack {
+                                if isSkipping {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Loading...")
+                                } else {
+                                    Image(systemName: "forward.fill")
+                                    Text("Skip")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.orange.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                        .disabled(isSkipping)
+                        .opacity(isSkipping ? 0.6 : 1.0)
+                        .offset(y: isJolting ? -8 : 0)
+                        .animation(.easeInOut(duration: 0.15), value: isJolting)
+                        .padding(.trailing, 10)
                     }
                     .padding(.bottom, 20)
                 }
@@ -772,6 +803,9 @@ protocol RespawnableTile: SKSpriteNode {
 }
 
 class PhysicsGameScene: SKScene, MessageTileSpawner {
+    // MARK: - Scale Factor for Easy Experimentation
+    static let componentScaleFactor: CGFloat = 0.90  // 0.90 = 10% smaller, 1.1 = 10% larger (public for external access)
+    
     private let gameModel: GameModel
     var motionManager: CMMotionManager?
     var onCelebration: ((String) -> Void)?
@@ -930,7 +964,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Create isometric floor with depth
         floor = SKNode()
-        floor.position = CGPoint(x: size.width / 2, y: size.height * 0.15 + 50)
+        floor.position = CGPoint(x: size.width / 2, y: size.height * 0.15 + 50 - 50)
         addChild(floor)
         
         // Floor shape removed - keeping only physics body for collision detection
@@ -948,12 +982,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Create realistic bookshelf
         bookshelf = SKNode()
-        bookshelfOriginalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
+        bookshelfOriginalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70 - 50)
         bookshelf.position = bookshelfOriginalPosition
         addChild(bookshelf)
         
-        let shelfWidth: CGFloat = size.width * 0.675  // Reduced by 10% from 0.75 to 0.675
-        let shelfHeight: CGFloat = 374  // Increased by 56% total (240 * 1.3 * 1.2)
+        let baseShelfWidthRatio: CGFloat = 0.75  // Original shelf width ratio
+        let baseShelfHeight: CGFloat = 374  // Original shelf height
+        let shelfWidth: CGFloat = size.width * baseShelfWidthRatio * PhysicsGameScene.componentScaleFactor
+        let shelfHeight: CGFloat = baseShelfHeight * PhysicsGameScene.componentScaleFactor
         let shelfDepth: CGFloat = 50
         
         // Create bookshelf frame structure
@@ -964,7 +1000,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Create multiple shelves with proper wood grain appearance
         for i in 0..<4 {
-            let shelfY = CGFloat(-140 + (i * 103))  // Increased spacing by 10% from 94 to 103
+            let baseShelfSpacing: CGFloat = 113.3  // Increased by 10% from 103
+            let shelfY = CGFloat(-140 + (CGFloat(i) * baseShelfSpacing * PhysicsGameScene.componentScaleFactor))
             let shelf = createRealisticShelf(width: shelfWidth - 20, y: shelfY, depth: shelfDepth)  // Reduced inset from 30 to 20
             shelf.name = "shelf_\(i)"  // Add identifier for hint system
             bookshelf.addChild(shelf)
@@ -1159,7 +1196,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Create tiles for current sentence
         let letters = gameModel.scrambledLetters
-        let tileSize = CGSize(width: 40, height: 40)
+        let baseTileSize: CGFloat = 40  // Original tile size
+        let tileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
+                             height: baseTileSize * PhysicsGameScene.componentScaleFactor)
         
         // Calculate spawn area at top center for rain effect
         let spawnY = size.height * 0.9  // Near top of screen
@@ -1198,7 +1237,10 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
         
         // Create score tile - rectangular and falls down like other tiles
-        let scoreTileSize = CGSize(width: 100, height: 40)  // Wider to fit 3-digit numbers + " pts"
+        let baseScoreTileWidth: CGFloat = 100  // Original score tile width
+        let baseScoreTileHeight: CGFloat = 40  // Original score tile height  
+        let scoreTileSize = CGSize(width: baseScoreTileWidth * PhysicsGameScene.componentScaleFactor, 
+                                  height: baseScoreTileHeight * PhysicsGameScene.componentScaleFactor)
         scoreTile = ScoreTile(size: scoreTileSize)
         
         // Position score tile to fall from the right side
@@ -1225,12 +1267,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
         
         // Spawn debug tile showing phrase source (after cleanup, persists with score tile)
-        let debugMessage = "Source: \(gameModel.debugPhraseSource)"
-        spawnMessageTile(message: debugMessage)
-        print("🐛 Spawned debug tile in resetGame: \(debugMessage)")
+        // TODO: Temporarily disabled - can be re-enabled later
+        // let debugMessage = "Source: \(gameModel.debugPhraseSource)"
+        // spawnMessageTile(message: debugMessage)
+        // print("🐛 Spawned debug tile in resetGame: \(debugMessage)")
         
-        // Create language tile - same size as letter tiles (40x40)
-        let languageTileSize = CGSize(width: 40, height: 40)  // Same as letter tiles
+        // Create language tile - same size as letter tiles  
+        let languageTileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
+                                     height: baseTileSize * PhysicsGameScene.componentScaleFactor)
         let currentLanguage = getCurrentPhraseLanguage()
         languageTile = LanguageTile(size: languageTileSize, language: currentLanguage)
         
@@ -1454,7 +1498,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         // Get shelf dimensions that match the actual shelf creation
         let wallThickness: CGFloat = 12
         let wallOverlap: CGFloat = 8
-        let shelfWidth: CGFloat = size.width * 0.675 - 20  // Match actual shelf width
+        let baseShelfWidthRatio: CGFloat = 0.75  // Original shelf width ratio
+        let shelfWidth: CGFloat = size.width * baseShelfWidthRatio * PhysicsGameScene.componentScaleFactor - 20
         let shelfThickness: CGFloat = 8
         let depthOffset: CGFloat = 15
         
@@ -1849,8 +1894,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         removeAction(forKey: "quakeForces")
         
         // Smoothly return bookshelf to original position and rotation
-        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
-        let returnToOriginalPosition = SKAction.move(to: originalPosition, duration: 0.3)
+        let returnToOriginalPosition = SKAction.move(to: bookshelfOriginalPosition, duration: 0.3)
         let returnToOriginalRotation = SKAction.rotate(toAngle: 0, duration: 0.3)
         
         returnToOriginalPosition.timingMode = .easeOut
@@ -2060,8 +2104,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Reset bookshelf position and rotation in case quake was active
         bookshelf.removeAllActions()
-        let originalPosition = CGPoint(x: size.width / 2, y: size.height * 0.4 + 70)
-        bookshelf.position = originalPosition
+        bookshelf.position = bookshelfOriginalPosition
         bookshelf.zRotation = 0
         
         // Create new tiles with current game model data (don't call startNewGame again)
@@ -3455,7 +3498,8 @@ class MessageTile: InformationTile {
     
     // Maximum width for notification tiles (80% of shelf width)
     private static func calculateMaxTileWidth(sceneSize: CGSize) -> CGFloat {
-        let shelfWidth = sceneSize.width * 0.675 - 20  // Actual shelf width
+        let baseShelfWidthRatio: CGFloat = 0.75  // Original shelf width ratio
+        let shelfWidth = sceneSize.width * baseShelfWidthRatio * PhysicsGameScene.componentScaleFactor - 20
         return shelfWidth * 0.8
     }
     
@@ -3513,7 +3557,8 @@ class MessageTile: InformationTile {
         // Calculate final dimensions
         let tileWidth = max(min(singleLineWidth + padding, actualMaxWidth), minWidth)
         let tileHeight = CGFloat(wrappedLines.count) * lineHeight + padding
-        let calculatedSize = CGSize(width: tileWidth, height: max(tileHeight, 40))  // Minimum 40 height
+        let baseMinHeight: CGFloat = 40  // Original minimum height
+        let calculatedSize = CGSize(width: tileWidth, height: max(tileHeight, baseMinHeight * PhysicsGameScene.componentScaleFactor))
         
         super.init(size: calculatedSize)
         
