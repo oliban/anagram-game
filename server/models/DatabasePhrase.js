@@ -145,7 +145,8 @@ class DatabasePhrase {
       senderId,
       targetId,
       hint,
-      language = LANGUAGES.ENGLISH
+      language = LANGUAGES.ENGLISH,
+      contributionLinkId = null
     } = options;
 
     // Basic validation
@@ -165,23 +166,32 @@ class DatabasePhrase {
     const difficultyScore = this.calculateDifficultyScore(cleanContent);
 
     try {
-      const result = await query(`
-        INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
-      `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language]);
+      // Use transaction to ensure both phrase creation and assignment are atomic
+      return await transaction(async (client) => {
+        // Create the phrase
+        const result = await client.query(`
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language, contribution_link_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *
+        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language, contributionLinkId]);
 
-      const phraseData = result.rows[0];
-      console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
-      
-      const phrase = new DatabasePhrase(phraseData);
-      
-      // If this is a targeted phrase, assign it to the target player
-      if (targetId) {
-        await this.assignPhraseToPlayers(phrase.id, [targetId]);
-      }
-      
-      return phrase;
+        const phraseData = result.rows[0];
+        console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
+        
+        const phrase = new DatabasePhrase(phraseData);
+        
+        // If this is a targeted phrase, assign it to the target player within the same transaction
+        if (targetId) {
+          await client.query(`
+            INSERT INTO player_phrases (phrase_id, target_player_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+          `, [phrase.id, targetId]);
+          console.log(`🎯 DATABASE: Phrase ${phrase.id} assigned to player ${targetId} within transaction`);
+        }
+        
+        return phrase;
+      });
     } catch (error) {
       console.error('❌ DATABASE: Error creating phrase:', error.message);
       throw new Error('Failed to create phrase');
@@ -227,13 +237,18 @@ class DatabasePhrase {
           p.is_global,
           p.language,
           p.created_by_player_id as "senderId",
-          COALESCE(pl.name, 'Unknown Player') as "senderName",
+          COALESCE(
+            cl.contributor_name,
+            pl.name, 
+            'Unknown Player'
+          ) as "senderName",
           pp.target_player_id as "targetId",
           false as "isConsumed",
           'targeted' as phrase_type
         FROM phrases p
         JOIN player_phrases pp ON p.id = pp.phrase_id
         LEFT JOIN players pl ON p.created_by_player_id = pl.id
+        LEFT JOIN contribution_links cl ON p.contribution_link_id = cl.id
         WHERE pp.target_player_id = $1 
           AND pp.is_delivered = false
         ORDER BY p.created_at ASC
@@ -276,12 +291,17 @@ class DatabasePhrase {
             p.is_global,
             p.language,
             p.created_by_player_id as "senderId",
-            COALESCE(pl.name, 'Unknown Player') as "senderName",
+            COALESCE(
+              cl.contributor_name,
+              pl.name, 
+              'Unknown Player'
+            ) as "senderName",
             null as "targetId",
             false as "isConsumed",
             'global' as phrase_type
           FROM phrases p
           LEFT JOIN players pl ON p.created_by_player_id = pl.id
+          LEFT JOIN contribution_links cl ON p.contribution_link_id = cl.id
           WHERE p.is_global = true 
             AND p.is_approved = true
             AND (p.created_by_player_id IS NULL OR p.created_by_player_id != $1)

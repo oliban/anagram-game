@@ -343,13 +343,14 @@ app.post('/api/contribution/:token/submit', async (req, res) => {
       return res.status(400).json({ error: 'Invalid language' });
     }
 
-    // Create phrase using existing DatabasePhrase.createPhrase logic
+    // Create phrase using existing DatabasePhrase.createPhrase logic with contribution link
     const createdPhrase = await DatabasePhrase.createPhrase({
       content: trimmedPhrase,
       hint: finalClue,
       language: language,
       senderId: null, // External contribution
-      targetId: validation.link.requestingPlayerId
+      targetId: validation.link.requestingPlayerId,
+      contributionLinkId: validation.link.id // Link to contribution for contributor name
     });
     
     if (!createdPhrase) {
@@ -363,6 +364,24 @@ app.post('/api/contribution/:token/submit', async (req, res) => {
     };
 
     const recordResult = await linkGenerator.recordContribution(token, contributorInfo);
+
+    // Send instant real-time notification to target player for immediate delivery
+    const target = await DatabasePlayer.getPlayerById(validation.link.requestingPlayerId);
+    if (target && target.socketId) {
+      const phraseData = createdPhrase.getPublicInfo();
+      // Ensure targetId and senderName are included for iOS client compatibility
+      phraseData.targetId = validation.link.requestingPlayerId;
+      phraseData.senderName = contributorName || 'Anonymous Contributor';
+      
+      io.to(target.socketId).emit('new-phrase', {
+        phrase: phraseData,
+        senderName: contributorName || 'Anonymous Contributor',
+        timestamp: new Date().toISOString()
+      });
+      console.log(`📨 Sent instant new-phrase notification to ${target.name} (${target.socketId}) for contribution "${trimmedPhrase}"`);
+    } else {
+      console.log(`📨 Target player not connected - contribution phrase queued for later delivery`);
+    }
 
     res.status(201).json({
       success: true,
@@ -766,6 +785,114 @@ app.get('/api/stats', async (req, res) => {
     console.error('❌ Error getting monitoring stats:', error);
     res.status(500).json({ 
       error: 'Failed to get monitoring stats' 
+    });
+  }
+});
+
+// Get legend players endpoint
+app.get('/api/players/legends', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for legend players'
+      });
+    }
+
+    // Read the minimum skill level from config
+    const fs = require('fs').promises;
+    const path = require('path');
+    const configPath = path.join(__dirname, 'config', 'level-config.json');
+    
+    let minimumSkillLevel = 2; // Default to wretched (level 2)
+    let minimumSkillTitle = 'wretched';
+    let minimumPoints = 230;
+    
+    try {
+      const configData = await fs.readFile(configPath, 'utf8');
+      const levelConfig = JSON.parse(configData);
+      
+      // Find the wretched skill level
+      const wretchedLevel = levelConfig.skillLevels?.find(level => level.title === 'wretched');
+      if (wretchedLevel) {
+        minimumSkillLevel = wretchedLevel.id;
+        minimumSkillTitle = wretchedLevel.title;
+        minimumPoints = wretchedLevel.pointsRequired;
+      }
+    } catch (configError) {
+      console.error('❌ LEGENDS: Error loading level config, using defaults:', configError.message);
+    }
+
+    console.log(`👑 LEGENDS: Looking for players with ${minimumPoints}+ points (${minimumSkillTitle} level)`);
+
+    // Query for players with total scores >= minimum points required for wretched level
+    const query = `
+      SELECT 
+        p.id,
+        p.name,
+        COALESCE(SUM(cp.score), 0) as total_score,
+        COUNT(cp.id) as phrases_completed
+      FROM players p
+      LEFT JOIN completed_phrases cp ON p.id = cp.player_id
+      WHERE p.is_active = true
+      GROUP BY p.id, p.name
+      HAVING COALESCE(SUM(cp.score), 0) >= $1
+      ORDER BY total_score DESC
+      LIMIT 50
+    `;
+
+    const result = await pool.query(query, [minimumPoints]);
+    
+    const legendPlayers = result.rows.map(row => {
+      const totalScore = parseInt(row.total_score);
+      
+      // Calculate skill level based on total score
+      let skillLevel = minimumSkillLevel;
+      let skillTitle = minimumSkillTitle;
+      
+      try {
+        // Re-read config to calculate exact skill level
+        const fs = require('fs');
+        const configData = fs.readFileSync(configPath, 'utf8');
+        const levelConfig = JSON.parse(configData);
+        
+        // Find the highest skill level this player has achieved
+        for (let i = levelConfig.skillLevels.length - 1; i >= 0; i--) {
+          const level = levelConfig.skillLevels[i];
+          if (totalScore >= level.pointsRequired) {
+            skillLevel = level.id;
+            skillTitle = level.title;
+            break;
+          }
+        }
+      } catch (error) {
+        console.error('❌ LEGENDS: Error calculating skill level:', error.message);
+      }
+      
+      return {
+        id: row.id,
+        name: row.name,
+        totalScore: totalScore,
+        skillLevel: skillLevel,
+        skillTitle: skillTitle,
+        phrasesCompleted: parseInt(row.phrases_completed)
+      };
+    });
+
+    console.log(`👑 LEGENDS: Found ${legendPlayers.length} legend players`);
+
+    res.json({
+      success: true,
+      players: legendPlayers,
+      minimumSkillLevel: minimumSkillLevel,
+      minimumSkillTitle: minimumSkillTitle,
+      count: legendPlayers.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ LEGENDS: Error getting legend players:', error);
+    res.status(500).json({
+      error: 'Failed to get legend players'
     });
   }
 });
