@@ -159,6 +159,10 @@ server/data/import-*.json
 *.tmp
 *.temp
 
+# Test files (not part of production code)
+DifficultyTestFunction.swift
+test_difficulty.swift
+
 # Auto-generated documentation (can be regenerated)
 server/swagger-output.json
 
