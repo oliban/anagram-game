@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "generated_at": "2025-07-28T08:39:18.919Z",
+    "target_range": "0-50",
+    "requested_count": 5,
+    "actual_count": 5,
+    "language": "sv",
+    "generator_version": "1.0.0"
+  },
+  "phrases": [
+    {
+      "phrase": "blå himmel",
+      "clue": "Fågelns oändliga tak",
+      "difficulty": 45,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:39:18.919Z"
+    },
+    {
+      "phrase": "lugn sjö",
+      "clue": "Naturens perfekta spegel",
+      "difficulty": 35,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:39:18.919Z"
+    },
+    {
+      "phrase": "söt dröm",
+      "clue": "2 ord som hör ihop",
+      "difficulty": 40,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:39:18.919Z"
+    },
+    {
+      "phrase": "snäll hjärta",
+      "clue": "Vänlighetens hemadress",
+      "difficulty": 53,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:39:18.919Z"
+    },
+    {
+      "phrase": "kall vinter",
+      "clue": "Snögubbens favoritårstid",
+      "difficulty": 52,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:39:18.919Z"
+    }
+  ]
+}

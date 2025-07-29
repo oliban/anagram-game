@@ -48,6 +48,9 @@ struct LobbyView: View {
                     // Leaderboards
                     leaderboardsSection
                     
+                    // Performance info section (simple logging-based)
+                    performanceInfoSection
+                    
                     Spacer(minLength: 100)
                 }
                 .padding()
@@ -566,6 +569,45 @@ struct LobbyView: View {
         }
     }
     
+    // MARK: - Performance Info Section
+    private var performanceInfoSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("🧪 Performance Baseline Testing")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            VStack(spacing: 8) {
+                Text("Performance metrics are being sent to server logs during:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("• Game resets (timing & memory)")
+                        .font(.caption)
+                    Text("• Tile system operations")
+                        .font(.caption)
+                    Text("• Memory usage tracking")
+                        .font(.caption)
+                    Text("• Device model identification")
+                        .font(.caption)
+                }
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("Check server logs at /api/debug/performance for data")
+                    .font(.caption2)
+                    .foregroundColor(.blue)
+                    .padding(.top, 4)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
 }
 
 // MARK: - Supporting Views
