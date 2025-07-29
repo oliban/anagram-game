@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database shared by all services
+  postgres:
+    image: postgres:15-alpine
+    container_name: anagram-db
+    environment:
+      POSTGRES_DB: anagram_game
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/shared/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Core game server - multiplayer API + WebSocket
+  game-server:
+    build:
+      context: ./services
+      dockerfile: game-server/Dockerfile
+    container_name: anagram-game-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=anagram_game
+      - DB_USER=postgres
+      - DB_PASSWORD=localdev
+      - DB_SSL=false
+      - PORT=3000
+    ports:
+      - "3000:3000"
+
+  # Web dashboard - admin interface
+  web-dashboard:
+    build:
+      context: ./services
+      dockerfile: web-dashboard/Dockerfile
+    container_name: anagram-web-dashboard
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=anagram_game
+      - DB_USER=postgres
+      - DB_PASSWORD=localdev
+      - DB_SSL=false
+      - WEB_DASHBOARD_PORT=3001
+    ports:
+      - "3001:3001"
+
+  # Link generator service
+  link-generator:
+    build:
+      context: ./services
+      dockerfile: link-generator/Dockerfile
+    container_name: anagram-link-generator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=anagram_game
+      - DB_USER=postgres
+      - DB_PASSWORD=localdev
+      - DB_SSL=false
+      - LINK_GENERATOR_PORT=3002
+    ports:
+      - "3002:3002"
+
+volumes:
+  postgres_data:
