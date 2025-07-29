@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Combine
+import QuartzCore
 
 // Data structure for local phrases with clues
 struct LocalPhrase {
@@ -226,6 +227,19 @@ class GameModel: ObservableObject {
     }
     
     func startNewGame(isUserInitiated: Bool = false) async {
+        
+        // Performance monitoring - start game reset timer
+        let resetStartTime = CACurrentMediaTime()
+        print("🧪 PERFORMANCE: Game reset started at \(resetStartTime)")
+        
+        // Send performance data to server
+        Task {
+            await sendPerformanceToServer([
+                "event": "game_reset_start",
+                "start_time": resetStartTime,
+                "memory_usage_mb": getMemoryUsage()
+            ])
+        }
         
         // Debug: Log entry to startNewGame
         await sendDebugToServer("ENTERING_startNewGame: isUserInitiated=\(isUserInitiated)")
@@ -507,6 +521,21 @@ class GameModel: ObservableObject {
         gameState = .playing
         wordsCompleted = 0
         
+        // Performance monitoring - end game reset timer and record memory
+        let resetEndTime = CACurrentMediaTime()
+        let memoryUsage = getMemoryUsage()
+        print("🧪 PERFORMANCE: Game reset completed at \(resetEndTime)")
+        print("🧪 PERFORMANCE: Current memory usage: \(String(format: "%.1f", memoryUsage)) MB")
+        
+        // Send performance data to server
+        Task {
+            await sendPerformanceToServer([
+                "event": "game_reset_complete",
+                "end_time": resetEndTime,
+                "memory_usage_mb": memoryUsage
+            ])
+        }
+        
         // Reset hint state
         currentHints = []
         currentScore = 0
@@ -615,7 +644,15 @@ class GameModel: ObservableObject {
     
     func skipCurrentGame() async {
         print("🚀🚀🚀 SKIP BUTTON PRESSED - skipCurrentGame() CALLED 🚀🚀🚀")
-        await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame()")
+        
+        // Enhanced memory tracking for skip operation
+        let skipStartMemory = getMemoryUsage()
+        await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame() - Memory: \(String(format: "%.1f", skipStartMemory))MB")
+        
+        await sendPerformanceToServer([
+            "event": "skip_model_start",
+            "memory_mb": skipStartMemory
+        ])
         
         // Prevent concurrent skip operations to avoid race conditions
         guard !isSkipping else {
@@ -692,9 +729,20 @@ class GameModel: ObservableObject {
         print("🚀 Starting new game after skip")
         await startNewGame(isUserInitiated: true)
         
+        // Enhanced memory tracking at skip completion
+        let skipEndMemory = getMemoryUsage()
+        let skipMemoryDelta = skipEndMemory - skipStartMemory
+        
+        await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished - Memory: \(String(format: "%.1f", skipEndMemory))MB (Δ\(String(format: "%.1f", skipMemoryDelta))MB)")
+        
+        await sendPerformanceToServer([
+            "event": "skip_model_complete",
+            "memory_mb": skipEndMemory,
+            "memory_delta_mb": skipMemoryDelta
+        ])
+        
         // Reset skip flag to allow future skip operations
         isSkipping = false
-        await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished")
     }
     
     func addHint(_ hint: String) {
@@ -859,7 +907,7 @@ class GameModel: ObservableObject {
     }
     
     // Send debug message to server
-    private func sendDebugToServer(_ message: String) async {
+    func sendDebugToServer(_ message: String) async {
         guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
         
         var request = URLRequest(url: url)
@@ -903,6 +951,52 @@ class GameModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // Method to refresh phrase queue for lobby display and game play
+    // MARK: - Performance Monitoring
+    
+    private func getMemoryUsage() -> Double {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+        
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        
+        guard result == KERN_SUCCESS else {
+            return 0
+        }
+        
+        return Double(info.resident_size) / 1024.0 / 1024.0 // Convert to MB
+    }
+    
+    // Send performance metrics to server
+    func sendPerformanceToServer(_ metrics: [String: Any]) async {
+        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        var logData = metrics
+        logData["timestamp"] = ISO8601DateFormatter().string(from: Date())
+        logData["playerId"] = playerId ?? "unknown"
+        logData["deviceModel"] = await getDeviceInfo()
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: logData)
+            request.httpBody = jsonData
+            let _ = try await URLSession.shared.data(for: request)
+        } catch {
+            print("❌ Failed to send performance data: \(error)")
+        }
+    }
+    
+    private func getDeviceInfo() async -> String {
+        // Get simulator info from device ID or use device model
+        return ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "Unknown"
+    }
+    
     func refreshPhrasesForLobby() async {
         let networkManager = NetworkManager.shared
         

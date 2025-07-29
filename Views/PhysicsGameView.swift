@@ -523,6 +523,12 @@ struct PhysicsGameView: View {
     @State private var isJolting = false
     @StateObject private var networkManager = NetworkManager.shared
     
+    // Real-time metrics
+    @State private var currentFPS: Double = 60.0
+    @State private var currentMemoryMB: Double = 100.0
+    @State private var tilesCount: Int = 0
+    @State private var metricsTimer: Timer?
+    
     // Static reference to avoid SwiftUI state issues
     private static var sharedScene: PhysicsGameScene?
     
@@ -566,6 +572,47 @@ struct PhysicsGameView: View {
                                     // No longer used - clue is now displayed persistently
                                 }
                                 .scaleEffect(0.85, anchor: .leading) // Scale from leading edge to maintain left alignment
+                                Spacer()
+                            }
+                            
+                            // Debug Quake Buttons (for simulator testing)
+                            HStack(spacing: 8) {
+                                Button("🧪 Quake") {
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.debugTriggerQuake(state: .normal)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.orange.opacity(0.8))
+                                .cornerRadius(8)
+                                
+                                Button("💥 Super") {
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.debugTriggerQuake(state: .superQuake)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.red.opacity(0.8))
+                                .cornerRadius(8)
+                                
+                                Button("⏹️ Stop") {
+                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                                        scene.debugTriggerQuake(state: .none)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.8))
+                                .cornerRadius(8)
+                                
                                 Spacer()
                             }
                         }
@@ -627,6 +674,61 @@ struct PhysicsGameView: View {
                     
                     Spacer() // Push bottom controls down
                     
+                    // REAL-TIME METRICS DISPLAY
+                    VStack(spacing: 4) {
+                        HStack(spacing: 16) {
+                            // FPS
+                            VStack(spacing: 2) {
+                                Text("FPS")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                Text("\(String(format: "%.1f", currentFPS))")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(currentFPS < 30 ? .red : (currentFPS < 50 ? .orange : .green))
+                            }
+                            
+                            // Memory
+                            VStack(spacing: 2) {
+                                Text("MEM")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                Text("\(String(format: "%.0f", currentMemoryMB))MB")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(currentMemoryMB > 200 ? .red : (currentMemoryMB > 150 ? .orange : .green))
+                            }
+                            
+                            // Tiles Count
+                            VStack(spacing: 2) {
+                                Text("TILES")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                Text("\(tilesCount)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                            }
+                            
+                            // Quake State
+                            VStack(spacing: 2) {
+                                Text("QUAKE")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                Text(getQuakeStateText())
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(getQuakeStateColor())
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(12)
+                        .shadow(radius: 3)
+                    }
+                    .padding(.bottom, 8)
+                    
                     // BOTTOM ROW - Clean layout inside ZStack
                     HStack(alignment: .bottom) {
                         // Bottom-left: Send Phrase button 
@@ -655,13 +757,51 @@ struct PhysicsGameView: View {
                         Button(action: {
                             print("🔥🔥🔥 SKIP BUTTON TAPPED IN UI 🔥🔥🔥")
                             Task {
+                                // Enhanced memory tracking for skip operation
+                                let preSkipMemory = getMemoryUsage()
+                                let preSkipTiles = gameScene?.tiles.count ?? 0
+                                let preSkipChildren = gameScene?.children.count ?? 0
+                                
                                 isSkipping = true
+                                
+                                // Log detailed pre-skip state
+                                await gameModel.sendDebugToServer("SKIP_PRESSED: Memory before: \(String(format: "%.1f", preSkipMemory))MB, Tiles: \(preSkipTiles), Scene children: \(preSkipChildren)")
+                                
+                                await gameModel.sendPerformanceToServer([
+                                    "event": "skip_button_pressed",
+                                    "memory_before_mb": preSkipMemory,
+                                    "tiles_count_before": preSkipTiles,
+                                    "scene_children_before": preSkipChildren
+                                ])
+                                
                                 print("🔥 About to call gameModel.skipCurrentGame()")
                                 await gameModel.skipCurrentGame()
                                 print("🔥 Finished calling gameModel.skipCurrentGame()")
+                                
                                 // The GameModel.startNewGame() will handle scene updates automatically
                                 // Longer delay to ensure tile creation is fully complete
                                 try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                                
+                                // Track memory after skip operation completes
+                                let postSkipMemory = getMemoryUsage()
+                                let postSkipTiles = gameScene?.tiles.count ?? 0
+                                let postSkipChildren = gameScene?.children.count ?? 0
+                                let memoryDelta = postSkipMemory - preSkipMemory
+                                let tilesDelta = postSkipTiles - preSkipTiles
+                                let childrenDelta = postSkipChildren - preSkipChildren
+                                
+                                await gameModel.sendDebugToServer("SKIP_COMPLETE: Memory after: \(String(format: "%.1f", postSkipMemory))MB (Δ\(String(format: "%.1f", memoryDelta))MB), Tiles: \(postSkipTiles) (Δ\(tilesDelta)), Children: \(postSkipChildren) (Δ\(childrenDelta))")
+                                
+                                await gameModel.sendPerformanceToServer([
+                                    "event": "skip_operation_complete",
+                                    "memory_after_mb": postSkipMemory,
+                                    "memory_delta_mb": memoryDelta,
+                                    "tiles_count_after": postSkipTiles,
+                                    "tiles_delta": tilesDelta,
+                                    "scene_children_after": postSkipChildren,
+                                    "scene_children_delta": childrenDelta
+                                ])
+                                
                                 isSkipping = false
                             }
                         }) {
@@ -699,6 +839,9 @@ struct PhysicsGameView: View {
         .onAppear {
             print("🎬 PhysicsGameView appeared")
             
+            // Start metrics timer immediately
+            startMetricsTimer()
+            
             // Delay setup to ensure scene is created first
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.setupGame()
@@ -706,6 +849,111 @@ struct PhysicsGameView: View {
         }
         .onDisappear {
             motionManager.stopDeviceMotionUpdates()
+            metricsTimer?.invalidate()
+        }
+    }
+    
+    // MARK: - Metrics Helper Functions
+    
+    private func getQuakeStateText() -> String {
+        guard let scene = gameScene ?? PhysicsGameView.sharedScene else { return "—" }
+        switch scene.quakeState {
+        case .none: return "NONE"
+        case .normal: return "NORM"
+        case .superQuake: return "SUPER"
+        }
+    }
+    
+    private func getQuakeStateColor() -> Color {
+        guard let scene = gameScene ?? PhysicsGameView.sharedScene else { return .gray }
+        switch scene.quakeState {
+        case .none: return .gray
+        case .normal: return .orange
+        case .superQuake: return .red
+        }
+    }
+    
+    private func startMetricsTimer() {
+        metricsTimer?.invalidate()
+        print("📊 METRICS: Starting metrics timer...")
+        metricsTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            self.updateMetrics()
+        }
+        print("📊 METRICS: Timer started successfully")
+    }
+    
+    private func updateMetrics() {
+        DispatchQueue.main.async {
+            // Always update memory usage
+            self.currentMemoryMB = self.getMemoryUsage()
+            
+            // Update scene-dependent metrics if scene is available
+            if let scene = gameScene ?? PhysicsGameView.sharedScene {
+                self.currentFPS = scene.currentFPS
+                self.tilesCount = scene.tiles.count
+                
+                // Log metrics to console
+                print("📊 REAL-TIME METRICS: FPS: \(String(format: "%.1f", self.currentFPS)), Memory: \(String(format: "%.1f", self.currentMemoryMB))MB, Tiles: \(self.tilesCount), Quake: \(scene.quakeState)")
+                
+                // Send metrics to server every 10 updates (every 5 seconds)
+                if Int.random(in: 1...10) == 1 {
+                    Task {
+                        await self.sendMetricsToServer(fps: self.currentFPS, memory: self.currentMemoryMB, tiles: self.tilesCount, quakeState: scene.quakeState)
+                    }
+                }
+            } else {
+                print("⚠️ METRICS: No scene available - Memory: \(String(format: "%.1f", self.currentMemoryMB))MB")
+            }
+        }
+    }
+    
+    private func getMemoryUsage() -> Double {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+        
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        
+        guard result == KERN_SUCCESS else {
+            return 0
+        }
+        
+        return Double(info.resident_size) / 1024.0 / 1024.0 // Convert to MB
+    }
+    
+    private func sendMetricsToServer(fps: Double, memory: Double, tiles: Int, quakeState: PhysicsGameScene.QuakeState) async {
+        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let quakeString = switch quakeState {
+        case .none: "none"
+        case .normal: "normal" 
+        case .superQuake: "super"
+        }
+        
+        let logData: [String: Any] = [
+            "event": "real_time_metrics",
+            "fps": fps,
+            "memory_mb": memory,
+            "tiles_count": tiles,
+            "quake_state": quakeString,
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "playerId": gameModel.playerId ?? "unknown",
+            "component": "PhysicsGameView_RealTime"
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: logData)
+            request.httpBody = jsonData
+            let _ = try await URLSession.shared.data(for: request)
+        } catch {
+            print("❌ Failed to send real-time metrics: \(error)")
         }
     }
     
@@ -791,6 +1039,9 @@ struct PhysicsGameView: View {
             PhysicsGameView.sharedScene?.updateGravity(from: motion.gravity)
         }
         print("✅ Motion updates started")
+        
+        // Start metrics timer for real-time display
+        startMetricsTimer()
     }
 }
 
@@ -817,7 +1068,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     private var physicsBodyOriginalPositions: [SKSpriteNode: CGPoint] = [:]
     private var isBookshelfJolting: Bool = false
     private var floor: SKNode!
-    private var tiles: [LetterTile] = []
+    var tiles: [LetterTile] = []
     private var scoreTile: ScoreTile?
     private var languageTile: LanguageTile?
     
@@ -840,9 +1091,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var celebrationText: String = ""
 
-    private enum QuakeState { case none, normal, superQuake }
-    private var quakeState: QuakeState = .none
+    enum QuakeState { case none, normal, superQuake }
+    var quakeState: QuakeState = .none
     private var quakeEndAction: SKAction?
+    
+    // FPS tracking
+    private var lastUpdateTime: TimeInterval = 0
+    private var frameCount: Int = 0
+    private var lastFPSUpdateTime: TimeInterval = 0
+    var currentFPS: Double = 60.0
     
     init(gameModel: GameModel, size: CGSize) {
         self.gameModel = gameModel
@@ -1361,6 +1618,28 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
     }
     
+    // Send performance metrics to server
+    private func sendPerformanceToServer(_ metrics: [String: Any]) async {
+        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        var logData = metrics
+        logData["timestamp"] = ISO8601DateFormatter().string(from: Date())
+        logData["playerId"] = gameModel.playerId ?? "unknown"
+        logData["component"] = "PhysicsGameView"
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: logData)
+            request.httpBody = jsonData
+            let _ = try await URLSession.shared.data(for: request)
+        } catch {
+            print("❌ Failed to send performance data: \(error)")
+        }
+    }
+    
     func spawnMessageTile(message: String) {
         // Create new message tile - width calculated based on text length
         let newMessageTile = MessageTile(message: message, sceneSize: size)
@@ -1414,6 +1693,22 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         physicsWorld.gravity = CGVector(dx: 0, dy: -30.0) // Much stronger gravity for heavy feel
 
         // ALWAYS show tile positions for debugging (not just when falling)
+    }
+    
+    // Debug function to manually trigger quake states
+    func debugTriggerQuake(state: QuakeState) {
+        print("🧪 DEBUG: Manually triggering quake state: \(state)")
+        switch state {
+        case .none:
+            stopShelfShaking()
+        case .normal:
+            stopShelfShaking()
+            startShelfShaking()
+        case .superQuake:
+            stopShelfShaking()
+            startSuperShelfShaking()
+        }
+        self.quakeState = state
         let floorY = size.height * 0.25
         
         // Remove any existing status markers from tiles
@@ -1940,6 +2235,19 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     override func update(_ currentTime: TimeInterval) {
+        // Track FPS
+        frameCount += 1
+        if lastFPSUpdateTime == 0 {
+            lastFPSUpdateTime = currentTime
+        }
+        
+        // Update FPS every second
+        if currentTime - lastFPSUpdateTime >= 1.0 {
+            currentFPS = Double(frameCount) / (currentTime - lastFPSUpdateTime)
+            frameCount = 0
+            lastFPSUpdateTime = currentTime
+        }
+        
         // Check for tiles that have left the screen and respawn them
         for tile in allRespawnableTiles {
             let margin: CGFloat = 100  // Buffer zone outside screen
@@ -1990,6 +2298,19 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     func resetGame() {
         print("🔄 Scene resetGame() called")
+        
+        // Performance monitoring - record tile system performance
+        let tileResetStartTime = CACurrentMediaTime()
+        print("🧪 PERFORMANCE: Tile reset started at \(tileResetStartTime) with \(tiles.count) existing tiles")
+        
+        // Send performance data to server
+        Task {
+            await sendPerformanceToServer([
+                "event": "tile_reset_start",
+                "start_time": tileResetStartTime,
+                "existing_tiles_count": tiles.count
+            ])
+        }
         
         // Add server debug logging - create a simple debug endpoint call
         Task {
@@ -2116,6 +2437,19 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
         
         print("✅ Scene reset complete - \(tiles.count) new tiles created")
+        
+        // Performance monitoring - record completion
+        let tileResetEndTime = CACurrentMediaTime()
+        print("🧪 PERFORMANCE: Tile reset completed at \(tileResetEndTime) with \(tiles.count) new tiles")
+        
+        // Send performance data to server
+        Task {
+            await sendPerformanceToServer([
+                "event": "tile_reset_complete",
+                "end_time": tileResetEndTime,
+                "new_tiles_count": tiles.count
+            ])
+        }
         
         // Notify that scene reset is completely finished
         Task {

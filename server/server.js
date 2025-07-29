@@ -408,6 +408,12 @@ app.post('/api/debug/log', (req, res) => {
   res.json({ status: 'logged' });
 });
 
+app.post('/api/debug/performance', (req, res) => {
+  const { event, fps, memory_mb, tiles_count, quake_state, timestamp, playerId, component, deviceModel } = req.body;
+  console.log(`📊 PERFORMANCE [${timestamp}] Player ${playerId} (${deviceModel || 'Unknown'}): FPS=${fps}, Memory=${memory_mb}MB, Tiles=${tiles_count}, Quake=${quake_state} [${component}]`);
+  res.json({ status: 'logged' });
+});
+
 // API Routes
 app.get('/api/status', async (req, res) => {
   try {

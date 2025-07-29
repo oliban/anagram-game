@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "generated_at": "2025-07-28T08:26:29.449Z",
+    "target_range": "0-50",
+    "requested_count": 5,
+    "actual_count": 5,
+    "language": "en",
+    "generator_version": "1.0.0"
+  },
+  "phrases": [
+    {
+      "phrase": "green tree",
+      "clue": "Connected terms",
+      "difficulty": 55,
+      "language": "en",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:26:29.449Z"
+    },
+    {
+      "phrase": "dark night",
+      "clue": "Related words",
+      "difficulty": 42,
+      "language": "en",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:26:29.449Z"
+    },
+    {
+      "phrase": "soft rain",
+      "clue": "Themed vocabulary",
+      "difficulty": 41,
+      "language": "en",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:26:29.449Z"
+    },
+    {
+      "phrase": "sweet dream",
+      "clue": "Related words",
+      "difficulty": 52,
+      "language": "en",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:26:29.449Z"
+    },
+    {
+      "phrase": "blue sky",
+      "clue": "Connected terms",
+      "difficulty": 34,
+      "language": "en",
+      "source": "ai_generated",
+      "generated_at": "2025-07-28T08:26:29.449Z"
+    }
+  ]
+}

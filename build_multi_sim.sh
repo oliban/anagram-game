@@ -30,8 +30,10 @@ DERIVED_DATA_PATH="$HOME/Library/Developer/Xcode/DerivedData"
 # Simulator UUIDs (you can customize these)
 SIM1_UUID="AF307F12-A657-4D6A-8123-240CBBEC5B31"  # iPhone 15
 SIM2_UUID="86355D8A-560E-465D-8FDC-3D037BCA482B"  # iPhone 15 Pro
+SIM3_UUID="046502C7-3D59-43F1-AA2D-EA2ADD0873B9"  # iPhone SE (3rd generation)
 SIM1_NAME="iPhone 15"
 SIM2_NAME="iPhone 15 Pro"
+SIM3_NAME="iPhone SE (3rd generation)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -43,6 +45,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}📱 Using simulators:${NC}"
 echo -e "  1. $SIM1_NAME ($SIM1_UUID)"
 echo -e "  2. $SIM2_NAME ($SIM2_UUID)"
+echo -e "  3. $SIM3_NAME ($SIM3_UUID)"
 echo ""
 
 # Function to boot simulator if not already running
@@ -153,17 +156,20 @@ fi
 # No need to generate Config.swift as it's not used anymore
 echo -e "${BLUE}⚙️ Using embedded configuration (AppConfig in NetworkManager.swift)${NC}"
 
-# Boot both simulators
+# Boot all simulators
 boot_simulator "$SIM1_UUID" "$SIM1_NAME"
 boot_simulator "$SIM2_UUID" "$SIM2_NAME"
+boot_simulator "$SIM3_UUID" "$SIM3_NAME"
 
 echo -e "${BLUE}⏳ Waiting for simulators to stabilize...${NC}"
 sleep 3
 
-# Build and install on both simulators
+# Build and install on all simulators
 build_and_install "$SIM1_UUID" "$SIM1_NAME"
 echo ""
 build_and_install "$SIM2_UUID" "$SIM2_NAME"
+echo ""
+build_and_install "$SIM3_UUID" "$SIM3_NAME"
 
 echo ""
 echo -e "${GREEN}🎉 Multi-simulator setup complete!${NC}"
