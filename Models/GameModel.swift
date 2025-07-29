@@ -988,7 +988,7 @@ class GameModel: ObservableObject {
         
         let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
         
-        await MainActor.run {
+        await MainActor.run { [self] in
             print("📥 LOBBY: BEFORE REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count), phraseQueue: \(phraseQueue.count)")
             
             // CRITICAL FIX: Preserve targeted phrases that were received via WebSocket push

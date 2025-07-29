@@ -6,11 +6,11 @@ services:
     image: postgres:15-alpine
     container_name: anagram-db
     environment:
-      POSTGRES_DB: anagram_game
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/shared/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
@@ -30,16 +30,16 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV}
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=anagram_game
-      - DB_USER=postgres
-      - DB_PASSWORD=localdev
-      - DB_SSL=false
-      - PORT=3000
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL=${DB_SSL}
+      - PORT=${GAME_SERVER_PORT}
     ports:
-      - "3000:3000"
+      - "${GAME_SERVER_PORT}:${GAME_SERVER_PORT}"
 
   # Web dashboard - admin interface
   web-dashboard:
@@ -51,16 +51,16 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV}
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=anagram_game
-      - DB_USER=postgres
-      - DB_PASSWORD=localdev
-      - DB_SSL=false
-      - WEB_DASHBOARD_PORT=3001
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL=${DB_SSL}
+      - WEB_DASHBOARD_PORT=${WEB_DASHBOARD_PORT}
     ports:
-      - "3001:3001"
+      - "${WEB_DASHBOARD_PORT}:${WEB_DASHBOARD_PORT}"
 
   # Link generator service
   link-generator:
@@ -72,16 +72,16 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV}
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=anagram_game
-      - DB_USER=postgres
-      - DB_PASSWORD=localdev
-      - DB_SSL=false
-      - LINK_GENERATOR_PORT=3002
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL=${DB_SSL}
+      - LINK_GENERATOR_PORT=${LINK_GENERATOR_PORT}
     ports:
-      - "3002:3002"
+      - "${LINK_GENERATOR_PORT}:${LINK_GENERATOR_PORT}"
 
 volumes:
   postgres_data:
