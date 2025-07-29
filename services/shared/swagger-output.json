@@ -1,0 +1,799 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Anagram Game Multiplayer Server API",
+    "version": "1.0.0",
+    "description": "A comprehensive API for the Anagram Game multiplayer server with PostgreSQL database, real-time WebSocket communication, and advanced phrase management.",
+    "contact": {
+      "name": "API Support",
+      "url": "https://github.com/oliban/anagram-game"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "host": "localhost:3000",
+  "basePath": "/",
+  "tags": [
+    {
+      "name": "Server Health",
+      "description": "Server status and health monitoring"
+    },
+    {
+      "name": "Player Management",
+      "description": "Player registration and online status"
+    },
+    {
+      "name": "Phrase Management",
+      "description": "Phrase creation, retrieval, and management"
+    }
+  ],
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/status": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/players/register": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "example": "any"
+                },
+                "socketId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/players/online": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "hint": {
+                  "example": "any"
+                },
+                "content": {
+                  "example": "any"
+                },
+                "senderId": {
+                  "example": "any"
+                },
+                "targetId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/phrases/create": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "content": {
+                  "example": "any"
+                },
+                "hint": {
+                  "example": "any"
+                },
+                "senderId": {
+                  "example": "any"
+                },
+                "targetIds": {
+                  "example": "any"
+                },
+                "isGlobal": {
+                  "example": "any"
+                },
+                "difficultyLevel": {
+                  "example": "any"
+                },
+                "phraseType": {
+                  "example": "any"
+                },
+                "priority": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/global": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "minDifficulty",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "maxDifficulty",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "approved",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/approve": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/for/{playerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/download/{playerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/consume": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/skip": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/analyze-difficulty": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "phrase": {
+                  "example": "any"
+                },
+                "language": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/hint/{level}": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "level",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/hints/status": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "playerId",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/complete": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "example": "any"
+                },
+                "completionTime": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/preview": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "playerId",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/scores/player/{playerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/leaderboards/{period}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/stats/global": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/scores/refresh": {
+      "post": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Player": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "example": "123e4567-e89b-12d3-a456-426614174000"
+        },
+        "name": {
+          "type": "string",
+          "example": "John Doe"
+        },
+        "lastSeen": {
+          "type": "string",
+          "example": "2023-12-07T10:30:00.000Z"
+        },
+        "isActive": {
+          "type": "boolean",
+          "example": true
+        },
+        "phrasesCompleted": {
+          "type": "number",
+          "example": 15
+        }
+      }
+    },
+    "Phrase": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "example": "123e4567-e89b-12d3-a456-426614174000"
+        },
+        "content": {
+          "type": "string",
+          "example": "Hello world"
+        },
+        "hint": {
+          "type": "string",
+          "example": "A greeting to the world"
+        },
+        "senderId": {
+          "type": "string",
+          "example": "123e4567-e89b-12d3-a456-426614174000"
+        },
+        "targetId": {
+          "type": "string",
+          "example": "456e7890-e89b-12d3-a456-426614174000"
+        },
+        "createdAt": {
+          "type": "string",
+          "example": "2023-12-07T10:30:00.000Z"
+        },
+        "isConsumed": {
+          "type": "boolean",
+          "example": false
+        },
+        "difficultyLevel": {
+          "type": "number",
+          "example": 3
+        },
+        "isGlobal": {
+          "type": "boolean",
+          "example": false
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "example": "Error message"
+        },
+        "timestamp": {
+          "type": "string",
+          "example": "2023-12-07T10:30:00.000Z"
+        }
+      }
+    }
+  },
+  "autoQuery": true,
+  "autoBody": true,
+  "autoResponses": true,
+  "autoHeaders": true
+}
