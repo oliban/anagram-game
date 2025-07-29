@@ -1989,6 +1989,52 @@ app.get('/api/leaderboards/:period', async (req, res) => {
   }
 });
 
+// iOS app expects singular /api/leaderboard/ - duplicate route for compatibility
+app.get('/api/leaderboard/:period', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for leaderboards'
+      });
+    }
+
+    const { period } = req.params;
+    const limit = req.query.limit !== undefined ? Math.min(parseInt(req.query.limit), 100) : 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    // Validate period
+    if (!['daily', 'weekly', 'total'].includes(period)) {
+      return res.status(400).json({
+        error: 'Invalid period. Must be daily, weekly, or total'
+      });
+    }
+
+    // Validate pagination parameters
+    if (limit < 1 || offset < 0) {
+      return res.status(400).json({
+        error: 'Invalid pagination parameters'
+      });
+    }
+
+    console.log(`📊 LEADERBOARD (SINGULAR): Getting ${period} leaderboard for iOS app`);
+
+    // Get leaderboard - same logic as plural endpoint
+    const leaderboardData = await ScoringSystem.getLeaderboard(period, limit, offset);
+
+    res.json({
+      success: true,
+      ...leaderboardData,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ LEADERBOARD (SINGULAR): Error getting leaderboard:', error.message);
+    res.status(500).json({
+      error: 'Failed to get leaderboard'
+    });
+  }
+});
+
 app.get('/api/stats/global', async (req, res) => {
   try {
     if (!isDatabaseConnected) {
@@ -2263,6 +2309,240 @@ async function gracefulShutdown(signal) {
     process.exit(1);
   }
 }
+
+// Legend players endpoint (main branch endpoint)
+app.get('/api/players/legends', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for legend players'
+      });
+    }
+
+    // Read the minimum skill level from config (use defaults if config missing)
+    let minimumSkillLevel = 2; // Default to wretched (level 2)
+    let minimumSkillTitle = 'wretched';
+    let minimumPoints = 230;
+    
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(__dirname, 'config', 'level-config.json');
+      
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8');
+        const levelConfig = JSON.parse(configData);
+        
+        // Find the wretched skill level
+        const wretchedLevel = levelConfig.skillLevels?.find(level => level.title === 'wretched');
+        if (wretchedLevel) {
+          minimumSkillLevel = wretchedLevel.id;
+          minimumSkillTitle = wretchedLevel.title;
+          minimumPoints = wretchedLevel.pointsRequired;
+        }
+      }
+    } catch (configError) {
+      console.error('❌ LEGENDS: Error loading level config, using defaults:', configError.message);
+    }
+
+    console.log(`👑 LEGENDS: Looking for players with ${minimumPoints}+ points (${minimumSkillTitle} level)`);
+
+    // Query for players with total scores >= minimum points required for wretched level  
+    // Use same scoring logic as leaderboard system, get max score per player
+    const query = `
+      SELECT 
+        p.id,
+        p.name,
+        MAX(ps.total_score) as total_score,
+        MAX(ps.phrases_completed) as phrases_completed
+      FROM players p
+      JOIN player_scores ps ON p.id = ps.player_id
+      WHERE ps.total_score >= $1
+      GROUP BY p.id, p.name
+      ORDER BY MAX(ps.total_score) DESC
+      LIMIT 50
+    `;
+
+    const result = await pool.query(query, [minimumPoints]);
+    
+    const legendPlayers = result.rows.map(row => {
+      const totalScore = parseInt(row.total_score);
+      
+      // Calculate skill level based on total score
+      let skillLevel = minimumSkillLevel;
+      let skillTitle = minimumSkillTitle;
+      
+      try {
+        // Re-read config to calculate exact skill level (use defaults if config missing)
+        const fs = require('fs');
+        const path = require('path');
+        const configPath = path.join(__dirname, 'config', 'level-config.json');
+        
+        if (fs.existsSync(configPath)) {
+          const configData = fs.readFileSync(configPath, 'utf8');
+          const levelConfig = JSON.parse(configData);
+          
+          // Find the highest skill level this player has achieved
+          if (levelConfig.skillLevels) {
+            for (let i = levelConfig.skillLevels.length - 1; i >= 0; i--) {
+              const level = levelConfig.skillLevels[i];
+              if (totalScore >= level.pointsRequired) {
+                skillLevel = level.id;
+                skillTitle = level.title;
+                break;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ LEGENDS: Error calculating skill level:', error.message);
+      }
+      
+      return {
+        id: row.id,
+        name: row.name,
+        totalScore: totalScore,
+        skillLevel: skillLevel,
+        skillTitle: skillTitle,
+        phrasesCompleted: parseInt(row.phrases_completed)
+      };
+    });
+
+    console.log(`👑 LEGENDS: Found ${legendPlayers.length} legend players`);
+
+    res.json({
+      success: true,
+      players: legendPlayers,
+      minimumSkillLevel: minimumSkillLevel,
+      minimumSkillTitle: minimumSkillTitle,
+      count: legendPlayers.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ LEGENDS: Error getting legend players:', error);
+    res.status(500).json({
+      error: 'Failed to get legend players'
+    });
+  }
+});
+
+// iOS app compatibility - legend players endpoint alias
+app.get('/api/legend-players', async (req, res) => {
+  try {
+    if (!isDatabaseConnected) {
+      return res.status(503).json({
+        error: 'Database connection required for legend players'
+      });
+    }
+
+    // Read the minimum skill level from config (use defaults if config missing)
+    let minimumSkillLevel = 2; // Default to wretched (level 2)
+    let minimumSkillTitle = 'wretched';
+    let minimumPoints = 230;
+    
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(__dirname, 'config', 'level-config.json');
+      
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8');
+        const levelConfig = JSON.parse(configData);
+        
+        // Find the wretched skill level
+        const wretchedLevel = levelConfig.skillLevels?.find(level => level.title === 'wretched');
+        if (wretchedLevel) {
+          minimumSkillLevel = wretchedLevel.id;
+          minimumSkillTitle = wretchedLevel.title;
+          minimumPoints = wretchedLevel.pointsRequired;
+        }
+      }
+    } catch (configError) {
+      console.error('❌ LEGENDS: Error loading level config, using defaults:', configError.message);
+    }
+
+    console.log(`👑 LEGENDS: Looking for players with ${minimumPoints}+ points (${minimumSkillTitle} level)`);
+
+    // Query for players with total scores >= minimum points required for wretched level  
+    // Use same scoring logic as leaderboard system, get max score per player
+    const query = `
+      SELECT 
+        p.id,
+        p.name,
+        MAX(ps.total_score) as total_score,
+        MAX(ps.phrases_completed) as phrases_completed
+      FROM players p
+      JOIN player_scores ps ON p.id = ps.player_id
+      WHERE ps.total_score >= $1
+      GROUP BY p.id, p.name
+      ORDER BY MAX(ps.total_score) DESC
+      LIMIT 50
+    `;
+
+    const result = await pool.query(query, [minimumPoints]);
+    
+    const legendPlayers = result.rows.map(row => {
+      const totalScore = parseInt(row.total_score);
+      
+      // Calculate skill level based on total score
+      let skillLevel = minimumSkillLevel;
+      let skillTitle = minimumSkillTitle;
+      
+      try {
+        // Re-read config to calculate exact skill level (use defaults if config missing)
+        const fs = require('fs');
+        const path = require('path');
+        const configPath = path.join(__dirname, 'config', 'level-config.json');
+        
+        if (fs.existsSync(configPath)) {
+          const configData = fs.readFileSync(configPath, 'utf8');
+          const levelConfig = JSON.parse(configData);
+          
+          // Find the highest skill level this player has achieved
+          if (levelConfig.skillLevels) {
+            for (let i = levelConfig.skillLevels.length - 1; i >= 0; i--) {
+              const level = levelConfig.skillLevels[i];
+              if (totalScore >= level.pointsRequired) {
+                skillLevel = level.id;
+                skillTitle = level.title;
+                break;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ LEGENDS: Error calculating skill level:', error.message);
+      }
+      
+      return {
+        id: row.id,
+        name: row.name,
+        totalScore: totalScore,
+        skillLevel: skillLevel,
+        skillTitle: skillTitle,
+        phrasesCompleted: parseInt(row.phrases_completed)
+      };
+    });
+
+    console.log(`👑 LEGENDS: Found ${legendPlayers.length} legend players`);
+
+    res.json({
+      success: true,
+      players: legendPlayers,
+      minimumSkillLevel: minimumSkillLevel,
+      minimumSkillTitle: minimumSkillTitle,
+      count: legendPlayers.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ LEGENDS: Error getting legend players:', error);
+    res.status(500).json({
+      error: 'Failed to get legend players'
+    });
+  }
+});
 
 // Register shutdown handlers
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));

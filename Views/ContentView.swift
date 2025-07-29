@@ -205,9 +205,6 @@ struct ContentView: View {
         case .success:
             print("✅ Connection test successful - proceeding with registration")
             
-            // Establish WebSocket connection
-            networkManager.connect()
-            
             // Wait briefly for connection to establish
             try? await Task.sleep(nanoseconds: AppConfig.registrationStabilizationDelay)
             

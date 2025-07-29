@@ -99,7 +99,7 @@ class LeaderboardService {
     // MARK: - Legend Players
     
     func fetchLegendPlayers() async throws -> LegendPlayersResponse {
-        guard let url = URL(string: "\(baseURL)/api/legend-players") else {
+        guard let url = URL(string: "\(baseURL)/api/players/legends") else {
             throw NetworkError.invalidURL
         }
         
