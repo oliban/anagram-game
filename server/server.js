@@ -19,9 +19,9 @@ const ConfigService = require('./services/config-service');
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger-output.json');
 
-// Web dashboard modules
+// Web dashboard modules (temporarily disabled for Docker)
 const path = require('path');
-const ContributionLinkGenerator = require('../web-dashboard/server/link-generator');
+// const ContributionLinkGenerator = require('./web-dashboard/server/link-generator');
 
 const app = express();
 const server = createServer(app);
