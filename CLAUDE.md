@@ -47,9 +47,45 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - **Ask for guidance** when stuck: "I see approaches [A] vs [B]. Which do you prefer?"
 
 ## TESTING & DEPLOYMENT
+
+### Microservices Architecture (NEW)
+**All servers now run as Docker containers with separate services:**
+
+**Start all services for testing:**
+```bash
+docker-compose -f docker-compose.services.yml up -d
+```
+
+**Check service status:**
+```bash
+# View all running containers
+docker-compose -f docker-compose.services.yml ps
+
+# Test health endpoints
+curl http://localhost:3000/api/status  # Game server
+curl http://localhost:3001/api/status  # Web dashboard  
+curl http://localhost:3002/api/status  # Link generator
+```
+
+**Monitor logs:**
+```bash
+# All services
+docker-compose -f docker-compose.services.yml logs -f
+
+# Specific service
+docker-compose -f docker-compose.services.yml logs -f game-server
+docker-compose -f docker-compose.services.yml logs -f web-dashboard
+docker-compose -f docker-compose.services.yml logs -f link-generator
+```
+
+**Stop services:**
+```bash
+docker-compose -f docker-compose.services.yml down
+```
+
 **Multi-Simulator Testing**: Deploy to both iPhone 15 and iPhone 15 Pro simulators
 - Build script: `/Users/fredriksafsten/Workprojects/anagram-game/build_multi_sim.sh`
-- Monitor server logs: `tail -f server/server_output.log`
+- **Server logs**: Use Docker commands above (not server/server_output.log)
 - Always await feedback before proceeding to next tasks
 
 **Testing Strategy**:
@@ -58,14 +94,31 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - Performance-critical paths → Add performance tests
 
 ## DEPLOYMENT SEQUENCE
-1. **Server Setup**: Use safe server management (`./server/manage-server.sh restart`), monitor logs
-2. **Version**: Increment `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
-3. **Build**: Clean build with local derived data (`-derivedDataPath ./build`)
-4. **Deploy**: Install and launch on both simulators
-5. **Verify**: Monitor logs, check API calls, confirm connections
+### Local Development (NEW)
+1. **Start Services**: `docker-compose -f docker-compose.services.yml up -d`
+2. **Verify Health**: Check all service endpoints (3000, 3001, 3002)
+3. **Version**: Increment `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
+4. **Build iOS**: Clean build with local derived data (`-derivedDataPath ./build`)
+5. **Deploy**: Install and launch on both simulators
+6. **Verify**: Monitor Docker logs, check API calls, confirm connections
+
+### Production Deployment (AWS)
+1. **Infrastructure**: Use AWS CDK for ECS Fargate + Aurora Serverless v2
+2. **Secrets**: Configure AWS Secrets Manager for environment variables
+3. **Deploy**: GitHub Actions CI/CD pipeline to AWS
+4. **Monitor**: CloudWatch logs and health checks
 
 ## ARCHITECTURE & ENVIRONMENT
-**Client-Server**: iOS SwiftUI + SpriteKit ↔ WebSocket/REST ↔ Node.js + PostgreSQL
+
+### Microservices Architecture (NEW)
+**Client-Server**: iOS SwiftUI + SpriteKit ↔ Docker Services ↔ Shared PostgreSQL
+
+**Services:**
+- 🎮 **Game Server** (port 3000): Core multiplayer API + WebSocket
+- 📊 **Web Dashboard** (port 3001): Admin interface
+- 🔗 **Link Generator** (port 3002): Contribution link service
+- 🗄️ **PostgreSQL** (port 5432): Shared database
+
 **Patterns**: MVVM with @Observable GameModel, Socket.IO for multiplayer, URLSession for HTTP
 **Simulators**: iPhone 15 (`AF307F12-A657-4D6A-8123-240CBBEC5B31`), iPhone 15 Pro (`86355D8A-560E-465D-8FDC-3D037BCA482B`)
 **Bundle ID**: `com.fredrik.anagramgame`
@@ -96,19 +149,51 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 ## REFERENCE COMMANDS
 
 ### Development
+
+#### Microservices (NEW - Primary Method)
 ```bash
-# Server Management (Safe, Port-Specific)
+# Start all services (game-server, web-dashboard, link-generator, postgres)
+docker-compose -f docker-compose.services.yml up -d
+
+# Stop all services
+docker-compose -f docker-compose.services.yml down
+
+# View logs (all services)
+docker-compose -f docker-compose.services.yml logs -f
+
+# View specific service logs
+docker-compose -f docker-compose.services.yml logs -f game-server
+
+# Rebuild services after code changes
+docker-compose -f docker-compose.services.yml build
+docker-compose -f docker-compose.services.yml up -d
+
+# Check service health
+curl http://localhost:3000/api/status  # Game server
+curl http://localhost:3001/api/status  # Web dashboard
+curl http://localhost:3002/api/status  # Link generator
+```
+
+#### Legacy Single Server (Deprecated)
+```bash
+# DEPRECATED - Use microservices above instead
 ./server/manage-server.sh start    # Start server
 ./server/manage-server.sh stop     # Stop server safely
 ./server/manage-server.sh restart  # Restart server
 ./server/manage-server.sh status   # Check server status
 ./server/manage-server.sh logs     # View recent logs
 tail -f server/server_output.log   # Live logs
+```
 
 # iOS Tests
 xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15'
 
-# Database
+# Database (Microservices)
+# Database runs in Docker container, accessible at localhost:5432
+psql -h localhost -p 5432 -U postgres -d anagram_game
+docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d anagram_game
+
+# Database (Legacy)
 node -e "require('./server/database/connection').testConnection()"
 psql -d anagram_game -f server/database/schema.sql
 
