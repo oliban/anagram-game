@@ -1,0 +1,26 @@
+{
+  "services": {
+    "gameServer": {
+      "port": 3000,
+      "host": "localhost"
+    },
+    "webDashboard": {
+      "port": 3001,
+      "host": "localhost"
+    },
+    "linkGenerator": {
+      "port": 3002,
+      "host": "localhost"
+    },
+    "database": {
+      "port": 5432,
+      "host": "localhost"
+    }
+  },
+  "development": {
+    "host": "192.168.1.133"
+  },
+  "production": {
+    "host": "your-production-domain.com"
+  }
+}
