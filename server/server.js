@@ -452,38 +452,7 @@ app.get('/api/config', async (req, res) => {
   }
 });
 
-// Admin endpoint to update configuration
-app.post('/api/admin/config', async (req, res) => {
-  try {
-    const { key, value, description } = req.body;
-    
-    if (!key || value === undefined) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: key and value' 
-      });
-    }
-    
-    const success = await configService.setConfig(key, value, description);
-    
-    if (success) {
-      res.json({ 
-        success: true, 
-        message: `Configuration ${key} updated to ${value}` 
-      });
-    } else {
-      res.status(500).json({ 
-        error: 'Failed to update configuration' 
-      });
-    }
-  } catch (error) {
-    console.error('🚨 ADMIN CONFIG ERROR:', error);
-    res.status(500).json({ 
-      error: 'Internal server error' 
-    });
-  }
-});
-
-// Admin endpoint to get all configuration
+// Admin endpoint to get all configuration (read-only)
 app.get('/api/admin/config', async (req, res) => {
   try {
     const config = await configService.getAllConfig();

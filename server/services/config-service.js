@@ -52,38 +52,6 @@ class ConfigService {
         }
     }
 
-    /**
-     * Set configuration value in database
-     * @param {string} key - Configuration key
-     * @param {any} value - Configuration value
-     * @param {string} description - Optional description
-     * @returns {Promise<boolean>} Success status
-     */
-    async setConfig(key, value, description = null) {
-        try {
-            const stringValue = String(value);
-            
-            const result = await this.dbPool.query(`
-                INSERT INTO server_config (key, value, description) 
-                VALUES ($1, $2, $3)
-                ON CONFLICT (key) 
-                DO UPDATE SET 
-                    value = $2, 
-                    description = COALESCE($3, server_config.description),
-                    updated_at = CURRENT_TIMESTAMP
-            `, [key, stringValue, description]);
-
-            // Clear cache for this key to force refresh
-            this.cache.delete(key);
-            this.lastCacheUpdate.delete(key);
-
-            console.log(`⚙️ CONFIG: Updated ${key} = ${stringValue}`);
-            return true;
-        } catch (error) {
-            console.error(`🚨 CONFIG ERROR: Failed to set config ${key}:`, error);
-            return false;
-        }
-    }
 
     /**
      * Get all configuration values
