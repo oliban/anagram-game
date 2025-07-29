@@ -7,12 +7,15 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Enhanced players table
 CREATE TABLE players (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
     is_active BOOLEAN DEFAULT true,
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     phrases_completed INTEGER DEFAULT 0,
     socket_id VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    device_id VARCHAR(255) NULL,
+    CONSTRAINT unique_player_name UNIQUE (name),
+    CONSTRAINT players_name_device_key UNIQUE (name, device_id)
 );
 
 -- Global phrase bank with hints
@@ -25,7 +28,9 @@ CREATE TABLE phrases (
     created_by_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_approved BOOLEAN DEFAULT false,
-    usage_count INTEGER DEFAULT 0
+    usage_count INTEGER DEFAULT 0,
+    phrase_type VARCHAR(50) DEFAULT 'custom',
+    language VARCHAR(10) DEFAULT 'en'
 );
 
 -- Player-specific phrase queue for targeting
@@ -57,6 +62,16 @@ CREATE TABLE skipped_phrases (
     phrase_id UUID REFERENCES phrases(id) ON DELETE CASCADE,
     skipped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(player_id, phrase_id)
+);
+
+-- Contribution links for tracking external phrase contributors
+CREATE TABLE contribution_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    contributor_name VARCHAR(100) NOT NULL,
+    link_code VARCHAR(50) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    phrases_contributed INTEGER DEFAULT 0
 );
 
 -- Offline phrase downloads for mobile clients

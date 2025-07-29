@@ -82,21 +82,20 @@ class DatabasePhrase {
       }
     }
 
-    // Validate hint
-    if (!hint || typeof hint !== 'string') {
-      errors.push('Hint must be a non-empty string');
+    // Validate hint (allow empty hints for iOS compatibility)
+    if (hint !== undefined && hint !== null && typeof hint !== 'string') {
+      errors.push('Hint must be a string');
     } else {
-      const trimmedHint = hint.trim();
-      if (trimmedHint.length === 0) {
-        errors.push('Hint cannot be empty');
-      } else if (trimmedHint.length > 300) {
+      const trimmedHint = (hint || '').trim();  // Default to empty string if hint is null/undefined
+      if (trimmedHint.length > 300) {
         errors.push('Hint cannot be longer than 300 characters');
       }
       
       // Check that hint doesn't contain the exact answer words (only words longer than 5 chars)
       // This prevents giving away the answer while allowing common words like "test", "word", etc.
-      const contentLower = content.toLowerCase();
-      const hintLower = trimmedHint.toLowerCase();
+      if (trimmedHint.length > 0) {  // Only validate if hint is provided
+        const contentLower = content.toLowerCase();
+        const hintLower = trimmedHint.toLowerCase();
       const words = contentLower.split(/\s+/);
       
       // Skip common words that are reasonable to use in hints
@@ -109,6 +108,7 @@ class DatabasePhrase {
           break;
         }
       }
+    }
     }
 
     return {

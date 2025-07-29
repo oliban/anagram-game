@@ -104,11 +104,47 @@ class NetworkManager: ObservableObject {
     // MARK: - Player Management
     
     func registerPlayer(name: String) async -> RegistrationResult {
-        return await playerService.registerPlayer(name: name)
+        let result = await playerService.registerPlayer(name: name)
+        
+        // If registration successful, establish WebSocket connection
+        if case .success = result {
+            // Get player directly from service to avoid binding timing issues
+            if let servicePlayer = playerService.currentPlayer {
+                print("🔌 NETWORK: About to initiate WebSocket connection for player: \(servicePlayer.id)")
+                connectionService.connect(playerId: servicePlayer.id)
+                print("🔌 NETWORK: WebSocket connection initiated after successful registration")
+            } else {
+                print("❌ NETWORK: Success but no currentPlayer in service! NetworkManager: \(currentPlayer?.id ?? "nil")")
+            }
+        } else {
+            print("❌ NETWORK: WebSocket connection NOT initiated. Result: \(result), CurrentPlayer: \(currentPlayer?.id ?? "nil")")
+        }
+        
+        return result
     }
     
     func registerPlayerBool(name: String) async -> Bool {
-        return await playerService.registerPlayerBool(name: name)
+        print("🔍 NETWORK: registerPlayerBool called for name: \(name)")
+        let result = await playerService.registerPlayer(name: name)
+        print("🔍 NETWORK: registerPlayerBool result: \(result)")
+        print("🔍 NETWORK: currentPlayer after registration: \(currentPlayer?.name ?? "nil")")
+        
+        // If registration successful, establish WebSocket connection  
+        if case .success = result {
+            // Get player directly from service to avoid binding timing issues
+            if let servicePlayer = playerService.currentPlayer {
+                print("🔌 NETWORK: About to initiate WebSocket connection for player: \(servicePlayer.id)")
+                connectionService.connect(playerId: servicePlayer.id)
+                print("🔌 NETWORK: WebSocket connection initiated after successful registration")
+                return true
+            } else {
+                print("❌ NETWORK: Success but no currentPlayer in service! NetworkManager: \(currentPlayer?.id ?? "nil")")
+            }
+        } else {
+            print("❌ NETWORK: WebSocket connection NOT initiated. Result: \(result), CurrentPlayer: \(currentPlayer?.id ?? "nil")")
+        }
+        
+        return false
     }
     
     func fetchOnlinePlayers() async {
