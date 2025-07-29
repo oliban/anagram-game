@@ -115,18 +115,23 @@ struct ContentView: View {
         .onAppear {
             print("📱 ContentView appeared - checking for existing player or showing registration")
             
-            // Check if we have a stored player name from previous session
-            if let storedName = UserDefaults.standard.string(forKey: "playerName") {
-                print("📱 Found stored player name: \(storedName) - attempting auto-connect")
-                Task {
+            // First, fetch server configuration
+            Task {
+                await networkManager.fetchServerConfig()
+                
+                // Then check if we have a stored player name from previous session
+                if let storedName = UserDefaults.standard.string(forKey: "playerName") {
+                    print("📱 Found stored player name: \(storedName) - attempting auto-connect")
                     await autoConnectWithStoredName(storedName)
+                } else {
+                    print("📱 No stored player name - showing registration")
+                    // Reset connection state and show registration
+                    await MainActor.run {
+                        networkManager.connectionStatus = .disconnected
+                        networkManager.isConnected = false
+                        showingRegistration = true
+                    }
                 }
-            } else {
-                print("📱 No stored player name - showing registration")
-                // Reset connection state and show registration
-                networkManager.connectionStatus = .disconnected
-                networkManager.isConnected = false
-                showingRegistration = true
             }
         }
         .onChange(of: networkManager.currentPlayer) { oldValue, newValue in
