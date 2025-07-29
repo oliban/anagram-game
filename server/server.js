@@ -225,7 +225,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, {
 app.use('/web', express.static(path.join(__dirname, '../web-dashboard/public')));
 
 // Web Dashboard Routes
-const linkGenerator = new ContributionLinkGenerator();
+// const linkGenerator = new ContributionLinkGenerator();
 
 // Serve monitoring dashboard
 app.get('/monitoring', (req, res) => {
