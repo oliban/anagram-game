@@ -277,8 +277,13 @@ class PlayerService: PlayerServiceDelegate {
     // MARK: - Socket Event Handling
     
     func handlePlayerListUpdate(data: [Any]) {
-        guard let playersData = data.first as? [[String: Any]] else {
-            print("❌ SOCKET: Invalid players data format")
+        print("📨 PLAYER SERVICE: handlePlayerListUpdate called with data: \(data)")
+        
+        // Handle the new format: data[0] is an object with "players" array and "timestamp"
+        guard let updateData = data.first as? [String: Any],
+              let playersData = updateData["players"] as? [[String: Any]] else {
+            print("❌ SOCKET: Invalid players data format. Expected {players: [...], timestamp: ...}")
+            print("❌ SOCKET: Raw data: \(data)")
             return
         }
         

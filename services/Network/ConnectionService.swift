@@ -33,6 +33,7 @@ class ConnectionService: ObservableObject {
     private var manager: SocketManager?
     private var socket: SocketIOClient?
     private let baseURL = AppConfig.baseURL
+    private var pendingPlayerId: String?
     
     // Delegates for handling socket events
     weak var playerDelegate: PlayerServiceDelegate?
@@ -53,10 +54,14 @@ class ConnectionService: ObservableObject {
         }
         
         let config: SocketIOClientConfiguration = [
-            .log(false),
+            .log(true),
             .compress,
-            .connectParams(["transport": "websocket"]),
-            .forceWebsockets(true)
+            .reconnects(true),
+            .reconnectAttempts(-1), // Keep trying forever
+            .reconnectWait(3),     // Wait 3 seconds before reconnecting
+            .reconnectWaitMax(10), // Max wait 10 seconds
+            .forceWebsockets(true),// Use WebSockets only, no long-polling fallback
+            .secure(false)         // Set to true for https
         ]
         
         manager = SocketManager(socketURL: url, config: config)
@@ -74,6 +79,12 @@ class ConnectionService: ObservableObject {
             DispatchQueue.main.async {
                 self?.connectionStatus = .connected
                 self?.isConnected = true
+            }
+            
+            // Emit player-connect event if we have a pending player ID
+            if let playerId = self?.pendingPlayerId {
+                print("🔌 SOCKET: Emitting player-connect event for \(playerId)")
+                self?.socket?.emit("player-connect", with: [["playerId": playerId]], completion: nil)
             }
         }
         
@@ -101,14 +112,20 @@ class ConnectionService: ObservableObject {
                 self?.connectionStatus = .connected
                 self?.isConnected = true
             }
+            
+            // Re-emit player-connect event on reconnection
+            if let playerId = self?.pendingPlayerId {
+                print("🔄 SOCKET: Re-emitting player-connect event after reconnection for \(playerId)")
+                self?.socket?.emit("player-connect", with: [["playerId": playerId]], completion: nil)
+            }
         }
         
         // Delegate to services for specific events
-        socket.on("playersUpdate") { [weak self] data, _ in
+        socket.on("player-list-updated") { [weak self] data, _ in
             self?.playerDelegate?.handlePlayerListUpdate(data: data)
         }
         
-        socket.on("phraseReceived") { [weak self] data, _ in
+        socket.on("new-phrase") { [weak self] data, _ in
             self?.phraseDelegate?.handleNewPhrase(data: data)
         }
         
@@ -125,10 +142,22 @@ class ConnectionService: ObservableObject {
             return
         }
         
-        print("🔌 SOCKET: Connecting with player ID: \(playerId)")
-        connectionStatus = .connecting
+        print("🔌 SOCKET: Attempting connection to \(baseURL) with player ID: \(playerId)")
+        print("🔌 SOCKET: Socket state before connect: \(socket.status)")
         
-        socket.connect(withPayload: ["playerId": playerId])
+        // Store the player ID for the player-connect event
+        pendingPlayerId = playerId
+        
+        if socket.status == .connected {
+            // If already connected, just send the player-connect event
+            print("🔌 SOCKET: Already connected, emitting player-connect event")
+            socket.emit("player-connect", with: [["playerId": playerId]], completion: nil)
+            return
+        }
+        
+        connectionStatus = .connecting
+        socket.connect()
+        print("🔌 SOCKET: Connect() called - will emit player-connect on successful connection")
     }
     
     func disconnect() {
