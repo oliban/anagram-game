@@ -1,4 +1,4 @@
-const { pool } = require('../../database/connection');
+const { pool } = require('./shared/database/connection');
 const crypto = require('crypto');
 
 class ContributionLinkGenerator {

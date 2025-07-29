@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-07-10",
+  "description": "Shared difficulty algorithm configuration for anagram phrase scoring",
+  
+  "languages": {
+    "english": "en",
+    "swedish": "sv"
+  },
+  
+  "letterFrequencies": {
+    "en": {
+      "e": 12.7, "t": 9.1, "a": 8.2, "o": 7.5, "i": 7.0, "n": 6.7, "s": 6.3, "h": 6.1, "r": 6.0,
+      "d": 4.3, "l": 4.0, "c": 2.8, "u": 2.8, "m": 2.4, "w": 2.4, "f": 2.2, "g": 2.0, "y": 2.0,
+      "p": 1.9, "b": 1.5, "v": 1.0, "k": 0.8, "j": 0.2, "x": 0.2, "q": 0.1, "z": 0.1
+    },
+    "sv": {
+      "e": 10.1, "a": 9.4, "n": 8.9, "t": 8.7, "r": 8.4, "s": 6.8, "l": 5.2, "i": 5.8,
+      "d": 4.5, "o": 4.4, "k": 3.2, "g": 2.8, "m": 3.5, "h": 2.1, "f": 2.0, "v": 2.4,
+      "u": 1.8, "p": 1.8, "b": 1.3, "c": 1.5, "y": 0.7, "j": 0.6, "x": 0.1, "w": 0.1,
+      "z": 0.1, "å": 1.8, "ä": 1.8, "ö": 1.3, "q": 0.01
+    }
+  },
+  
+  "maxFrequencies": {
+    "en": 12.7,
+    "sv": 10.1
+  },
+  
+  "difficultyThresholds": {
+    "veryEasy": 20,
+    "easy": 40,
+    "medium": 60,
+    "hard": 80
+  },
+  
+  "difficultyLabels": {
+    "veryEasy": "Very Easy",
+    "easy": "Easy", 
+    "medium": "Medium",
+    "hard": "Hard",
+    "veryHard": "Very Hard"
+  },
+  
+  "algorithmParameters": {
+    "wordCount": {
+      "exponent": 1.5,
+      "multiplier": 10.0
+    },
+    "letterCount": {
+      "exponent": 1.2,
+      "multiplier": 1.5
+    },
+    "commonality": {
+      "multiplier": 25.0,
+      "shortPhraseThreshold": 3,
+      "shortPhraseDampening": 0.5
+    },
+    "letterRepetition": {
+      "multiplier": 15.0,
+      "description": "Penalty multiplier for repeated letters in anagram difficulty"
+    },
+    "minimumScore": 1.0
+  },
+  
+  "textNormalization": {
+    "en": {
+      "regex": "[^a-z]",
+      "description": "Keep only English letters"
+    },
+    "sv": {
+      "regex": "[^a-zåäö]",
+      "description": "Keep Swedish letters including å, ä, ö"
+    }
+  },
+  
+  "languageDetection": {
+    "swedishCharacters": "[åäö]",
+    "defaultLanguage": "en"
+  }
+}

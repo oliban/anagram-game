@@ -6,7 +6,7 @@
  */
 
 // Import the shared algorithm
-const sharedAlgorithm = require('../shared/difficulty-algorithm');
+const sharedAlgorithm = require('../difficulty-algorithm');
 
 // Re-export all functions from the shared algorithm
 module.exports = sharedAlgorithm;
