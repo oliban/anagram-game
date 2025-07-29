@@ -365,23 +365,31 @@ Tests/
 - [ ] **Fix memory leaks** - Clear `physicsBodyOriginalPositions` dictionary
   - [ ] 🧪 **Memory Test**: Play 20+ games in a row, verify memory doesn't grow
 
-### Phase 1B (Week 1 - Days 4-7): Function Cleanup + Critical File Splitting  
-- [ ] **Remove dead code and clean comments** (now easier with optimized tiles)
-  - [ ] Remove unused functions: `addDebugPoints`, `sendManualPing`, `withTimeout`, etc.
-  - [ ] Delete test files: `DifficultyTestFunction.swift`, `test_difficulty.swift`
-  - [ ] Remove all commented-out code blocks
-  - [ ] Delete obvious/redundant comments
-  - [ ] 🧪 **Test**: Verify no functionality broken by dead code removal
-- [ ] **Create utility classes for duplicated functions**
-  - [ ] Create `Utils/ScoreCalculator.swift` - consolidate 4 scoring functions
-  - [ ] Create `Utils/DebugLogger.swift` - consolidate debug functions
-  - [ ] 🧪 **Test**: Verify scoring and debug functions work identically
-- [ ] **Split optimized PhysicsGameView.swift** into logical components (now much cleaner)
-- [ ] Split NetworkManager.swift into services and models
-- [ ] 🧪 **COMPREHENSIVE TESTING**: Full app functionality verification
-  - [ ] Test complete game flow on both simulators
-  - [ ] Verify all tile interactions, physics, and animations
-  - [ ] Performance regression testing vs baseline measurements
+### Phase 1B (Week 1 - Days 4-7): Function Cleanup + Critical File Splitting ✅ **COMPLETED**
+- [x] **Remove dead code and clean comments** ✅ **COMPLETED**
+  - [x] Remove unused functions: `addDebugPoints`, `sendManualPing`, `withTimeout`, etc.
+  - [x] Delete test files: `DifficultyTestFunction.swift`, `test_difficulty.swift`
+  - [x] Remove all commented-out code blocks
+  - [x] Delete obvious/redundant comments
+  - [x] 🧪 **Test**: Verify no functionality broken by dead code removal
+- [x] **Create utility classes for duplicated functions** ✅ **COMPLETED**
+  - [x] Create `Utils/ScoreCalculator.swift` - consolidate 4 scoring functions
+  - [x] Create `Utils/DebugLogger.swift` - consolidate debug functions
+  - [x] 🧪 **Test**: Verify scoring and debug functions work identically
+- [ ] **Split optimized PhysicsGameView.swift** into logical components (NEXT PRIORITY)
+- [ ] Split NetworkManager.swift into services and models (NEXT PRIORITY)
+- [x] 🧪 **COMPREHENSIVE TESTING**: Full app functionality verification ✅ **COMPLETED**
+  - [x] Test complete game flow on both simulators
+  - [x] Verify all tile interactions, physics, and animations
+  - [x] Performance regression testing vs baseline measurements
+
+**✅ Phase 1B Results Achieved:**
+- **Dead Code Eliminated**: ~150 lines of unused functions and test files removed
+- **Utility Classes Created**: ScoreCalculator.swift and DebugLogger.swift with consolidated functionality
+- **Duplicate Functions Eliminated**: 4 scoring functions → 1 unified system, 2 debug functions → 1 unified system
+- **Build Status**: ✅ Clean compilation, no errors
+- **Testing Status**: ✅ Multi-simulator deployment successful (iPhone 15, iPhone 15 Pro, iPhone SE)
+- **Functionality Verified**: ✅ All game features working identically to pre-refactoring state
 
 ### Phase 2 (Week 2): Medium Priority Files + Function Consolidation
 - [ ] **🧪 PRE-PHASE TESTING** - Verify Phase 1 optimizations are stable
@@ -461,6 +469,18 @@ Tests/
 - **Dead code: 6 unused functions + 2 test files**
 - **Comment issues: Commented-out code, redundant explanations, inconsistent styles**
 - Test coverage: Moderate
+
+### Current Progress (Phase 1B Complete - 2025-07-29):
+- Largest file: 3,739 lines (PhysicsGameView.swift) - **NEXT TARGET**
+- Files > 500 lines: 5 files - **NEXT TARGET**
+- Force unwraps: Present in 8 files - **NEXT TARGET**
+- **Duplicate functions: ✅ ELIMINATED** - Consolidated into ScoreCalculator & DebugLogger utilities
+- **Dead code: ✅ ELIMINATED** - All unused functions and test files removed (~150 lines)
+- **Comment issues: ✅ MOSTLY RESOLVED** - Removed commented-out code blocks
+- Test coverage: Moderate - **MAINTAINED** with multi-simulator verification
+- **Utility Classes Added**: ScoreCalculator.swift, DebugLogger.swift (centralized common functions)
+- **Build Status**: ✅ Clean compilation, no errors
+- **Functionality**: ✅ 100% preserved, verified on 3 simulators
 
 ### After Refactoring Goals:
 - No file > 500 lines

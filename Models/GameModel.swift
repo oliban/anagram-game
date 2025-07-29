@@ -244,7 +244,7 @@ class GameModel: ObservableObject {
         }
         
         // Debug: Log entry to startNewGame
-        await sendDebugToServer("ENTERING_startNewGame: isUserInitiated=\(isUserInitiated)")
+        await DebugLogger.shared.sendToServer("ENTERING_startNewGame: isUserInitiated=\(isUserInitiated)")
         
         // Clear notification tracking for new game session
         await MainActor.run {
@@ -254,7 +254,7 @@ class GameModel: ObservableObject {
         
         // Prevent multiple concurrent calls
         guard !isStartingNewGame else {
-            await sendDebugToServer("STARTGAME_BLOCKED: already starting new game")
+            await DebugLogger.shared.sendToServer("STARTGAME_BLOCKED: already starting new game")
             return
         }
         
@@ -273,7 +273,7 @@ class GameModel: ObservableObject {
     private func checkForCustomPhrases(isUserInitiated: Bool = false) async {
         // Prevent multiple simultaneous phrase checks
         guard !isCheckingPhrases else {
-            await sendDebugToServer("PHRASE_CHECK_BLOCKED: already checking phrases")
+            await DebugLogger.shared.sendToServer("PHRASE_CHECK_BLOCKED: already checking phrases")
             return
         }
         
@@ -281,18 +281,18 @@ class GameModel: ObservableObject {
         gameState = .loading
         
         // Debug: Log entry to checkForCustomPhrases
-        await sendDebugToServer("ENTERING_checkForCustomPhrases: isUserInitiated=\(isUserInitiated)")
+        await DebugLogger.shared.sendToServer("ENTERING_checkForCustomPhrases: isUserInitiated=\(isUserInitiated)")
         
         let networkManager = NetworkManager.shared
         var phraseSource = "Unknown"
         
         // PRIORITY 1: Fetch fresh phrases from server first (bypasses WebSocket queue issues)
         print("🔍 GAME: Fetching fresh phrases from server")
-        await sendDebugToServer("SERVER_FETCH_STARTING: fetching phrases from server")
+        await DebugLogger.shared.sendToServer("SERVER_FETCH_STARTING: fetching phrases from server")
         let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
         
         // Debug: Log what we got from server
-        await sendDebugToServer("SERVER_FETCH_RESULT: got \(customPhrases.count) phrases")
+        await DebugLogger.shared.sendToServer("SERVER_FETCH_RESULT: got \(customPhrases.count) phrases")
         
         if let firstPhrase = customPhrases.first {
             // Distinguish between targeted and global server phrases
@@ -316,7 +316,7 @@ class GameModel: ObservableObject {
             print("🔍 PHRASE_DEBUG: Sender: \(firstPhrase.senderName)")
             
             // Send debug info to server
-            await sendDebugToServer("PHRASE_DEBUG: phrase='\(firstPhrase.content)', difficulty=\(difficultyAnalysis.score), level=\(currentLevel), maxAllowed=\(maxAllowedDifficulty)")
+            await DebugLogger.shared.sendToServer("PHRASE_DEBUG: phrase='\(firstPhrase.content)', difficulty=\(difficultyAnalysis.score), level=\(currentLevel), maxAllowed=\(maxAllowedDifficulty)")
             
             currentCustomPhrase = firstPhrase
             currentSentence = firstPhrase.content
@@ -394,7 +394,7 @@ class GameModel: ObservableObject {
                 print("🎯 GAME: No custom phrases available, using local file sentence")
                 
                 // Debug: Log that we're using local phrases
-                await sendDebugToServer("USING_LOCAL_PHRASES: localPhrases.count=\(localPhrases.count)")
+                await DebugLogger.shared.sendToServer("USING_LOCAL_PHRASES: localPhrases.count=\(localPhrases.count)")
                 
                 // Use a random sentence from the default collection
                 guard !localPhrases.isEmpty else {
@@ -424,7 +424,7 @@ class GameModel: ObservableObject {
                 print("🔍 LOCAL_PHRASE_DEBUG: Selected local phrase '\(selectedPhrase)'")
                 print("🔍 LOCAL_PHRASE_DEBUG: Difficulty score: \(difficultyAnalysis.score)")
                 print("🔍 LOCAL_PHRASE_DEBUG: Used filtered list: \(!levelAppropriatePhrases.isEmpty)")
-                await sendDebugToServer("LOCAL_PHRASE_DEBUG: phrase='\(selectedPhrase)', difficulty=\(difficultyAnalysis.score), filtered=\(!levelAppropriatePhrases.isEmpty)")
+                await DebugLogger.shared.sendToServer("LOCAL_PHRASE_DEBUG: phrase='\(selectedPhrase)', difficulty=\(difficultyAnalysis.score), filtered=\(!levelAppropriatePhrases.isEmpty)")
                 
                 currentSentence = selectedPhrase
                 customPhraseInfo = ""
@@ -460,11 +460,11 @@ class GameModel: ObservableObject {
                 print("🔍 DEBUG: LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
                 
                 // Send debug info to server
-                await sendDebugToServer("LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
+                await DebugLogger.shared.sendToServer("LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
                 
                 // CRITICAL: Set phraseDifficulty for local phrases
                 phraseDifficulty = calculatedDifficulty
-                await sendDebugToServer("LOCAL_PHRASE_DIFFICULTY_SET: phraseDifficulty=\(phraseDifficulty)")
+                await DebugLogger.shared.sendToServer("LOCAL_PHRASE_DIFFICULTY_SET: phraseDifficulty=\(phraseDifficulty)")
             }
         }
         
@@ -502,8 +502,8 @@ class GameModel: ObservableObject {
         }
         
         // Send debug messages after MainActor.run
-        await sendDebugToServer("SCENE_RESET: messageTileSpawner is \(messageTileSpawner != nil ? "connected" : "nil")")
-        await sendDebugToServer("SCENE_RESET: resetGame() called on scene")
+        await DebugLogger.shared.sendToServer("SCENE_RESET: messageTileSpawner is \(messageTileSpawner != nil ? "connected" : "nil")")
+        await DebugLogger.shared.sendToServer("SCENE_RESET: resetGame() called on scene")
     }
     
     // Called when messageTileSpawner connection is established
@@ -621,16 +621,18 @@ class GameModel: ObservableObject {
     
     @MainActor
     private func calculateLocalScore() -> Int {
-        // Use stored difficulty if available, otherwise calculate
-        let baseDifficulty = phraseDifficulty > 0 ? phraseDifficulty : {
-            let language = currentCustomPhrase?.language ?? "en"
-            let analysis = NetworkManager.analyzeDifficultyClientSide(phrase: currentSentence, language: language)
-            return Int(analysis.score)
-        }()
+        let language = currentCustomPhrase?.language ?? "en"
+        let storedDifficulty = phraseDifficulty > 0 ? phraseDifficulty : nil
         
+        let finalScore = ScoreCalculator.shared.calculateWithFallback(
+            storedDifficulty: storedDifficulty,
+            phrase: currentSentence,
+            language: language,
+            hintsUsed: hintsUsed
+        )
+        
+        let baseDifficulty = storedDifficulty ?? ScoreCalculator.shared.calculateBaseDifficulty(phrase: currentSentence, language: language)
         print("🔍 SCORE: Using base difficulty: \(baseDifficulty) (hints: \(hintsUsed))")
-        
-        let finalScore = GameModel.applyHintPenalty(baseScore: baseDifficulty, hintsUsed: hintsUsed)
         print("🔍 SCORE: Final calculated score: \(finalScore) (base: \(baseDifficulty), hints: \(hintsUsed))")
         return finalScore
     }
@@ -653,7 +655,7 @@ class GameModel: ObservableObject {
         let skipStartMemory: Double
         if AppConfig.isPerformanceMonitoringEnabled {
             skipStartMemory = getMemoryUsage()
-            await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame() - Memory: \(String(format: "%.1f", skipStartMemory))MB")
+            await DebugLogger.shared.sendToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame() - Memory: \(String(format: "%.1f", skipStartMemory))MB")
             
             await sendPerformanceToServer([
                 "event": "skip_model_start",
@@ -665,7 +667,7 @@ class GameModel: ObservableObject {
         
         // Prevent concurrent skip operations to avoid race conditions
         guard !isSkipping else {
-            await sendDebugToServer("SKIP_BLOCKED: Already skipping, ignoring concurrent request")
+            await DebugLogger.shared.sendToServer("SKIP_BLOCKED: Already skipping, ignoring concurrent request")
             print("⚠️ Skip already in progress, ignoring concurrent request")
             return
         }
@@ -675,13 +677,13 @@ class GameModel: ObservableObject {
         
         // If we have a current custom phrase, skip it on the server
         if let customPhrase = currentCustomPhrase {
-            await sendDebugToServer("SKIP_SERVER_PHRASE: Skipping custom phrase: \(customPhrase.content)")
+            await DebugLogger.shared.sendToServer("SKIP_SERVER_PHRASE: Skipping custom phrase: \(customPhrase.content)")
             print("⏭️ Skipping custom phrase: \(customPhrase.content)")
             
             let networkManager = NetworkManager.shared
-            await sendDebugToServer("SKIP_CALLING_SKIP_PHRASE: About to call skipPhrase")
+            await DebugLogger.shared.sendToServer("SKIP_CALLING_SKIP_PHRASE: About to call skipPhrase")
             let skipSuccess = await networkManager.skipPhrase(phraseId: customPhrase.id)
-            await sendDebugToServer("SKIP_PHRASE_RESULT: skipSuccess=\(skipSuccess)")
+            await DebugLogger.shared.sendToServer("SKIP_PHRASE_RESULT: skipSuccess=\(skipSuccess)")
             
             if skipSuccess {
                 print("✅ Successfully skipped phrase on server")
@@ -691,7 +693,7 @@ class GameModel: ObservableObject {
             
             // CRITICAL: Also consume targeted phrases when skipped to prevent re-offering
             if customPhrase.targetId != nil {
-                await sendDebugToServer("SKIP_CONSUME_TARGETED: Consuming targeted phrase to prevent re-offering")
+                await DebugLogger.shared.sendToServer("SKIP_CONSUME_TARGETED: Consuming targeted phrase to prevent re-offering")
                 let consumeSuccess = await networkManager.consumePhrase(phraseId: customPhrase.id)
                 if consumeSuccess {
                     print("✅ Successfully consumed skipped targeted phrase \(customPhrase.id)")
@@ -723,18 +725,18 @@ class GameModel: ObservableObject {
                 return (removedFromPhraseQueue, removedFromLobbyQueue)
             }
             
-            await sendDebugToServer("SKIP_QUEUE_CLEANUP: Removed phrase \(phraseIdToRemove) from local queues (phraseQueue: \(removedCounts.0), lobbyQueue: \(removedCounts.1))")
+            await DebugLogger.shared.sendToServer("SKIP_QUEUE_CLEANUP: Removed phrase \(phraseIdToRemove) from local queues (phraseQueue: \(removedCounts.0), lobbyQueue: \(removedCounts.1))")
             
             // Clear any cached phrases from NetworkManager
-            await sendDebugToServer("SKIP_CLEARING_CACHE: About to call clearCachedPhrase")
+            await DebugLogger.shared.sendToServer("SKIP_CLEARING_CACHE: About to call clearCachedPhrase")
             await networkManager.clearCachedPhrase()
-            await sendDebugToServer("SKIP_CACHE_CLEARED: clearCachedPhrase completed")
+            await DebugLogger.shared.sendToServer("SKIP_CACHE_CLEARED: clearCachedPhrase completed")
         } else {
-            await sendDebugToServer("SKIP_NO_CUSTOM_PHRASE: No custom phrase to skip")
+            await DebugLogger.shared.sendToServer("SKIP_NO_CUSTOM_PHRASE: No custom phrase to skip")
         }
         
         // Start a new game regardless of skip result
-        await sendDebugToServer("SKIP_STARTING_NEW_GAME: About to call startNewGame")
+        await DebugLogger.shared.sendToServer("SKIP_STARTING_NEW_GAME: About to call startNewGame")
         print("🚀 Starting new game after skip")
         await startNewGame(isUserInitiated: true)
         
@@ -743,7 +745,7 @@ class GameModel: ObservableObject {
             let skipEndMemory = getMemoryUsage()
             let skipMemoryDelta = skipEndMemory - skipStartMemory
             
-            await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished - Memory: \(String(format: "%.1f", skipEndMemory))MB (Δ\(String(format: "%.1f", skipMemoryDelta))MB)")
+            await DebugLogger.shared.sendToServer("SKIP_COMPLETED: skipCurrentGame() finished - Memory: \(String(format: "%.1f", skipEndMemory))MB (Δ\(String(format: "%.1f", skipMemoryDelta))MB)")
             
             await sendPerformanceToServer([
                 "event": "skip_model_complete",
@@ -911,35 +913,6 @@ class GameModel: ObservableObject {
     
     // MARK: - Debug Methods
     
-    /// Debug method to add points for testing
-    func addDebugPoints(_ points: Int = 100) {
-        playerTotalScore += points
-        print("🐛 DEBUG: Added \(points) points, total now: \(playerTotalScore)")
-    }
-    
-    // Send debug message to server
-    func sendDebugToServer(_ message: String) async {
-        guard AppConfig.isPerformanceMonitoringEnabled else { return }
-        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let logData = [
-            "message": message,
-            "timestamp": ISO8601DateFormatter().string(from: Date()),
-            "playerId": playerId ?? "unknown"
-        ]
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: logData)
-            request.httpBody = jsonData
-            let _ = try await URLSession.shared.data(for: request)
-        } catch {
-            print("Debug logging failed: \(error)")
-        }
-    }
     
     // Network notification setup
     @MainActor

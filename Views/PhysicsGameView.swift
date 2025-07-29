@@ -452,7 +452,7 @@ struct HintButtonView: View {
     }
     
     private func calculateLocalScore(currentLevel: Int, originalScore: Int) -> Int {
-        return GameModel.applyHintPenalty(baseScore: originalScore, hintsUsed: currentLevel)
+        return ScoreCalculator.shared.applyHintPenalty(baseScore: originalScore, hintsUsed: currentLevel)
     }
     
     private func generateLocalHint(level: Int, sentence: String) -> String {
@@ -773,7 +773,7 @@ struct PhysicsGameView: View {
                                     preSkipChildren = gameScene?.children.count ?? 0
                                     
                                     // Log detailed pre-skip state
-                                    await gameModel.sendDebugToServer("SKIP_PRESSED: Memory before: \(String(format: "%.1f", preSkipMemory))MB, Tiles: \(preSkipTiles), Scene children: \(preSkipChildren)")
+                                    await DebugLogger.shared.sendToServer("SKIP_PRESSED: Memory before: \(String(format: "%.1f", preSkipMemory))MB, Tiles: \(preSkipTiles), Scene children: \(preSkipChildren)")
                                     
                                     await gameModel.sendPerformanceToServer([
                                         "event": "skip_button_pressed",
@@ -806,7 +806,7 @@ struct PhysicsGameView: View {
                                     let tilesDelta = postSkipTiles - preSkipTiles
                                     let childrenDelta = postSkipChildren - preSkipChildren
                                     
-                                    await gameModel.sendDebugToServer("SKIP_COMPLETE: Memory after: \(String(format: "%.1f", postSkipMemory))MB (Δ\(String(format: "%.1f", memoryDelta))MB), Tiles: \(postSkipTiles) (Δ\(tilesDelta)), Children: \(postSkipChildren) (Δ\(childrenDelta))")
+                                    await DebugLogger.shared.sendToServer("SKIP_COMPLETE: Memory after: \(String(format: "%.1f", postSkipMemory))MB (Δ\(String(format: "%.1f", memoryDelta))MB), Tiles: \(postSkipTiles) (Δ\(tilesDelta)), Children: \(postSkipChildren) (Δ\(childrenDelta))")
                                     
                                     await gameModel.sendPerformanceToServer([
                                         "event": "skip_operation_complete",
@@ -1563,12 +1563,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             run(SKAction.sequence([delayAction, addAction]))
         }
         
-        // Spawn debug tile showing phrase source (after cleanup, persists with score tile)
-        // TODO: Temporarily disabled - can be re-enabled later
-        // let debugMessage = "Source: \(gameModel.debugPhraseSource)"
-        // spawnMessageTile(message: debugMessage)
-        // print("🐛 Spawned debug tile in resetGame: \(debugMessage)")
-        
         // Create language tile - same size as letter tiles  
         let languageTileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
                                      height: baseTileSize * PhysicsGameScene.componentScaleFactor)
@@ -1597,7 +1591,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     private func calculateCurrentScore(hintsUsed: Int? = nil) -> Int {
         let actualHintsUsed = hintsUsed ?? gameModel.hintsUsed
-        return GameModel.applyHintPenalty(baseScore: gameModel.phraseDifficulty, hintsUsed: actualHintsUsed)
+        return ScoreCalculator.shared.applyHintPenalty(baseScore: gameModel.phraseDifficulty, hintsUsed: actualHintsUsed)
     }
     
     private func getCurrentPhraseLanguage() -> String {
@@ -1617,14 +1611,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Send debug to server
         Task {
-            await sendDebugToServer("SCORE_TILE_UPDATE: phrase='\(gameModel.currentSentence)' displayed_difficulty=\(difficulty) actual_difficulty=\(actualDifficulty) current_score=\(currentScore)")
+            await DebugLogger.shared.sendToServer("SCORE_TILE_UPDATE: phrase='\(gameModel.currentSentence)' displayed_difficulty=\(difficulty) actual_difficulty=\(actualDifficulty) current_score=\(currentScore)")
         }
         
         // Special logging for 100-point bugs
         if difficulty == 100 {
             print("🔍 DEBUG: BUG_100_POINTS: '\(gameModel.currentSentence)' showing 100pts but should be \(actualDifficulty)")
             Task {
-                await sendDebugToServer("BUG_100_POINTS: '\(gameModel.currentSentence)' showing 100pts but should be \(actualDifficulty)")
+                await DebugLogger.shared.sendToServer("BUG_100_POINTS: '\(gameModel.currentSentence)' showing 100pts but should be \(actualDifficulty)")
             }
         }
     }
@@ -1635,28 +1629,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         print("Language tile updated to: \(newLanguage)")
     }
     
-    // Send debug message to server
-    private func sendDebugToServer(_ message: String) async {
-        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let logData = [
-            "message": message,
-            "timestamp": ISO8601DateFormatter().string(from: Date()),
-            "playerId": gameModel.playerId ?? "unknown"
-        ]
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: logData)
-            request.httpBody = jsonData
-            let _ = try await URLSession.shared.data(for: request)
-        } catch {
-            print("Debug logging failed: \(error)")
-        }
-    }
     
     // Send performance metrics to server
     private func sendPerformanceToServer(_ metrics: [String: Any]) async {
@@ -1807,10 +1779,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     func triggerQuake() {
         triggerQuakeWithDuration(3.0)
-    }
-    
-    func triggerQuickQuake() {
-        triggerQuakeWithDuration(0.5)
     }
     
     func triggerHint() {
@@ -3322,27 +3290,6 @@ class LetterTile: SKSpriteNode, RespawnableTile {
             // Reset squashed state after animation completes
             self.isSquashed = false
         }
-    }
-    
-    // Bounce back animation with elastic effect
-    func unsquashTile() {
-        guard isSquashed else { return }
-        
-        isSquashed = false
-        
-        // Elastic bounce back with slight overshoot
-        let restoreAction = SKAction.group([
-            SKAction.scaleX(to: originalScale * 1.05, duration: 0.15),
-            SKAction.scaleY(to: originalScale * 1.05, duration: 0.15)
-        ])
-        
-        let settleAction = SKAction.group([
-            SKAction.scaleX(to: originalScale, duration: 0.15),
-            SKAction.scaleY(to: originalScale, duration: 0.15)
-        ])
-        
-        let bounceSequence = SKAction.sequence([restoreAction, settleAction])
-        run(bounceSequence)
     }
     
     // Get the mass of this tile for collision calculations

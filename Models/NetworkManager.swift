@@ -1453,16 +1453,6 @@ class NetworkManager: ObservableObject {
         setupSocketManager()
     }
     
-    func sendManualPing() {
-        guard let socket = socket else {
-            print("❌ Cannot send manual ping - no socket")
-            return
-        }
-        print("🔧 MANUAL PING TEST: Sending ping via SocketIO")
-        // SocketIO doesn't have a manual ping method, so we send a custom message
-        socket.emit("ping", completion: nil)
-    }
-    
     // MARK: - Difficulty Analysis API Method
     
     func analyzeDifficulty(phrase: String, language: String = "en") async -> DifficultyAnalysis? {
