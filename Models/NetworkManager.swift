@@ -9,15 +9,30 @@ extension Notification.Name {
 }
 
 // MARK: - Configuration
-// This matches server/.env configuration
+// Configuration loaded from shared/app-config.json
 struct AppConfig {
-    // Server Configuration
-    static let serverPort = "8080"  // From server/.env PORT
-    static let baseURL = "http://192.168.1.133:\(serverPort)"  // Use Mac IP for device testing
+    private static let sharedConfig = loadSharedConfig()
     
-    // Contribution system URLs (different service)
-    static let contributionBaseURL = "http://192.168.1.133:\(serverPort)"
-    static let contributionAPIURL = "\(contributionBaseURL)/api/contribution/request"
+    // Server Configuration - dynamically loaded from shared config
+    static var serverPort: String { 
+        return String(sharedConfig?.services.gameServer.port ?? 3000)
+    }
+    
+    static var baseURL: String {
+        let host = sharedConfig?.development.host ?? "192.168.1.133"
+        return "http://\(host):\(serverPort)"
+    }
+    
+    // Contribution system URLs (link-generator service) 
+    static var contributionBaseURL: String {
+        let host = sharedConfig?.development.host ?? "192.168.1.133"
+        let port = sharedConfig?.services.linkGenerator.port ?? 3002
+        return "http://\(host):\(port)"
+    }
+    
+    static var contributionAPIURL: String {
+        return "\(contributionBaseURL)/api/contribution/request"
+    }
     
     // Timing Configuration
     static let connectionRetryDelay: UInt64 = 2_000_000_000  // 2 seconds in nanoseconds
@@ -43,6 +58,41 @@ struct AppConfig {
         // Notify observers that configuration has changed
         NotificationCenter.default.post(name: .performanceMonitoringConfigChanged, object: enabled)
     }
+}
+
+// Shared configuration models
+struct SharedAppConfig: Codable {
+    let services: ServiceConfig
+    let development: EnvironmentConfig
+    let production: EnvironmentConfig
+}
+
+struct ServiceConfig: Codable {
+    let gameServer: ServiceInfo
+    let webDashboard: ServiceInfo
+    let linkGenerator: ServiceInfo
+    let database: ServiceInfo
+}
+
+struct ServiceInfo: Codable {
+    let port: Int
+    let host: String
+}
+
+struct EnvironmentConfig: Codable {
+    let host: String
+}
+
+// Configuration loader
+private func loadSharedConfig() -> SharedAppConfig? {
+    guard let path = Bundle.main.path(forResource: "app-config", ofType: "json"),
+          let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+          let config = try? JSONDecoder().decode(SharedAppConfig.self, from: data) else {
+        print("⚠️ CONFIG: Failed to load app-config.json from bundle, using defaults")
+        return nil
+    }
+    print("✅ CONFIG: Loaded shared configuration from bundle")
+    return config
 }
 
 // Server configuration model
