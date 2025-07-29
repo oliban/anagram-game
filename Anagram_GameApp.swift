@@ -35,10 +35,6 @@ struct Anagram_GameApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .onAppear {
-                    // Force portrait orientation
-                    UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-                }
         }
         .modelContainer(sharedModelContainer)
     }

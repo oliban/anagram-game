@@ -229,16 +229,18 @@ class GameModel: ObservableObject {
     func startNewGame(isUserInitiated: Bool = false) async {
         
         // Performance monitoring - start game reset timer
-        let resetStartTime = CACurrentMediaTime()
-        print("🧪 PERFORMANCE: Game reset started at \(resetStartTime)")
-        
-        // Send performance data to server
-        Task {
-            await sendPerformanceToServer([
-                "event": "game_reset_start",
-                "start_time": resetStartTime,
-                "memory_usage_mb": getMemoryUsage()
-            ])
+        if AppConfig.isPerformanceMonitoringEnabled {
+            let resetStartTime = CACurrentMediaTime()
+            print("🧪 PERFORMANCE: Game reset started at \(resetStartTime)")
+            
+            // Send performance data to server
+            Task {
+                await sendPerformanceToServer([
+                    "event": "game_reset_start",
+                    "start_time": resetStartTime,
+                    "memory_usage_mb": getMemoryUsage()
+                ])
+            }
         }
         
         // Debug: Log entry to startNewGame
@@ -522,18 +524,20 @@ class GameModel: ObservableObject {
         wordsCompleted = 0
         
         // Performance monitoring - end game reset timer and record memory
-        let resetEndTime = CACurrentMediaTime()
-        let memoryUsage = getMemoryUsage()
-        print("🧪 PERFORMANCE: Game reset completed at \(resetEndTime)")
-        print("🧪 PERFORMANCE: Current memory usage: \(String(format: "%.1f", memoryUsage)) MB")
-        
-        // Send performance data to server
-        Task {
-            await sendPerformanceToServer([
-                "event": "game_reset_complete",
-                "end_time": resetEndTime,
-                "memory_usage_mb": memoryUsage
-            ])
+        if AppConfig.isPerformanceMonitoringEnabled {
+            let resetEndTime = CACurrentMediaTime()
+            let memoryUsage = getMemoryUsage()
+            print("🧪 PERFORMANCE: Game reset completed at \(resetEndTime)")
+            print("🧪 PERFORMANCE: Current memory usage: \(String(format: "%.1f", memoryUsage)) MB")
+            
+            // Send performance data to server
+            Task {
+                await sendPerformanceToServer([
+                    "event": "game_reset_complete",
+                    "end_time": resetEndTime,
+                    "memory_usage_mb": memoryUsage
+                ])
+            }
         }
         
         // Reset hint state
@@ -646,13 +650,18 @@ class GameModel: ObservableObject {
         print("🚀🚀🚀 SKIP BUTTON PRESSED - skipCurrentGame() CALLED 🚀🚀🚀")
         
         // Enhanced memory tracking for skip operation
-        let skipStartMemory = getMemoryUsage()
-        await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame() - Memory: \(String(format: "%.1f", skipStartMemory))MB")
-        
-        await sendPerformanceToServer([
-            "event": "skip_model_start",
-            "memory_mb": skipStartMemory
-        ])
+        let skipStartMemory: Double
+        if AppConfig.isPerformanceMonitoringEnabled {
+            skipStartMemory = getMemoryUsage()
+            await sendDebugToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame() - Memory: \(String(format: "%.1f", skipStartMemory))MB")
+            
+            await sendPerformanceToServer([
+                "event": "skip_model_start",
+                "memory_mb": skipStartMemory
+            ])
+        } else {
+            skipStartMemory = 0.0
+        }
         
         // Prevent concurrent skip operations to avoid race conditions
         guard !isSkipping else {
@@ -730,16 +739,18 @@ class GameModel: ObservableObject {
         await startNewGame(isUserInitiated: true)
         
         // Enhanced memory tracking at skip completion
-        let skipEndMemory = getMemoryUsage()
-        let skipMemoryDelta = skipEndMemory - skipStartMemory
-        
-        await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished - Memory: \(String(format: "%.1f", skipEndMemory))MB (Δ\(String(format: "%.1f", skipMemoryDelta))MB)")
-        
-        await sendPerformanceToServer([
-            "event": "skip_model_complete",
-            "memory_mb": skipEndMemory,
-            "memory_delta_mb": skipMemoryDelta
-        ])
+        if AppConfig.isPerformanceMonitoringEnabled {
+            let skipEndMemory = getMemoryUsage()
+            let skipMemoryDelta = skipEndMemory - skipStartMemory
+            
+            await sendDebugToServer("SKIP_COMPLETED: skipCurrentGame() finished - Memory: \(String(format: "%.1f", skipEndMemory))MB (Δ\(String(format: "%.1f", skipMemoryDelta))MB)")
+            
+            await sendPerformanceToServer([
+                "event": "skip_model_complete",
+                "memory_mb": skipEndMemory,
+                "memory_delta_mb": skipMemoryDelta
+            ])
+        }
         
         // Reset skip flag to allow future skip operations
         isSkipping = false
@@ -908,6 +919,7 @@ class GameModel: ObservableObject {
     
     // Send debug message to server
     func sendDebugToServer(_ message: String) async {
+        guard AppConfig.isPerformanceMonitoringEnabled else { return }
         guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
         
         var request = URLRequest(url: url)
@@ -972,6 +984,7 @@ class GameModel: ObservableObject {
     
     // Send performance metrics to server
     func sendPerformanceToServer(_ metrics: [String: Any]) async {
+        guard AppConfig.isPerformanceMonitoringEnabled else { return }
         guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
         
         var request = URLRequest(url: url)

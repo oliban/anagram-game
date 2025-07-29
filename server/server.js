@@ -12,6 +12,7 @@ const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const { HintSystem, HintValidationError } = require('./services/hintSystem');
 const ScoringSystem = require('./services/scoringSystem');
+const ConfigService = require('./services/config-service');
 // Language detection removed - use explicit language parameter
 
 // Swagger documentation setup
@@ -24,6 +25,9 @@ const ContributionLinkGenerator = require('../web-dashboard/server/link-generato
 
 const app = express();
 const server = createServer(app);
+
+// Initialize configuration service
+const configService = new ConfigService(pool);
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -403,15 +407,93 @@ app.post('/api/contribution/:token/submit', async (req, res) => {
 
 // Debug logging endpoint
 app.post('/api/debug/log', (req, res) => {
+  // Check if performance monitoring is enabled
+  if (process.env.ENABLE_PERFORMANCE_MONITORING !== 'true') {
+    return res.json({ status: 'monitoring_disabled' });
+  }
+  
   const { message, timestamp, playerId } = req.body;
   console.log(`🔍 DEBUG [${timestamp}] Player ${playerId}: ${message}`);
   res.json({ status: 'logged' });
 });
 
 app.post('/api/debug/performance', (req, res) => {
+  // Check if performance monitoring is enabled
+  if (process.env.ENABLE_PERFORMANCE_MONITORING !== 'true') {
+    return res.json({ status: 'monitoring_disabled' });
+  }
+  
   const { event, fps, memory_mb, tiles_count, quake_state, timestamp, playerId, component, deviceModel } = req.body;
   console.log(`📊 PERFORMANCE [${timestamp}] Player ${playerId} (${deviceModel || 'Unknown'}): FPS=${fps}, Memory=${memory_mb}MB, Tiles=${tiles_count}, Quake=${quake_state} [${component}]`);
   res.json({ status: 'logged' });
+});
+
+// Configuration endpoint - returns client configuration
+app.get('/api/config', async (req, res) => {
+  try {
+    const performanceMonitoringEnabled = await configService.getConfig('performance_monitoring_enabled', true);
+    
+    const config = {
+      performanceMonitoringEnabled,
+      serverVersion: '1.0.0',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(`⚙️ CONFIG: Sent configuration to client - Performance monitoring: ${config.performanceMonitoringEnabled}`);
+    res.json(config);
+  } catch (error) {
+    console.error('🚨 CONFIG ERROR: Failed to get configuration:', error);
+    // Fallback to default configuration
+    res.json({
+      performanceMonitoringEnabled: true,
+      serverVersion: '1.0.0',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Admin endpoint to update configuration
+app.post('/api/admin/config', async (req, res) => {
+  try {
+    const { key, value, description } = req.body;
+    
+    if (!key || value === undefined) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: key and value' 
+      });
+    }
+    
+    const success = await configService.setConfig(key, value, description);
+    
+    if (success) {
+      res.json({ 
+        success: true, 
+        message: `Configuration ${key} updated to ${value}` 
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to update configuration' 
+      });
+    }
+  } catch (error) {
+    console.error('🚨 ADMIN CONFIG ERROR:', error);
+    res.status(500).json({ 
+      error: 'Internal server error' 
+    });
+  }
+});
+
+// Admin endpoint to get all configuration
+app.get('/api/admin/config', async (req, res) => {
+  try {
+    const config = await configService.getAllConfig();
+    res.json(config);
+  } catch (error) {
+    console.error('🚨 ADMIN CONFIG ERROR:', error);
+    res.status(500).json({ 
+      error: 'Internal server error' 
+    });
+  }
 });
 
 // API Routes

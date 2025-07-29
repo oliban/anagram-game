@@ -529,6 +529,9 @@ struct PhysicsGameView: View {
     @State private var tilesCount: Int = 0
     @State private var metricsTimer: Timer?
     
+    // Performance monitoring configuration - reactive to server changes
+    @State private var isPerformanceMonitoringEnabled = AppConfig.isPerformanceMonitoringEnabled
+    
     // Static reference to avoid SwiftUI state issues
     private static var sharedScene: PhysicsGameScene?
     
@@ -674,60 +677,62 @@ struct PhysicsGameView: View {
                     
                     Spacer() // Push bottom controls down
                     
-                    // REAL-TIME METRICS DISPLAY
-                    VStack(spacing: 4) {
-                        HStack(spacing: 16) {
-                            // FPS
-                            VStack(spacing: 2) {
-                                Text("FPS")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                                Text("\(String(format: "%.1f", currentFPS))")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(currentFPS < 30 ? .red : (currentFPS < 50 ? .orange : .green))
+                    // REAL-TIME METRICS DISPLAY - conditional on performance monitoring
+                    if isPerformanceMonitoringEnabled {
+                        VStack(spacing: 4) {
+                            HStack(spacing: 16) {
+                                // FPS
+                                VStack(spacing: 2) {
+                                    Text("FPS")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                    Text("\(String(format: "%.1f", currentFPS))")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(currentFPS < 30 ? .red : (currentFPS < 50 ? .orange : .green))
+                                }
+                                
+                                // Memory
+                                VStack(spacing: 2) {
+                                    Text("MEM")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                    Text("\(String(format: "%.0f", currentMemoryMB))MB")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(currentMemoryMB > 200 ? .red : (currentMemoryMB > 150 ? .orange : .green))
+                                }
+                                
+                                // Tiles Count
+                                VStack(spacing: 2) {
+                                    Text("TILES")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                    Text("\(tilesCount)")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                
+                                // Quake State
+                                VStack(spacing: 2) {
+                                    Text("QUAKE")
+                                        .font(.caption2)
+                                        .foregroundColor(.gray)
+                                    Text(getQuakeStateText())
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(getQuakeStateColor())
+                                }
                             }
-                            
-                            // Memory
-                            VStack(spacing: 2) {
-                                Text("MEM")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                                Text("\(String(format: "%.0f", currentMemoryMB))MB")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(currentMemoryMB > 200 ? .red : (currentMemoryMB > 150 ? .orange : .green))
-                            }
-                            
-                            // Tiles Count
-                            VStack(spacing: 2) {
-                                Text("TILES")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                                Text("\(tilesCount)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                            }
-                            
-                            // Quake State
-                            VStack(spacing: 2) {
-                                Text("QUAKE")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                                Text(getQuakeStateText())
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(getQuakeStateColor())
-                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(12)
+                            .shadow(radius: 3)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(12)
-                        .shadow(radius: 3)
+                        .padding(.bottom, 8)
                     }
-                    .padding(.bottom, 8)
                     
                     // BOTTOM ROW - Clean layout inside ZStack
                     HStack(alignment: .bottom) {
@@ -758,21 +763,31 @@ struct PhysicsGameView: View {
                             print("🔥🔥🔥 SKIP BUTTON TAPPED IN UI 🔥🔥🔥")
                             Task {
                                 // Enhanced memory tracking for skip operation
-                                let preSkipMemory = getMemoryUsage()
-                                let preSkipTiles = gameScene?.tiles.count ?? 0
-                                let preSkipChildren = gameScene?.children.count ?? 0
+                                let preSkipMemory: Double
+                                let preSkipTiles: Int
+                                let preSkipChildren: Int
+                                
+                                if isPerformanceMonitoringEnabled {
+                                    preSkipMemory = getMemoryUsage()
+                                    preSkipTiles = gameScene?.tiles.count ?? 0
+                                    preSkipChildren = gameScene?.children.count ?? 0
+                                    
+                                    // Log detailed pre-skip state
+                                    await gameModel.sendDebugToServer("SKIP_PRESSED: Memory before: \(String(format: "%.1f", preSkipMemory))MB, Tiles: \(preSkipTiles), Scene children: \(preSkipChildren)")
+                                    
+                                    await gameModel.sendPerformanceToServer([
+                                        "event": "skip_button_pressed",
+                                        "memory_before_mb": preSkipMemory,
+                                        "tiles_count_before": preSkipTiles,
+                                        "scene_children_before": preSkipChildren
+                                    ])
+                                } else {
+                                    preSkipMemory = 0.0
+                                    preSkipTiles = 0
+                                    preSkipChildren = 0
+                                }
                                 
                                 isSkipping = true
-                                
-                                // Log detailed pre-skip state
-                                await gameModel.sendDebugToServer("SKIP_PRESSED: Memory before: \(String(format: "%.1f", preSkipMemory))MB, Tiles: \(preSkipTiles), Scene children: \(preSkipChildren)")
-                                
-                                await gameModel.sendPerformanceToServer([
-                                    "event": "skip_button_pressed",
-                                    "memory_before_mb": preSkipMemory,
-                                    "tiles_count_before": preSkipTiles,
-                                    "scene_children_before": preSkipChildren
-                                ])
                                 
                                 print("🔥 About to call gameModel.skipCurrentGame()")
                                 await gameModel.skipCurrentGame()
@@ -783,24 +798,26 @@ struct PhysicsGameView: View {
                                 try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
                                 
                                 // Track memory after skip operation completes
-                                let postSkipMemory = getMemoryUsage()
-                                let postSkipTiles = gameScene?.tiles.count ?? 0
-                                let postSkipChildren = gameScene?.children.count ?? 0
-                                let memoryDelta = postSkipMemory - preSkipMemory
-                                let tilesDelta = postSkipTiles - preSkipTiles
-                                let childrenDelta = postSkipChildren - preSkipChildren
-                                
-                                await gameModel.sendDebugToServer("SKIP_COMPLETE: Memory after: \(String(format: "%.1f", postSkipMemory))MB (Δ\(String(format: "%.1f", memoryDelta))MB), Tiles: \(postSkipTiles) (Δ\(tilesDelta)), Children: \(postSkipChildren) (Δ\(childrenDelta))")
-                                
-                                await gameModel.sendPerformanceToServer([
-                                    "event": "skip_operation_complete",
-                                    "memory_after_mb": postSkipMemory,
-                                    "memory_delta_mb": memoryDelta,
-                                    "tiles_count_after": postSkipTiles,
-                                    "tiles_delta": tilesDelta,
-                                    "scene_children_after": postSkipChildren,
-                                    "scene_children_delta": childrenDelta
-                                ])
+                                if isPerformanceMonitoringEnabled {
+                                    let postSkipMemory = getMemoryUsage()
+                                    let postSkipTiles = gameScene?.tiles.count ?? 0
+                                    let postSkipChildren = gameScene?.children.count ?? 0
+                                    let memoryDelta = postSkipMemory - preSkipMemory
+                                    let tilesDelta = postSkipTiles - preSkipTiles
+                                    let childrenDelta = postSkipChildren - preSkipChildren
+                                    
+                                    await gameModel.sendDebugToServer("SKIP_COMPLETE: Memory after: \(String(format: "%.1f", postSkipMemory))MB (Δ\(String(format: "%.1f", memoryDelta))MB), Tiles: \(postSkipTiles) (Δ\(tilesDelta)), Children: \(postSkipChildren) (Δ\(childrenDelta))")
+                                    
+                                    await gameModel.sendPerformanceToServer([
+                                        "event": "skip_operation_complete",
+                                        "memory_after_mb": postSkipMemory,
+                                        "memory_delta_mb": memoryDelta,
+                                        "tiles_count_after": postSkipTiles,
+                                        "tiles_delta": tilesDelta,
+                                        "scene_children_after": postSkipChildren,
+                                        "scene_children_delta": childrenDelta
+                                    ])
+                                }
                                 
                                 isSkipping = false
                             }
@@ -842,6 +859,18 @@ struct PhysicsGameView: View {
             // Start metrics timer immediately
             startMetricsTimer()
             
+            // Listen for performance monitoring configuration changes
+            NotificationCenter.default.addObserver(
+                forName: .performanceMonitoringConfigChanged,
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let enabled = notification.object as? Bool {
+                    isPerformanceMonitoringEnabled = enabled
+                    print("🎬 PhysicsGameView: Performance monitoring \(enabled ? "enabled" : "disabled") by server")
+                }
+            }
+            
             // Delay setup to ensure scene is created first
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.setupGame()
@@ -850,6 +879,9 @@ struct PhysicsGameView: View {
         .onDisappear {
             motionManager.stopDeviceMotionUpdates()
             metricsTimer?.invalidate()
+            
+            // Remove notification observer to prevent memory leaks
+            NotificationCenter.default.removeObserver(self, name: .performanceMonitoringConfigChanged, object: nil)
         }
     }
     
@@ -874,6 +906,11 @@ struct PhysicsGameView: View {
     }
     
     private func startMetricsTimer() {
+        guard isPerformanceMonitoringEnabled else { 
+            print("📊 METRICS: Performance monitoring disabled, skipping timer setup")
+            return 
+        }
+        
         metricsTimer?.invalidate()
         print("📊 METRICS: Starting metrics timer...")
         metricsTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
@@ -883,6 +920,8 @@ struct PhysicsGameView: View {
     }
     
     private func updateMetrics() {
+        guard isPerformanceMonitoringEnabled else { return }
+        
         DispatchQueue.main.async {
             // Always update memory usage
             self.currentMemoryMB = self.getMemoryUsage()
@@ -925,6 +964,7 @@ struct PhysicsGameView: View {
     }
     
     private func sendMetricsToServer(fps: Double, memory: Double, tiles: Int, quakeState: PhysicsGameScene.QuakeState) async {
+        guard isPerformanceMonitoringEnabled else { return }
         guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
         
         var request = URLRequest(url: url)

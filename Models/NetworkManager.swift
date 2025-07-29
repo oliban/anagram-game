@@ -3,6 +3,11 @@ import Network
 import UIKit
 import SocketIO
 
+// Notification names for configuration changes
+extension Notification.Name {
+    static let performanceMonitoringConfigChanged = Notification.Name("performanceMonitoringConfigChanged")
+}
+
 // MARK: - Configuration
 // This matches server/.env configuration
 struct AppConfig {
@@ -19,6 +24,32 @@ struct AppConfig {
     static let registrationStabilizationDelay: UInt64 = 1_000_000_000  // 1 second in nanoseconds
     static let playerListRefreshInterval: TimeInterval = 15.0  // 15 seconds
     static let notificationDisplayDuration: TimeInterval = 3.0  // 3 seconds
+    
+    // Performance Monitoring Configuration - Server-driven
+    static var isPerformanceMonitoringEnabled: Bool = {
+        // Default fallback based on build type
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }()
+    
+    // Update performance monitoring based on server configuration
+    static func updatePerformanceMonitoringFromServer(_ enabled: Bool) {
+        isPerformanceMonitoringEnabled = enabled
+        print("⚙️ CONFIG: Performance monitoring \(enabled ? "enabled" : "disabled") by server")
+        
+        // Notify observers that configuration has changed
+        NotificationCenter.default.post(name: .performanceMonitoringConfigChanged, object: enabled)
+    }
+}
+
+// Server configuration model
+struct ServerConfig: Codable {
+    let performanceMonitoringEnabled: Bool
+    let serverVersion: String
+    let timestamp: String
 }
 
 // Registration result enum
@@ -599,6 +630,36 @@ class NetworkManager: ObservableObject {
     }
     
     // MARK: - HTTP API Methods
+    
+    // Fetch server configuration including performance monitoring settings
+    func fetchServerConfig() async -> Bool {
+        guard let url = URL(string: "\(baseURL)/api/config") else {
+            print("❌ CONFIG: Invalid server URL for config endpoint")
+            return false
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                print("❌ CONFIG: Server config request failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return false
+            }
+            
+            let serverConfig = try JSONDecoder().decode(ServerConfig.self, from: data)
+            
+            // Update the global performance monitoring setting
+            AppConfig.updatePerformanceMonitoringFromServer(serverConfig.performanceMonitoringEnabled)
+            
+            print("✅ CONFIG: Server config fetched - Performance monitoring: \(serverConfig.performanceMonitoringEnabled)")
+            return true
+            
+        } catch {
+            print("❌ CONFIG: Failed to fetch server config: \(error.localizedDescription)")
+            return false
+        }
+    }
     
     func registerPlayer(name: String) async -> RegistrationResult {
         guard let url = URL(string: "\(baseURL)/api/players/register") else {
