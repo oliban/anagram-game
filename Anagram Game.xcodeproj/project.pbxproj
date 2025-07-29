@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* DebugLogger.swift */; };
+		E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* ScoreCalculator.swift */; };
 		1A2B3C4D5E6F7G8H9I0J1K2L /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */; };
 		3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */; };
 		4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */; };
@@ -49,6 +51,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		94EBAB24713A4FAC9669C23C /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/DebugLogger.swift; sourceTree = "<group>"; };
+		D503C31276F14194BECDBDBD /* ScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/ScoreCalculator.swift; sourceTree = "<group>"; };
 		23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsGameView.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
@@ -110,7 +114,9 @@
 				9EAA084E2E192E3A00DB73E7,
 				9EAA08632E192E3B00DB73E7 /* Anagram GameTests */,
 				9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */,
-				9EAA084D2E192E3A00DB73E7 /* Products */,
+				9EAA084D2E192E3A00DB73E7 /* Products */,				D503C31276F14194BECDBDBD /* ScoreCalculator.swift */,
+				94EBAB24713A4FAC9669C23C /* DebugLogger.swift */,
+
 			);
 			sourceTree = "<group>";
 		};
@@ -311,7 +317,9 @@
 				9E4790752E27ED6A0078A247 /* difficulty-algorithm-config.json in Resources */,
 				9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */,
 				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
-				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
+				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
+				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,7 +356,9 @@
 				8A2B5E1F6J596I7E00GF17I2 /* LobbyView.swift in Sources */,
 				8B3C7G3H8L708K9G00IG39K4 /* LegendsView.swift in Sources */,
 				9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */,
-				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,
+				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
+				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -357,7 +367,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				9EAA08652E192E3B00DB73E7 /* Anagram_GameTests.swift in Sources */,
-				9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */,
+				9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
+				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,7 +378,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				9EAA08712E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift in Sources */,
-				9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */,
+				9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
+				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
