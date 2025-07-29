@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* DebugLogger.swift */; };
-		E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* ScoreCalculator.swift */; };
 		1A2B3C4D5E6F7G8H9I0J1K2L /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */; };
 		3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */; };
 		4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */; };
@@ -19,6 +17,27 @@
 		8B3C7G3H8L708K9G00IG39K4 /* LegendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3C7G3G8L708K9G00IG39K4 /* LegendsView.swift */; };
 		9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */; };
 		9E4790752E27ED6A0078A247 /* difficulty-algorithm-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E4790742E27ED6A0078A247 /* difficulty-algorithm-config.json */; };
+		9EA4F6DD2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Resources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
+		9EA4F6DE2E390BE300E6B7D3 /* Utils/DebugLogger.swift in Resources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */; };
+		9EA4F6DF2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
+		9EA4F6E02E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */; };
+		9EA4F6E12E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
+		9EA4F6E22E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */; };
+		9EA4F6E62E39145300E6B7D3 /* HintButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E32E39145300E6B7D3 /* HintButtonView.swift */; };
+		9EA4F6E72E39145300E6B7D3 /* HintButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E32E39145300E6B7D3 /* HintButtonView.swift */; };
+		9EA4F6E82E39145300E6B7D3 /* HintButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E32E39145300E6B7D3 /* HintButtonView.swift */; };
+		9EA4F6E92E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E42E39145300E6B7D3 /* UnifiedSkillLevelView.swift */; };
+		9EA4F6EA2E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E42E39145300E6B7D3 /* UnifiedSkillLevelView.swift */; };
+		9EA4F6EB2E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E42E39145300E6B7D3 /* UnifiedSkillLevelView.swift */; };
+		9EA4F6EC2E39145300E6B7D3 /* SpriteKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E52E39145300E6B7D3 /* SpriteKitView.swift */; };
+		9EA4F6ED2E39145300E6B7D3 /* SpriteKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E52E39145300E6B7D3 /* SpriteKitView.swift */; };
+		9EA4F6EE2E39145300E6B7D3 /* SpriteKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6E52E39145300E6B7D3 /* SpriteKitView.swift */; };
+		9EA4F6F12E39146300E6B7D3 /* PhysicsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6EF2E39146300E6B7D3 /* PhysicsCategories.swift */; };
+		9EA4F6F22E39146300E6B7D3 /* PhysicsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6EF2E39146300E6B7D3 /* PhysicsCategories.swift */; };
+		9EA4F6F32E39146300E6B7D3 /* PhysicsCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6EF2E39146300E6B7D3 /* PhysicsCategories.swift */; };
+		9EA4F6F42E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6F02E39146300E6B7D3 /* Color+SkillLevel.swift */; };
+		9EA4F6F52E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6F02E39146300E6B7D3 /* Color+SkillLevel.swift */; };
+		9EA4F6F62E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F6F02E39146300E6B7D3 /* Color+SkillLevel.swift */; };
 		9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */; };
 		9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08512E192E3A00DB73E7 /* ContentView.swift */; };
 		9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08532E192E3A00DB73E7 /* Item.swift */; };
@@ -31,6 +50,8 @@
 		9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */; };
 		9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */; };
 		9EE850522E1AA6970012700E /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 9EE850512E1AA6970012700E /* SocketIO */; };
+		E38DF1D553394454B962ABE1 /* Utils/ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
+		E936F87B725A494E9F604DCC /* Utils/DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,8 +72,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		94EBAB24713A4FAC9669C23C /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/DebugLogger.swift; sourceTree = "<group>"; };
-		D503C31276F14194BECDBDBD /* ScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/ScoreCalculator.swift; sourceTree = "<group>"; };
 		23D0938913984E7E90A2BA62 /* PhysicsGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsGameView.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F7G8H9I0J1K2L3M /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		4C7F9A8C2F192E3A00DB73E7 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
@@ -61,8 +80,14 @@
 		7F1A4D9E5I495H6D00FE06H1 /* PhraseCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseCreationView.swift; sourceTree = "<group>"; };
 		8A2B5E1E6J596I7E00GF17I2 /* LobbyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyView.swift; sourceTree = "<group>"; };
 		8B3C7G3G8L708K9G00IG39K4 /* LegendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegendsView.swift; sourceTree = "<group>"; };
+		94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/DebugLogger.swift; sourceTree = "<group>"; };
 		9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintButton.swift; sourceTree = "<group>"; };
 		9E4790742E27ED6A0078A247 /* difficulty-algorithm-config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = "difficulty-algorithm-config.json"; path = "shared/difficulty-algorithm-config.json"; sourceTree = "<group>"; };
+		9EA4F6E32E39145300E6B7D3 /* HintButtonView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HintButtonView.swift; path = Views/Game/UI/HintButtonView.swift; sourceTree = "<group>"; };
+		9EA4F6E42E39145300E6B7D3 /* UnifiedSkillLevelView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = UnifiedSkillLevelView.swift; path = Views/Game/UI/UnifiedSkillLevelView.swift; sourceTree = "<group>"; };
+		9EA4F6E52E39145300E6B7D3 /* SpriteKitView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SpriteKitView.swift; path = Views/Game/UI/SpriteKitView.swift; sourceTree = "<group>"; };
+		9EA4F6EF2E39146300E6B7D3 /* PhysicsCategories.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PhysicsCategories.swift; path = Views/Game/Extensions/PhysicsCategories.swift; sourceTree = "<group>"; };
+		9EA4F6F02E39146300E6B7D3 /* Color+SkillLevel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "Color+SkillLevel.swift"; path = "Views/Game/Extensions/Color+SkillLevel.swift"; sourceTree = "<group>"; };
 		9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Anagram Game.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameApp.swift; sourceTree = "<group>"; };
 		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -79,6 +104,7 @@
 		9EAA08A62E192E3A00DB73E7 /* GameModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModel.swift; sourceTree = "<group>"; };
 		9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModelTests.swift; sourceTree = "<group>"; };
 		9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = anagrams.txt; sourceTree = "<group>"; };
+		D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/ScoreCalculator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,13 +136,18 @@
 		9EAA08432E192E3A00DB73E7 = {
 			isa = PBXGroup;
 			children = (
+				9EA4F6F02E39146300E6B7D3 /* Color+SkillLevel.swift */,
+				9EA4F6EF2E39146300E6B7D3 /* PhysicsCategories.swift */,
+				9EA4F6E52E39145300E6B7D3 /* SpriteKitView.swift */,
+				9EA4F6E42E39145300E6B7D3 /* UnifiedSkillLevelView.swift */,
 				9E4790742E27ED6A0078A247 /* difficulty-algorithm-config.json */,
+				9EA4F6E32E39145300E6B7D3 /* HintButtonView.swift */,
 				9EAA084E2E192E3A00DB73E7,
 				9EAA08632E192E3B00DB73E7 /* Anagram GameTests */,
 				9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */,
-				9EAA084D2E192E3A00DB73E7 /* Products */,				D503C31276F14194BECDBDBD /* ScoreCalculator.swift */,
-				94EBAB24713A4FAC9669C23C /* DebugLogger.swift */,
-
+				9EAA084D2E192E3A00DB73E7 /* Products */,
+				D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */,
+				94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -317,9 +348,9 @@
 				9E4790752E27ED6A0078A247 /* difficulty-algorithm-config.json in Resources */,
 				9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */,
 				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
-				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
-				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
-
+				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
+				9EA4F6DD2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Resources */,
+				9EA4F6DE2E390BE300E6B7D3 /* Utils/DebugLogger.swift in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,7 +375,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EA4F6EC2E39145300E6B7D3 /* SpriteKitView.swift in Sources */,
 				9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */,
+				9EA4F6F12E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
 				3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */,
 				9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */,
 				9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */,
@@ -353,12 +386,15 @@
 				5D8E2B9E3G293F4B00DC84F8 /* PlayerRegistrationView.swift in Sources */,
 				6E9F3C8F4H394G5C00ED95G9 /* OnlinePlayersView.swift in Sources */,
 				7F1A4D9F5I495H6D00FE06H1 /* PhraseCreationView.swift in Sources */,
+				9EA4F6E62E39145300E6B7D3 /* HintButtonView.swift in Sources */,
+				9EA4F6E92E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */,
 				8A2B5E1F6J596I7E00GF17I2 /* LobbyView.swift in Sources */,
 				8B3C7G3H8L708K9G00IG39K4 /* LegendsView.swift in Sources */,
 				9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */,
-				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
-				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
-
+				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,
+				E38DF1D553394454B962ABE1 /* Utils/ScoreCalculator.swift in Sources */,
+				9EA4F6F42E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
+				E936F87B725A494E9F604DCC /* Utils/DebugLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,10 +402,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EA4F6ED2E39145300E6B7D3 /* SpriteKitView.swift in Sources */,
 				9EAA08652E192E3B00DB73E7 /* Anagram_GameTests.swift in Sources */,
-				9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
-				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
-
+				9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */,
+				9EA4F6F22E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
+				9EA4F6DF2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */,
+				9EA4F6E02E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */,
+				9EA4F6F52E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
+				9EA4F6EA2E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */,
+				9EA4F6E72E39145300E6B7D3 /* HintButtonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -377,10 +418,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EA4F6EE2E39145300E6B7D3 /* SpriteKitView.swift in Sources */,
 				9EAA08712E192E3B00DB73E7 /* Anagram_GameUITestsLaunchTests.swift in Sources */,
-				9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */,				E38DF1D553394454B962ABE1 /* ScoreCalculator.swift in Sources */,
-				E936F87B725A494E9F604DCC /* DebugLogger.swift in Sources */,
-
+				9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */,
+				9EA4F6F32E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
+				9EA4F6E12E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */,
+				9EA4F6E22E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */,
+				9EA4F6F62E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
+				9EA4F6EB2E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */,
+				9EA4F6E82E39145300E6B7D3 /* HintButtonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
