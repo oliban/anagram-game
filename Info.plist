@@ -45,6 +45,13 @@
 				<key>NSExceptionMinimumTLSVersion</key>
 				<string>TLSv1.2</string>
 			</dict>
+			<key>anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+			</dict>
 		</dict>
 	</dict>
 </dict>

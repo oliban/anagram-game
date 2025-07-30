@@ -3,8 +3,187 @@ import Network
 import UIKit
 import SocketIO
 
-// Import all the service and model files
-// Note: These files need to be added to the Xcode project
+// MARK: - Configuration
+// Environment-aware configuration for local/cloud development
+struct AppConfig {
+    // Environment detection - temporarily hardcoded to AWS for testing
+    static let baseURL: String = {
+        let url = "http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com"
+        print("🔧 DEBUG: Using hardcoded AWS URL: \(url)")
+        return url
+    }()
+    
+    // Contribution system URLs (routed through ALB to microservices)
+    static let contributionBaseURL = baseURL
+    static let contributionAPIURL = "\(contributionBaseURL)/contribute/api/request"
+    
+    // Timing Configuration
+    static let connectionRetryDelay: UInt64 = 2_000_000_000  // 2 seconds in nanoseconds
+    static let registrationStabilizationDelay: UInt64 = 1_000_000_000  // 1 second in nanoseconds
+    static let playerListRefreshInterval: TimeInterval = 15.0  // 15 seconds
+    static let notificationDisplayDuration: TimeInterval = 3.0  // 3 seconds
+}
+
+// Registration result enum
+enum RegistrationResult {
+    case success
+    case nameConflict(suggestions: [String])
+    case failure(message: String)
+}
+
+// Player model matching server-side structure
+struct Player: Codable, Identifiable, Equatable {
+    let id: String
+    let name: String
+    let lastSeen: Date
+    let isActive: Bool
+    let phrasesCompleted: Int
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, name, lastSeen, isActive, phrasesCompleted
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        isActive = try container.decode(Bool.self, forKey: .isActive)
+        phrasesCompleted = try container.decode(Int.self, forKey: .phrasesCompleted)
+        
+        // Handle date parsing
+        let dateString = try container.decode(String.self, forKey: .lastSeen)
+        let formatter = ISO8601DateFormatter()
+        lastSeen = formatter.date(from: dateString) ?? Date()
+    }
+}
+
+// Custom phrase model for multiplayer phrases
+struct CustomPhrase: Codable, Identifiable, Equatable {
+    let id: String
+    let content: String
+    let senderId: String
+    let targetId: String?  // Made optional to handle null values for global phrases
+    let createdAt: Date
+    let isConsumed: Bool
+    let senderName: String
+    let language: String // Language code for LanguageTile feature
+    let clue: String // Add clue field for hint system
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, content, senderId, targetId, createdAt, isConsumed, senderName, language
+        case clue = "hint" // Server sends "hint" but we store as "clue"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        content = try container.decode(String.self, forKey: .content)
+        senderId = try container.decode(String.self, forKey: .senderId)
+        targetId = try container.decodeIfPresent(String.self, forKey: .targetId)  // Handle null values
+        isConsumed = try container.decode(Bool.self, forKey: .isConsumed)
+        senderName = try container.decodeIfPresent(String.self, forKey: .senderName) ?? "Unknown Player"
+        language = try container.decodeIfPresent(String.self, forKey: .language) ?? "en" // Default to English
+        clue = try container.decodeIfPresent(String.self, forKey: .clue) ?? ""
+        
+        // Handle date parsing - make optional since server might not include it
+        if let dateString = try container.decodeIfPresent(String.self, forKey: .createdAt) {
+            let formatter = ISO8601DateFormatter()
+            createdAt = formatter.date(from: dateString) ?? Date()
+        } else {
+            createdAt = Date() // Default to current date
+        }
+    }
+}
+
+// Hint system models for Phase 4.8 integration
+struct HintStatus: Codable {
+    let hintsUsed: [UsedHint]
+    let nextHintLevel: Int?
+    let hintsRemaining: Int
+    let currentScore: Int
+    let nextHintScore: Int?
+    let canUseNextHint: Bool
+    
+    struct UsedHint: Codable {
+        let level: Int
+        let usedAt: Date
+        
+        init(level: Int, usedAt: Date) {
+            self.level = level
+            self.usedAt = usedAt
+        }
+        
+        private enum CodingKeys: String, CodingKey {
+            case level, usedAt
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            level = try container.decode(Int.self, forKey: .level)
+            
+            // Handle date parsing
+            let dateString = try container.decode(String.self, forKey: .usedAt)
+            let formatter = ISO8601DateFormatter()
+            usedAt = formatter.date(from: dateString) ?? Date()
+        }
+    }
+}
+
+struct ScorePreview: Codable {
+    let noHints: Int
+    let level1: Int
+    let level2: Int
+    let level3: Int
+}
+
+struct HintResponse: Codable {
+    let success: Bool
+    let hint: HintData
+    let scorePreview: ScorePreview
+    let timestamp: String
+    
+    struct HintData: Codable {
+        let level: Int
+        let content: String
+        let currentScore: Int
+        let nextHintScore: Int?
+        let hintsRemaining: Int
+        let canUseNextHint: Bool
+    }
+}
+
+struct PhrasePreview: Codable {
+    let success: Bool
+    let phrase: PhraseData
+    let timestamp: String
+    
+    struct PhraseData: Codable {
+        let id: String
+        let content: String
+        let hint: String
+        let difficultyLevel: Int
+        let isGlobal: Bool
+        let hintStatus: HintStatus
+        let scorePreview: ScorePreview
+    }
+}
+
+struct CompletionResult: Codable {
+    let success: Bool
+    let completion: CompletionData
+    let timestamp: String
+    
+    struct CompletionData: Codable {
+        let finalScore: Int
+        let hintsUsed: Int
+        let completionTime: Int
+    }
+}
+
+private struct RegistrationRequestBody: Encodable {
+    let name: String
+    let deviceId: String
+}
 
 @MainActor
 class NetworkManager: ObservableObject {
@@ -473,6 +652,10 @@ class NetworkManager: ObservableObject {
     
     func fetchDailyLeaderboard() async throws -> [LeaderboardEntry] {
         return try await leaderboardService.fetchDailyLeaderboard()
+    }
+    
+    func testConnection() async -> Result<Bool, NetworkError> {
+        return await difficultyService.performHealthCheck() ? .success(true) : .failure(.serverOffline)
     }
     
     func fetchWeeklyLeaderboard() async throws -> [LeaderboardEntry] {

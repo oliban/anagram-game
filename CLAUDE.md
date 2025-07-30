@@ -48,8 +48,27 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 
 ## TESTING & DEPLOYMENT
 
-### Microservices Architecture (NEW)
-**All servers now run as Docker containers with separate services:**
+### Build Script Usage (NEW)
+**Environment-aware device configuration:**
+
+```bash
+# Local development (default) - iPhone 15 + iPhone 15 Pro with local server
+./build_multi_sim.sh                    
+./build_multi_sim.sh local
+
+# AWS production - iPhone SE with AWS infrastructure  
+./build_multi_sim.sh aws
+
+# Force clean builds (removes cache)
+./build_multi_sim.sh local --clean
+./build_multi_sim.sh aws --clean
+
+# Legacy environment variable support still works
+LOCAL=1 ./build_multi_sim.sh
+```
+
+### Microservices Architecture (Local Development)
+**All servers run as Docker containers with separate services:**
 
 **Start all services for testing:**
 ```bash
@@ -83,11 +102,6 @@ docker-compose -f docker-compose.services.yml logs -f link-generator
 docker-compose -f docker-compose.services.yml down
 ```
 
-**Multi-Simulator Testing**: Deploy to both iPhone 15 and iPhone 15 Pro simulators
-- Build script: `/Users/fredriksafsten/Workprojects/anagram-game/build_multi_sim.sh`
-- **Server logs**: Use Docker commands above (not server/server_output.log)
-- Always await feedback before proceeding to next tasks
-
 **Testing Strategy**:
 - Complex game logic → XCTest unit tests first
 - Simple UI components → Test after implementation
@@ -105,8 +119,13 @@ docker-compose -f docker-compose.services.yml down
 ### Production Deployment (AWS)
 1. **Infrastructure**: Use AWS CDK for ECS Fargate + Aurora Serverless v2
 2. **Secrets**: Configure AWS Secrets Manager for environment variables
-3. **Deploy**: GitHub Actions CI/CD pipeline to AWS
-4. **Monitor**: CloudWatch logs and health checks
+3. **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate:
+   ```bash
+   docker build --platform linux/amd64 -t image-name .
+   ```
+   **Common Error**: Building on Apple Silicon creates ARM images that fail with "image Manifest does not contain descriptor matching platform 'linux/amd64'"
+4. **Deploy**: GitHub Actions CI/CD pipeline to AWS
+5. **Monitor**: CloudWatch logs and health checks
 
 ## ARCHITECTURE & ENVIRONMENT
 
@@ -235,6 +254,11 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 - **Build failures**: Clean derived data, check Info.plist versions, verify simulator UUIDs
 - **Database issues**: Test connection, verify schema, run server test suite
 - **iOS Simulator issues**: Use MCP iOS Simulator tools for UI inspection, screenshots, and interaction testing
+- **AWS ECS Platform Issues**: 
+  - **Error**: `image Manifest does not contain descriptor matching platform 'linux/amd64'`
+  - **Cause**: Docker image built for ARM architecture (Apple Silicon) instead of x86_64
+  - **Solution**: Always use `docker build --platform linux/amd64` for ECS Fargate deployments
+  - **Prevention**: Add platform flag to all Docker build commands in deployment scripts
 
 ### Device-User Association for Testing
 When testing device-based authentication, you may need to associate existing users with specific simulators. See detailed guide: `docs/device-user-association-guide.md`
