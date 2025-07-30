@@ -8,12 +8,12 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE players (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(50) NOT NULL,
+    device_id VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT true,
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     phrases_completed INTEGER DEFAULT 0,
     socket_id VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    device_id VARCHAR(255) NULL,
     CONSTRAINT unique_player_name UNIQUE (name),
     CONSTRAINT players_name_device_key UNIQUE (name, device_id)
 );
