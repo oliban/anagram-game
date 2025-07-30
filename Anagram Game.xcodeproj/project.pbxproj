@@ -17,8 +17,6 @@
 		8B3C7G3H8L708K9G00IG39K4 /* LegendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3C7G3G8L708K9G00IG39K4 /* LegendsView.swift */; };
 		9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */; };
 		9E4790752E27ED6A0078A247 /* difficulty-algorithm-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E4790742E27ED6A0078A247 /* difficulty-algorithm-config.json */; };
-		9EA4F6DD2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Resources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
-		9EA4F6DE2E390BE300E6B7D3 /* Utils/DebugLogger.swift in Resources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */; };
 		9EA4F6DF2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
 		9EA4F6E02E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */; };
 		9EA4F6E12E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503C31276F14194BECDBDBD /* Utils/ScoreCalculator.swift */; };
@@ -390,8 +388,6 @@
 				9EA4F7142E3928C100E6B7D3 /* app-config.json in Resources */,
 				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
 				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
-				9EA4F6DD2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Resources */,
-				9EA4F6DE2E390BE300E6B7D3 /* Utils/DebugLogger.swift in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -96,7 +96,7 @@ struct ContentView: View {
             
             // First, fetch server configuration
             Task {
-                try? await networkManager.fetchServerConfig()
+                _ = try? await networkManager.fetchServerConfig()
                 
                 // Then check if we have a stored player name from previous session
                 if let storedName = UserDefaults.standard.string(forKey: "playerName") {
