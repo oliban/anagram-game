@@ -12,12 +12,12 @@ RUN apk add --no-cache curl && \
 COPY services/game-server/package*.json ./
 
 # Install production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --only=production && npm cache clean --force
 
 # Copy application code
 COPY --chown=nodejs:nodejs services/game-server/ ./
 
-# Copy shared modules
+# Copy shared modules from services level
 COPY --chown=nodejs:nodejs services/shared/ ./shared/
 
 # Create necessary directories
