@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for local development
+  postgres:
+    image: postgres:15-alpine
+    container_name: anagram-db
+    environment:
+      POSTGRES_DB: anagram_game
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js server
+  server:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    container_name: anagram-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=anagram_game
+      - DB_USER=postgres
+      - DB_PASSWORD=localdev
+      - DB_SSL=false
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: npm start
+
+volumes:
+  postgres_data:
