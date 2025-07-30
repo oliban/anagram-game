@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced build script with server health checking
-# Usage: ./build_and_test.sh [local|aws] [--clean]
+# Usage: ./build_and_test.sh [local|aws] [--clean] [--physical]
 
 set -e
 
@@ -15,6 +15,7 @@ NC='\033[0m' # No Color
 # Parse arguments
 ENV_MODE="local"
 CLEAN_FLAG=""
+PHYSICAL_FLAG=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -30,8 +31,12 @@ while [[ $# -gt 0 ]]; do
       CLEAN_FLAG="--clean"
       shift
       ;;
+    --physical|--device)
+      PHYSICAL_FLAG="--physical"
+      shift
+      ;;
     *)
-      echo "Usage: $0 [local|aws] [--clean]"
+      echo "Usage: $0 [local|aws] [--clean] [--physical]"
       exit 1
       ;;
   esac
@@ -130,7 +135,7 @@ echo ""
 
 # Build the app
 echo -e "${BLUE}🔨 Building iOS app for ${ENV_MODE} environment...${NC}"
-./build_multi_sim.sh $ENV_MODE $CLEAN_FLAG
+./build_multi_sim.sh $ENV_MODE $CLEAN_FLAG $PHYSICAL_FLAG
 
 # Post-build verification
 echo ""
