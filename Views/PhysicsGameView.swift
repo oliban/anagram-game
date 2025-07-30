@@ -1982,8 +1982,57 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     
     
     private func checkSolution() {
+        print("🔍 checkSolution() CALLED - gameState: \(gameModel.gameState)")
+        
+        // Send to server for monitoring
+        Task {
+            let debugMessage = "checkSolution() CALLED - gameState: \(gameModel.gameState)"
+            guard let url = URL(string: "http://192.168.1.133:3000/api/debug/log") else { return }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let logData = [
+                "message": debugMessage,
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "source": "PhysicsGameView-checkSolution"
+            ]
+            
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch {
+                print("Debug logging failed: \(error)")
+            }
+        }
+        
         // Skip checking if game is already completed
         if gameModel.gameState == .completed {
+            print("🔍 checkSolution() SKIPPED - game already completed")
+            Task {
+                let debugMessage = "checkSolution() SKIPPED - game already completed"
+                guard let url = URL(string: "http://192.168.1.133:3000/api/debug/log") else { return }
+                
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                
+                let logData = [
+                    "message": debugMessage,
+                    "timestamp": ISO8601DateFormatter().string(from: Date()),
+                    "source": "PhysicsGameView-checkSolution"
+                ]
+                
+                do {
+                    let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                    request.httpBody = jsonData
+                    let _ = try await URLSession.shared.data(for: request)
+                } catch {
+                    print("Debug logging failed: \(error)")
+                }
+            }
             return
         }
         
@@ -2104,6 +2153,21 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         print("   Found words: \(allFoundWords)")
         print("   Found count: \(allFoundWords.count), Target count: \(targetWords.count)")
         
+        // Send critical analysis to server
+        Task {
+            let debugMessage = "FINAL ANALYSIS - Target: \(targetWords), Found: \(allFoundWords)"
+            guard let url = URL(string: "http://192.168.1.133:3000/api/debug/log") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let logData = ["message": debugMessage, "source": "PhysicsGameView-victory"]
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch { }
+        }
+        
         // Check for victory: all target words must be found in correct order
         let foundWordsUpper = allFoundWords.map { $0.uppercased() }
         let targetWordsUpper = targetWords.map { $0.uppercased() }
@@ -2115,10 +2179,38 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         print("   Found order: \(foundWordsUpper)")
         print("   Target order: \(targetWordsUpper)")
         
+        // Send victory check to server
+        Task {
+            let debugMessage = "VICTORY CHECK - HasAll: \(hasAllWords), HasCorrect: \(hasCorrectWords)"
+            guard let url = URL(string: "http://192.168.1.133:3000/api/debug/log") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let logData = ["message": debugMessage, "source": "PhysicsGameView-victory"]
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                request.httpBody = jsonData
+                let _ = try await URLSession.shared.data(for: request)
+            } catch { }
+        }
+        
         let isComplete = hasAllWords && hasCorrectWords
         
         if isComplete {
             print("🎉 VICTORY TRIGGERED!")
+            Task {
+                let debugMessage = "🎉 VICTORY TRIGGERED!"
+                guard let url = URL(string: "http://192.168.1.133:3000/api/debug/log") else { return }
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                let logData = ["message": debugMessage, "source": "PhysicsGameView-victory"]
+                do {
+                    let jsonData = try JSONSerialization.data(withJSONObject: logData)
+                    request.httpBody = jsonData
+                    let _ = try await URLSession.shared.data(for: request)
+                } catch { }
+            }
             if !celebrationText.contains("🎉") { // Only celebrate once
                 gameModel.completeGame() // Calculate score immediately
                 // Trigger celebration on next run loop to ensure score is updated

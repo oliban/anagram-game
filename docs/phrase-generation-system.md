@@ -28,22 +28,28 @@ Automated system for generating, analyzing, and importing anagram game phrases w
 
 ## System Architecture & Workflow
 
-### Process Flow Diagram
+### Process Flow Diagram (Docker Microservices)
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  1. AI GENERATE │───▶│  2. ANALYZE     │───▶│  3. PREVIEW     │───▶│  4. IMPORT      │
-│  🤖 AI-powered  │    │  phrase-        │    │  Review JSON    │    │  phrase-        │
-│  meaningful     │    │  analyzer.js    │    │  Files          │    │  importer.js    │
+│  1. AI GENERATE │───▶│  2. ANALYZE     │───▶│  3. PREVIEW     │───▶│  4. DOCKER      │
+│  🤖 AI-powered  │    │  phrase-        │    │  Review JSON    │    │  IMPORT         │
+│  meaningful     │    │  analyzer.js    │    │  Files          │    │  🐳 Container   │
 │  phrases        │    │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │                       │
          ▼                       ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ 🎯 Coherent     │    │   analyzed-     │    │ User Decision   │    │   Database      │
-│ phrases like    │    │   phrases.json  │    │ Point           │    │   Updated       │
-│ "fresh air"     │    │                 │    │                 │    │                 │
+│ 🎯 Coherent     │    │   analyzed-     │    │ User Decision   │    │ 🗄️ PostgreSQL   │
+│ phrases like    │    │   phrases.json  │    │ Point           │    │ Docker DB       │
+│ "fresh air"     │    │ + clever hints  │    │                 │    │ localhost:5432  │
 │ "happy child"   │    │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+
+🐳 DOCKER WORKFLOW:
+   1. Generate phrases on host: `node server/scripts/phrase-generator.js`
+   2. Copy files to container: `docker cp analyzed-phrases.json anagram-game-server:/app/`
+   3. Import in container: `docker exec anagram-game-server node phrase-importer.js --import`
+   4. Verify via API: `curl http://localhost:3000/api/phrases/for/{playerId}`
 
 🔍 PREVIEW POINTS:
    • After Step 1: AI-generated meaningful phrases with difficulty scores
@@ -55,6 +61,20 @@ Automated system for generating, analyzing, and importing anagram game phrases w
    • Replaces random word combinations with contextual phrases
    • Creates thematic clues without using phrase words
    • Supports multiple languages (English/Swedish)
+
+🏗️ MICROSERVICES ARCHITECTURE:
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   📱 iOS App    │───▶│  🎮 Game Server │───▶│ 🗄️ PostgreSQL   │
+│  SwiftUI +      │    │  Docker:3000    │    │  Docker:5432    │
+│  SpriteKit      │    │  + WebSocket    │    │  Shared DB      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  HTTP/REST API  │    │ DatabasePhrase  │    │ Global Phrases  │
+│  Phrase Fetch   │    │ Query Engine    │    │ 140+ with Hints │
+│  Score Submit   │    │ Consumption     │    │ Approval System │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ### File Structure
