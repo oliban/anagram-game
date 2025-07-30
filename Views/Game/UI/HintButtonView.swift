@@ -19,6 +19,7 @@ struct HintButtonView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var level3ClueText: String? = nil
+    @State private var preloadedTextClue: String = ""
     @State private var showSmokeEffect = false
     @StateObject private var networkManager = NetworkManager.shared
     
@@ -30,9 +31,9 @@ struct HintButtonView: View {
                     // After level 3 hint is used, show nothing (complete disappearance)
                     EmptyView()
                 } else {
-                    // Show hint button always (for now) - debug the hint status issue
-                    let _ = print("🔍 HINT DEBUG: hintStatus=\(String(describing: hintStatus)), level3ClueText=\(String(describing: level3ClueText))")
-                    Button(action: useNextHint) {
+                    Button(action: {
+                        useNextHint()
+                    }) {
                         HStack(spacing: 8) {
                             Image(systemName: "lightbulb.fill")
                                 .foregroundColor(.yellow)
@@ -84,11 +85,9 @@ struct HintButtonView: View {
             }
         }
         .onAppear {
-            print("🔍 HINT DEBUG onAppear: phraseId=\(phraseId)")
             loadHintStatus()
         }
         .onChange(of: phraseId) { _, _ in
-            print("🔍 HINT DEBUG onChange: phraseId=\(phraseId)")
             level3ClueText = nil // Reset clue text for new phrase
             showSmokeEffect = false // Reset smoke effect for new phrase
             loadHintStatus()
@@ -115,6 +114,7 @@ struct HintButtonView: View {
         // Calculate point cost (difference between current and next score)
         let pointCost = currentScore - nextScore
         
+        
         return "Hint \(nextLevel) (-\(pointCost) p)"
     }
     
@@ -136,15 +136,15 @@ struct HintButtonView: View {
                     
                     // Create a basic hint status for local phrases with actual scoring
                     // Always start with fresh hints for each game session
+                    let nextHintScore = GameModel.applyHintPenalty(baseScore: actualScore, hintsUsed: 1)
                     let newHintStatus = HintStatus(
                         hintsUsed: [],
                         nextHintLevel: 1,
                         hintsRemaining: 3,
                         currentScore: actualScore,
-                        nextHintScore: GameModel.applyHintPenalty(baseScore: actualScore, hintsUsed: 1),
+                        nextHintScore: nextHintScore,
                         canUseNextHint: true
                     )
-                    print("🔍 HINT DEBUG local phrase - fresh hints: \(newHintStatus)")
                     self.hintStatus = newHintStatus
                     self.isLoading = false
                 }
@@ -157,8 +157,6 @@ struct HintButtonView: View {
                     let preview = await previewTask
                     
                     await MainActor.run {
-                        print("🔍 HINT DEBUG server phrase: original status=\(String(describing: status))")
-                        
                         // Override server hint status to always provide fresh hints for each game
                         if let originalStatus = status {
                             let freshHintStatus = HintStatus(
@@ -169,7 +167,6 @@ struct HintButtonView: View {
                                 nextHintScore: originalStatus.nextHintScore,
                                 canUseNextHint: true
                             )
-                            print("🔍 HINT DEBUG server phrase - fresh hints: \(freshHintStatus)")
                             self.hintStatus = freshHintStatus
                         } else {
                             self.hintStatus = status
@@ -198,107 +195,66 @@ struct HintButtonView: View {
         Task {
             isLoading = true
             
-            if phraseId.hasPrefix("local-") {
-                // Generate local hints with proper scene interaction
-                let hint = generateLocalHint(level: nextLevel, sentence: gameModel.currentSentence)
-                
-                await MainActor.run {
-                    // Show smoke effect only on final hint (level 3)
-                    if nextLevel == 3 {
-                        // Hide button immediately, then show smoke
-                        level3ClueText = hint // This triggers button disappearance immediately
-                        showSmokeEffect = true
-                        // Drop information tile only for level 3 (text hint)
-                        if let scene = gameScene {
-                            scene.spawnMessageTile(message: hint)
-                        }
-                        // Hide smoke effect after animation
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                            showSmokeEffect = false
-                        }
-                    } else {
-                        // For levels 1 & 2, don't show notification tiles (visual hints only)
-                    }
-                    
-                    gameModel.addHint(hint)
-                    
-                    // Update hint status for local phrases with proper scoring
-                    let actualScore = gameModel.phraseDifficulty
-                    let newScore = calculateLocalScore(currentLevel: nextLevel, originalScore: actualScore)
-                    let nextHintScore = nextLevel < 3 ? calculateLocalScore(currentLevel: nextLevel + 1, originalScore: actualScore) : nil
-                    
-                    let updatedStatus = HintStatus(
-                        hintsUsed: hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())],
-                        nextHintLevel: nextLevel < 3 ? nextLevel + 1 : nil,
-                        hintsRemaining: hintStatus.hintsRemaining - 1,
-                        currentScore: newScore,
-                        nextHintScore: nextHintScore,
-                        canUseNextHint: nextLevel < 3
-                    )
-                    self.hintStatus = updatedStatus
-                    
-                    // Update score and language tiles when hint is used
-                    if let scene = gameScene {
-                        scene.updateScoreTile(hintsUsed: updatedStatus.hintsUsed.count)
-                        scene.updateLanguageTile()
-                    }
-                    
-                    isLoading = false
-                }
+            // Get text clue from pre-loaded phrase data (no network calls needed!)
+            let textClue: String
+            if let customPhrase = gameModel.currentCustomPhrase,
+               !customPhrase.clue.isEmpty {
+                textClue = customPhrase.clue
+            } else if let localClue = gameModel.getCurrentLocalClue(),
+                      !localClue.isEmpty {
+                textClue = localClue
             } else {
-                // Use server hints for custom phrases
-                let hintResponse = await networkManager.useHint(phraseId: phraseId, level: nextLevel)
-                
-                await MainActor.run {
-                    if let response = hintResponse {
-                        // Call the appropriate scene method based on hint level
-                        if let scene = gameScene {
-                            switch nextLevel {
-                            case 1:
-                                scene.showHint1()
-                            case 2:
-                                scene.showHint2()
-                            case 3:
-                                scene.showHint3()
-                                // Hide button immediately, then show smoke effect and drop information tile
-                                level3ClueText = response.hint.content // This triggers button disappearance immediately
-                                showSmokeEffect = true
-                                scene.spawnMessageTile(message: response.hint.content)
-                                // Hide smoke effect after animation
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                    showSmokeEffect = false
-                                }
-                            default:
-                                break
-                            }
-                        }
-                        
-                        gameModel.addHint(response.hint.content)
-                        
-                        // Update hint status based on response
-                        let updatedStatus = HintStatus(
-                            hintsUsed: response.hint.hintsRemaining < hintStatus.hintsRemaining ? 
-                                hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())] :
-                                hintStatus.hintsUsed,
-                            nextHintLevel: response.hint.nextHintScore != nil ? nextLevel + 1 : nil,
-                            hintsRemaining: response.hint.hintsRemaining,
-                            currentScore: response.hint.currentScore,
-                            nextHintScore: response.hint.nextHintScore,
-                            canUseNextHint: response.hint.canUseNextHint
-                        )
-                        self.hintStatus = updatedStatus
-                        
-                        // Update score and language tiles when hint is used
-                        if let scene = gameScene {
-                            scene.updateScoreTile(hintsUsed: updatedStatus.hintsUsed.count)
-                            scene.updateLanguageTile()
-                        }
-                    } else {
-                        errorMessage = "Failed to get hint"
-                    }
-                    
+                textClue = generateLocalTextHint(sentence: gameModel.currentSentence)
+            }
+            
+            await MainActor.run {
+                // Always execute scene methods for visual hints
+                guard let scene = gameScene else {
                     isLoading = false
+                    return
                 }
+                
+                switch nextLevel {
+                case 1:
+                    scene.showHint1() // Always highlight shelves
+                    gameModel.addHint("Shelves highlighted to show word count")
+                case 2:
+                    scene.showHint2() // Always highlight first letters
+                    gameModel.addHint("First letter tiles highlighted in blue")
+                case 3:
+                    scene.showHint3() // Always call scene method
+                    gameModel.addHint(textClue) // Use the text clue we got
+                    // Hide button and show smoke effect for level 3
+                    level3ClueText = textClue
+                    showSmokeEffect = true
+                    scene.spawnMessageTile(message: textClue)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        showSmokeEffect = false
+                    }
+                default:
+                    break
+                }
+                
+                // Update hint status with local calculation
+                let actualScore = gameModel.phraseDifficulty
+                let newScore = calculateLocalScore(currentLevel: nextLevel, originalScore: actualScore)
+                let nextHintScore = nextLevel < 3 ? calculateLocalScore(currentLevel: nextLevel + 1, originalScore: actualScore) : nil
+                
+                let updatedStatus = HintStatus(
+                    hintsUsed: hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())],
+                    nextHintLevel: nextLevel < 3 ? nextLevel + 1 : nil,
+                    hintsRemaining: hintStatus.hintsRemaining - 1,
+                    currentScore: newScore,
+                    nextHintScore: nextHintScore,
+                    canUseNextHint: nextLevel < 3
+                )
+                self.hintStatus = updatedStatus
+                
+                // Update UI
+                scene.updateScoreTile(hintsUsed: updatedStatus.hintsUsed.count)
+                scene.updateLanguageTile()
+                
+                isLoading = false
             }
         }
     }
