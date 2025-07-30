@@ -127,9 +127,11 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     let isConsumed: Bool
     let senderName: String
     let language: String // Language code for LanguageTile feature
+    let clue: String // Hint clue for level 3 hints
     
     private enum CodingKeys: String, CodingKey {
         case id, content, senderId, targetId, createdAt, isConsumed, senderName, language
+        case clue = "hint" // Server sends "hint" but we store as "clue"
     }
     
     init(from decoder: Decoder) throws {
@@ -141,6 +143,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
         isConsumed = try container.decode(Bool.self, forKey: .isConsumed)
         senderName = try container.decodeIfPresent(String.self, forKey: .senderName) ?? "Unknown Player"
         language = try container.decodeIfPresent(String.self, forKey: .language) ?? "en" // Default to English
+        clue = try container.decodeIfPresent(String.self, forKey: .clue) ?? "" // Server sends "hint" field, default to empty if missing
         
         // Handle date parsing - make optional since server might not include it
         if let dateString = try container.decodeIfPresent(String.self, forKey: .createdAt) {

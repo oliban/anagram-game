@@ -256,6 +256,8 @@ class PhraseService: PhraseServiceDelegate {
         }
         
         // Create the phrase manually since we're parsing from dictionary
+        let clue = data["clue"] as? String ?? "No clue available"
+        
         return CustomPhrase(
             id: id,
             content: content,
@@ -264,7 +266,8 @@ class PhraseService: PhraseServiceDelegate {
             createdAt: createdAt,
             isConsumed: isConsumed,
             senderName: senderName,
-            language: language
+            language: language,
+            clue: clue
         )
     }
 }
@@ -272,7 +275,7 @@ class PhraseService: PhraseServiceDelegate {
 // MARK: - CustomPhrase Initializer Extension
 
 extension CustomPhrase {
-    init(id: String, content: String, senderId: String, targetId: String?, createdAt: Date, isConsumed: Bool, senderName: String, language: String) {
+    init(id: String, content: String, senderId: String, targetId: String?, createdAt: Date, isConsumed: Bool, senderName: String, language: String, clue: String) {
         self.id = id
         self.content = content
         self.senderId = senderId
@@ -281,6 +284,7 @@ extension CustomPhrase {
         self.isConsumed = isConsumed
         self.senderName = senderName
         self.language = language
+        self.clue = clue
     }
 }
 

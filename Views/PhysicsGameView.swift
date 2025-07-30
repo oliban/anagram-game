@@ -32,8 +32,8 @@ struct PhysicsGameView: View {
     @State private var tilesCount: Int = 0
     @State private var metricsTimer: Timer?
     
-    // Performance monitoring configuration - reactive to server changes
-    @State private var isPerformanceMonitoringEnabled = AppConfig.isPerformanceMonitoringEnabled
+    // Performance monitoring configuration - disabled for troubleshooting
+    @State private var isPerformanceMonitoringEnabled = false
     
     // Static reference to avoid SwiftUI state issues
     private static var sharedScene: PhysicsGameScene?
@@ -74,7 +74,6 @@ struct PhysicsGameView: View {
                             // Hint button aligned to left edge of lobby button
                             HStack {
                                 HintButtonView(phraseId: gameModel.currentPhraseId ?? "local-fallback", gameModel: gameModel, gameScene: gameScene ?? PhysicsGameView.sharedScene) { _ in
-                                    print("🔍 HINT DEBUG: Creating HintButtonView for phraseId: \(gameModel.currentPhraseId ?? "local-fallback")")
                                     // No longer used - clue is now displayed persistently
                                 }
                                 .scaleEffect(0.85, anchor: .leading) // Scale from leading edge to maintain left alignment
@@ -1413,7 +1412,10 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         // Only clear tile hints, not shelf hints
         clearTileHints()
         let wordCount = gameModel.getExpectedWords().count
-        for i in 0..<min(wordCount, shelves.count) {
+        
+        let shelvesToHighlight = min(wordCount, shelves.count)
+        
+        for i in 0..<shelvesToHighlight {
             lightUpShelf(shelves[i], wordIndex: i)
         }
         
@@ -1549,9 +1551,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             }
         }
         
-        print("🔍 HINT2: Expected words: \(expectedWords)")
-        print("🔍 HINT2: Looking for first letters: \(firstLettersNeeded)")
-        print("🔍 HINT2: Total tiles available: \(tiles.count)")
         
         // Find and highlight matching tiles (only highlight one tile per needed first letter)
         var highlightedCount = 0
@@ -1566,11 +1565,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             // Use the LetterTile's letter property directly
             let tileChar = tile.letter.lowercased().first!
                 
-                print("🔍 HINT2: Checking tile with letter: '\(tileChar)'")
                 
             // Check if this tile contains a first letter we still need
             if let index = remainingLetters.firstIndex(of: tileChar) {
-                print("✅ HINT2: Highlighting tile with letter: '\(tileChar)'")
                 highlightTile(tile)
                 highlightedCount += 1
                 // Remove this letter from remaining list to avoid highlighting duplicates
@@ -1578,8 +1575,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             }
         }
         
-        print("🔍 HINT2: Successfully highlighted \(highlightedCount) tiles")
-        print("🔍 HINT2: Still need letters: \(remainingLetters)")
     }
     
     private func highlightTile(_ tile: LetterTile) {
