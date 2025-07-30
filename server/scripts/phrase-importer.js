@@ -10,7 +10,30 @@
 
 const fs = require('fs');
 const path = require('path');
-const { query, pool } = require('../database/connection');
+const { Client } = require('pg');
+
+// Docker database connection for microservices
+const dockerDbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'anagram_game',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres'
+};
+
+console.log('🐳 DOCKER MODE: Connecting to microservices database at localhost:5432');
+
+// Create connection function for Docker
+async function query(text, params) {
+  const client = new Client(dockerDbConfig);
+  await client.connect();
+  try {
+    const result = await client.query(text, params);
+    return result;
+  } finally {
+    await client.end();
+  }
+}
 
 // Configuration
 const CONFIG = {

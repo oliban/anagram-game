@@ -568,6 +568,7 @@ class GameModel: ObservableObject {
     
     @MainActor
     func completeGame() {
+        print("🎮 GAME COMPLETION STARTED")
         gameState = .completed
         
         // Calculate score immediately based on local data
@@ -582,11 +583,48 @@ class GameModel: ObservableObject {
         // Complete phrase on server (critical for leaderboard updates)
         if let phraseId = currentPhraseId {
             print("🔍 SERVER_COMPLETION: Attempting to complete phraseId: '\(phraseId)'")
+            print("🔍 CURRENT PLAYER: \(networkManager?.currentPlayer?.name ?? "NO PLAYER") - ID: \(networkManager?.currentPlayer?.id ?? "NO ID")")
             Task {
+                print("📡 Starting async completion task...")
                 let networkManager = NetworkManager.shared
                 if let result = await networkManager.completePhrase(phraseId: phraseId) {
                     if result.success {
                         print("✅ SERVER COMPLETION: Success! Server score: \(result.completion.finalScore), client: \(currentScore)")
+                        
+                        // CRITICAL: Consume phrase and clear caches to prevent re-offering
+                        if let phraseId = currentPhraseId {
+                            print("📌 CONSUMING PHRASE on completion: \(phraseId)")
+                            let consumeSuccess = await networkManager.consumePhrase(phraseId: phraseId)
+                            if consumeSuccess {
+                                print("✅ Successfully consumed completed phrase")
+                            } else {
+                                print("❌ Failed to consume completed phrase")
+                            }
+                            
+                            // CRITICAL: Clear completed phrase from local queues (same as skip logic)
+                            await MainActor.run {
+                                // Remove from phraseQueue
+                                let originalPhraseQueueCount = phraseQueue.count
+                                phraseQueue.removeAll { $0.id == phraseId }
+                                let removedFromPhraseQueue = originalPhraseQueueCount - phraseQueue.count
+                                
+                                // Remove from lobbyDisplayQueue  
+                                let originalLobbyQueueCount = lobbyDisplayQueue.count
+                                lobbyDisplayQueue.removeAll { $0.id == phraseId }
+                                let removedFromLobbyQueue = originalLobbyQueueCount - lobbyDisplayQueue.count
+                                
+                                print("📤 COMPLETION: Removed completed phrase from queues - phraseQueue: \(removedFromPhraseQueue), lobbyQueue: \(removedFromLobbyQueue)")
+                                
+                                // Clear current phrase references
+                                currentCustomPhrase = nil
+                                customPhraseInfo = ""
+                                currentPhraseId = nil
+                            }
+                            
+                            // Clear any cached phrases from NetworkManager
+                            await networkManager.clearCachedPhrase()
+                            print("🔄 COMPLETION: Cleared phrase caches")
+                        }
                         
                         // Refresh total score to get server's accurate total
                         Task { @MainActor in

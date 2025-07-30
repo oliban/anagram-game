@@ -170,10 +170,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const result = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language, contribution_link_id)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language, contributionLinkId]);
+        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language]);
 
         const phraseData = result.rows[0];
         console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
@@ -238,7 +238,6 @@ class DatabasePhrase {
           p.language,
           p.created_by_player_id as "senderId",
           COALESCE(
-            cl.contributor_name,
             pl.name, 
             'Unknown Player'
           ) as "senderName",
@@ -248,7 +247,6 @@ class DatabasePhrase {
         FROM phrases p
         JOIN player_phrases pp ON p.id = pp.phrase_id
         LEFT JOIN players pl ON p.created_by_player_id = pl.id
-        LEFT JOIN contribution_links cl ON p.contribution_link_id = cl.id
         WHERE pp.target_player_id = $1 
           AND pp.is_delivered = false
         ORDER BY p.created_at ASC
@@ -292,7 +290,6 @@ class DatabasePhrase {
             p.language,
             p.created_by_player_id as "senderId",
             COALESCE(
-              cl.contributor_name,
               pl.name, 
               'Unknown Player'
             ) as "senderName",
@@ -301,8 +298,7 @@ class DatabasePhrase {
             'global' as phrase_type
           FROM phrases p
           LEFT JOIN players pl ON p.created_by_player_id = pl.id
-          LEFT JOIN contribution_links cl ON p.contribution_link_id = cl.id
-          WHERE p.is_global = true 
+            WHERE p.is_global = true 
             AND p.is_approved = true
             AND (p.created_by_player_id IS NULL OR p.created_by_player_id != $1)
             AND p.id NOT IN (SELECT phrase_id FROM completed_phrases WHERE player_id = $1)
