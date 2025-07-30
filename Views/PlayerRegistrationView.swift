@@ -26,6 +26,14 @@ struct PlayerRegistrationView: View {
                     Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    // Server URL display for debugging
+                    Text("Server: \(AppConfig.baseURL)")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(4)
                 }
                 .padding(.top, 40)
                 
@@ -70,8 +78,17 @@ struct PlayerRegistrationView: View {
                                         .foregroundColor(.orange)
                                         .multilineTextAlignment(.leading)
                                 }
-                                .padding(.top, 4)
+                                
+                                // Additional debug info
+                                Text("Debug: Attempting connection to:")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                                Text(AppConfig.baseURL)
+                                    .font(.caption2)
+                                    .foregroundColor(.blue)
+                                    .textSelection(.enabled)
                             }
+                            .padding(.top, 4)
                         }
                     }
                     
@@ -191,12 +208,22 @@ struct PlayerRegistrationView: View {
             let trimmedName = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
             
             // First, test connection to server
+            print("🔧 DEBUG: Testing connection to server...")
             let connectionResult = await networkManager.testConnection()
+            print("🔧 DEBUG: Connection test result: \(connectionResult)")
             
             guard case .success = connectionResult else {
+                let errorMsg: String
+                switch connectionResult {
+                case .failure(let connectionError):
+                    errorMsg = "Connection test failed: \(connectionError)"
+                default:
+                    errorMsg = "Cannot connect to server. Please check your connection. Result: \(connectionResult)"
+                }
+                
                 await MainActor.run {
                     isRegistering = false
-                    errorMessage = "Cannot connect to server. Please check your connection."
+                    errorMessage = errorMsg
                 }
                 return
             }
