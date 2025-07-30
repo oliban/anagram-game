@@ -1,0 +1,162 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ACCOUNT_ID: 947874855942
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set environment based on branch
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          echo "STACK_NAME=AnagramProductionStack" >> $GITHUB_ENV
+        else
+          echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          echo "STACK_NAME=AnagramStagingStack" >> $GITHUB_ENV
+        fi
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Game Server image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: anagram-${{ env.ENVIRONMENT }}-game-server
+      run: |
+        docker buildx build \
+          --platform linux/amd64 \
+          --file services/game-server/Dockerfile \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+          --push \
+          .
+
+    - name: Build and push Web Dashboard image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: anagram-${{ env.ENVIRONMENT }}-web-dashboard
+      run: |
+        docker buildx build \
+          --platform linux/amd64 \
+          --file services/web-dashboard/Dockerfile \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+          --push \
+          .
+
+    - name: Build and push Link Generator image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: anagram-${{ env.ENVIRONMENT }}-link-generator
+      run: |
+        docker buildx build \
+          --platform linux/amd64 \
+          --file services/link-generator/Dockerfile \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+          --push \
+          .
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: infrastructure/package-lock.json
+
+    - name: Install CDK dependencies
+      working-directory: infrastructure
+      run: npm ci
+
+    - name: Install AWS CDK
+      run: npm install -g aws-cdk
+
+    - name: Deploy infrastructure
+      working-directory: infrastructure
+      run: |
+        cdk deploy ${{ env.STACK_NAME }} \
+          --context environment=${{ env.ENVIRONMENT }} \
+          --require-approval never \
+          --outputs-file cdk-outputs.json
+
+    - name: Force ECS service update
+      run: |
+        # Force ECS services to use the new images
+        aws ecs update-service \
+          --cluster anagram-${{ env.ENVIRONMENT }} \
+          --service anagram-${{ env.ENVIRONMENT }}-game-server \
+          --force-new-deployment \
+          --region ${{ env.AWS_REGION }}
+        
+        aws ecs update-service \
+          --cluster anagram-${{ env.ENVIRONMENT }} \
+          --service anagram-${{ env.ENVIRONMENT }}-web-dashboard \
+          --force-new-deployment \
+          --region ${{ env.AWS_REGION }}
+        
+        aws ecs update-service \
+          --cluster anagram-${{ env.ENVIRONMENT }} \
+          --service anagram-${{ env.ENVIRONMENT }}-link-generator \
+          --force-new-deployment \
+          --region ${{ env.AWS_REGION }}
+
+    - name: Wait for deployment to stabilize
+      run: |
+        aws ecs wait services-stable \
+          --cluster anagram-${{ env.ENVIRONMENT }} \
+          --services anagram-${{ env.ENVIRONMENT }}-game-server anagram-${{ env.ENVIRONMENT }}-web-dashboard anagram-${{ env.ENVIRONMENT }}-link-generator \
+          --region ${{ env.AWS_REGION }}
+
+    - name: Get Load Balancer URL
+      run: |
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --region ${{ env.AWS_REGION }} \
+          --query 'LoadBalancers[?contains(LoadBalancerName, `anagram-${{ env.ENVIRONMENT }}`)].DNSName' \
+          --output text)
+        echo "🚀 Deployment complete!"
+        echo "🌐 Game Server: http://$ALB_DNS/api/status"
+        echo "📊 Health check all services:"
+        echo "   curl -f http://$ALB_DNS/api/status"
+
+    - name: Test deployment health
+      run: |
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --region ${{ env.AWS_REGION }} \
+          --query 'LoadBalancers[?contains(LoadBalancerName, `anagram-${{ env.ENVIRONMENT }}`)].DNSName' \
+          --output text)
+        
+        # Wait a moment for ALB to update
+        sleep 30
+        
+        # Test game server health
+        if curl -f --max-time 30 "http://$ALB_DNS/api/status"; then
+          echo "✅ Game server health check passed"
+        else
+          echo "❌ Game server health check failed"
+          exit 1
+        fi
