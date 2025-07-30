@@ -4,15 +4,18 @@ import UIKit
 import SocketIO
 
 // MARK: - Configuration
-// This matches server/.env configuration
+// Environment-aware configuration for local/cloud development
 struct AppConfig {
-    // Server Configuration
-    static let serverPort = "8080"  // From server/.env PORT
-    static let baseURL = "http://192.168.1.133:\(serverPort)"  // Use Mac IP for device testing
+    // Environment detection - temporarily hardcoded to AWS for testing
+    static let baseURL: String = {
+        let url = "http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com"
+        print("🔧 DEBUG: Using hardcoded AWS URL: \(url)")
+        return url
+    }()
     
-    // Contribution system URLs (different service)
-    static let contributionBaseURL = "http://192.168.1.133:\(serverPort)"
-    static let contributionAPIURL = "\(contributionBaseURL)/api/contribution/request"
+    // Contribution system URLs (routed through ALB to microservices)
+    static let contributionBaseURL = baseURL
+    static let contributionAPIURL = "\(contributionBaseURL)/contribute/api/request"
     
     // Timing Configuration
     static let connectionRetryDelay: UInt64 = 2_000_000_000  // 2 seconds in nanoseconds
@@ -601,9 +604,14 @@ class NetworkManager: ObservableObject {
     // MARK: - HTTP API Methods
     
     func registerPlayer(name: String) async -> RegistrationResult {
+        print("🔧 DEBUG: Starting player registration with baseURL: \(baseURL)")
+        
         guard let url = URL(string: "\(baseURL)/api/players/register") else {
+            print("❌ DEBUG: Invalid URL: \(baseURL)/api/players/register")
             return .failure(message: "Invalid server URL")
         }
+        
+        print("🔧 DEBUG: Full registration URL: \(url)")
         
         do {
             var request = URLRequest(url: url)
@@ -613,12 +621,23 @@ class NetworkManager: ObservableObject {
             let deviceId = DeviceManager.shared.getDeviceId()
             let requestBody = RegistrationRequestBody(name: name, deviceId: deviceId)
             
+            print("🔧 DEBUG: Request body - name: \(name), deviceId: \(deviceId)")
+            
             request.httpBody = try JSONEncoder().encode(requestBody)
             
+            print("🔧 DEBUG: Making network request...")
             let (data, response) = try await urlSession.data(for: request)
+            print("🔧 DEBUG: Got response, data size: \(data.count) bytes")
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ DEBUG: Invalid server response type: \(type(of: response))")
                 return .failure(message: "Invalid server response")
+            }
+            
+            print("🔧 DEBUG: HTTP Status Code: \(httpResponse.statusCode)")
+            print("🔧 DEBUG: Response headers: \(httpResponse.allHeaderFields)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🔧 DEBUG: Response body: \(responseString)")
             }
             
             switch httpResponse.statusCode {
@@ -668,7 +687,12 @@ class NetworkManager: ObservableObject {
             }
             
         } catch {
-            print("❌ REGISTER: Network error: \(error)")
+            print("❌ DEBUG: Network error during registration: \(error)")
+            print("❌ DEBUG: Error type: \(type(of: error))")
+            if let urlError = error as? URLError {
+                print("❌ DEBUG: URLError code: \(urlError.code.rawValue)")
+                print("❌ DEBUG: URLError description: \(urlError.localizedDescription)")
+            }
             return .failure(message: "Network error: \(error.localizedDescription)")
         }
     }
@@ -1330,15 +1354,18 @@ class NetworkManager: ObservableObject {
     // MARK: - Legacy API for compatibility
     
     func testConnection() async -> Result<Bool, NetworkError> {
+        print("🔧 TEST DEBUG: Starting connection test with baseURL: \(baseURL)")
+        
         guard let url = URL(string: "\(baseURL)/api/status") else {
-            let error = "Invalid URL: \(baseURL)"
-            print("❌ TEST: \(error)")
+            let error = "Invalid URL: \(baseURL)/api/status"
+            print("❌ TEST DEBUG: \(error)")
             await MainActor.run {
                 self.lastError = error
             }
             return .failure(.invalidURL)
         }
         
+        print("🔧 TEST DEBUG: Full status URL: \(url)")
         print("🔍 TEST: Testing connection to \(baseURL)")
         await MainActor.run {
             self.lastError = "Testing connection..."
@@ -1349,21 +1376,28 @@ class NetworkManager: ObservableObject {
             var request = URLRequest(url: url)
             request.timeoutInterval = 10.0 // 10 second timeout
             
+            print("🔧 TEST DEBUG: Making request to status endpoint...")
             let (data, response) = try await urlSession.data(for: request)
+            print("🔧 TEST DEBUG: Got response, data size: \(data.count) bytes")
             
             print("🔍 TEST: Got response, status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
             
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🔧 TEST DEBUG: Response body: \(responseString)")
+            }
+            
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
-                print("❌ TEST: Server returned status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                print("❌ TEST: Server returned status code: \(statusCode)")
                 return .failure(.serverOffline)
             }
             
             // Parse the response to validate it's our server
             if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let status = jsonResponse["status"] as? String,
-               status == "online" {
-                print("✅ TEST: Connection successful")
+               (status == "online" || status == "healthy") {
+                print("✅ TEST: Connection successful, server status: \(status)")
                 await MainActor.run {
                     self.lastError = nil
                 }
@@ -1378,6 +1412,12 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidResponse)
         } catch {
             let errorMsg = "Connection failed: \(error.localizedDescription)"
+            print("❌ TEST DEBUG: Connection error: \(error)")
+            print("❌ TEST DEBUG: Error type: \(type(of: error))")
+            if let urlError = error as? URLError {
+                print("❌ TEST DEBUG: URLError code: \(urlError.code.rawValue)")
+                print("❌ TEST DEBUG: URLError description: \(urlError.localizedDescription)")
+            }
             print("❌ TEST: \(errorMsg)")
             await MainActor.run {
                 self.lastError = errorMsg
