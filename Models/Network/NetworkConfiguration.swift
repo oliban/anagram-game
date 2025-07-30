@@ -39,16 +39,17 @@ private func loadSharedConfig() -> SharedAppConfig {
     // No static JSON file needed - configuration is determined at build time
     
     #if DEBUG
-    let isDevelopment = true
+    let _ = true  // Development mode marker
     #else
-    let isDevelopment = false
+    let _ = false // Production mode marker  
     #endif
     
     // Environment-aware configuration
-    let gameServerConfig = ServiceInfo(port: 3000, host: "localhost")
-    let webDashboardConfig = ServiceInfo(port: 3001, host: "localhost") 
-    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "localhost")
-    let databaseConfig = ServiceInfo(port: 5432, host: "localhost")
+    // Note: host values here are not used - actual hosts come from developmentConfig/productionConfig
+    let gameServerConfig = ServiceInfo(port: 3000, host: "192.168.1.133")
+    let webDashboardConfig = ServiceInfo(port: 3001, host: "192.168.1.133") 
+    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "192.168.1.133")
+    let databaseConfig = ServiceInfo(port: 5432, host: "192.168.1.133")
     
     let services = ServiceConfig(
         gameServer: gameServerConfig,
@@ -80,36 +81,17 @@ private func loadSharedConfig() -> SharedAppConfig {
 struct AppConfig {
     private static let sharedConfig = loadSharedConfig()
     
-    // Dynamic environment detection based on build settings
+    // Build-time environment configuration
     private static var isLocalServer: Bool {
-        // Simple runtime detection - check if we can reach local server
-        // If local server is available, use it; otherwise use production
-        // This is more reliable than build-time macros
-        
-        // For development builds, check if local services are running
-        let localURL = "http://192.168.1.133:3000"
-        
-        // Quick sync check - if we're in a local development environment
-        // the local server should be running
-        let url = URL(string: "\(localURL)/api/status")!
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 1.0 // Very quick timeout
-        
-        let semaphore = DispatchSemaphore(value: 0)
-        var isLocalAvailable = false
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let httpResponse = response as? HTTPURLResponse, 
-               httpResponse.statusCode == 200 {
-                isLocalAvailable = true
-            }
-            semaphore.signal()
-        }.resume()
-        
-        _ = semaphore.wait(timeout: .now() + 1.0)
-        
-        print("🔍 CONFIG: Local server check - \(isLocalAvailable ? "AVAILABLE" : "UNAVAILABLE")")
-        return isLocalAvailable
+        #if DEBUG
+        // Debug builds use local server
+        print("🔧 CONFIG: Using LOCAL server (Debug build)")
+        return true
+        #else
+        // Release builds use production server
+        print("🔧 CONFIG: Using PRODUCTION server (Release build)")
+        return false
+        #endif
     }
     
     // Server Configuration - dynamically loaded from shared config
