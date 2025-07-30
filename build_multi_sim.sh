@@ -60,7 +60,7 @@ fi
 # Configure simulators based on environment
 if [ "$ENV_MODE" = "LOCAL" ]; then
     ENV_DESC="local server (parallel development)"
-    # Local development uses iPhone 15 devices
+    # Local development uses iPhone 15 devices (reserved for local development)
     SIM1_UUID="AF307F12-A657-4D6A-8123-240CBBEC5B31"  # iPhone 15
     SIM2_UUID="86355D8A-560E-465D-8FDC-3D037BCA482B"  # iPhone 15 Pro
     SIM1_NAME="iPhone 15"
@@ -68,7 +68,7 @@ if [ "$ENV_MODE" = "LOCAL" ]; then
     USE_MULTI_SIM=true
 else
     ENV_DESC="AWS cloud infrastructure"
-    # AWS production uses iPhone SE
+    # AWS production uses iPhone SE (reserved for AWS production)
     SIM_UUID="046502C7-3D59-43F1-AA2D-EA2ADD0873B9"  # iPhone SE (3rd generation)
     SIM_NAME="iPhone SE (3rd generation)"
     USE_MULTI_SIM=false
