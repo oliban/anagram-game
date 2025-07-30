@@ -80,46 +80,6 @@ struct PhysicsGameView: View {
                                 Spacer()
                             }
                             
-                            // Debug Quake Buttons (for simulator testing)
-                            HStack(spacing: 8) {
-                                Button("🧪 Quake") {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.debugTriggerQuake(state: .normal)
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.orange.opacity(0.8))
-                                .cornerRadius(8)
-                                
-                                Button("💥 Super") {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.debugTriggerQuake(state: .superQuake)
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.red.opacity(0.8))
-                                .cornerRadius(8)
-                                
-                                Button("⏹️ Stop") {
-                                    if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                        scene.debugTriggerQuake(state: .none)
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.gray.opacity(0.8))
-                                .cornerRadius(8)
-                                
-                                Spacer()
-                            }
                         }
                         .padding(.leading, 16)
                         .padding(.top, 10) // Match progress bar's top padding
