@@ -57,9 +57,6 @@
 		9EA4F7102E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
 		9EA4F7112E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
 		9EA4F7122E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
-		9EA4F7142E3928C100E6B7D3 /* app-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7132E3928C100E6B7D3 /* app-config.json */; };
-		9EA4F7152E3928C100E6B7D3 /* app-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7132E3928C100E6B7D3 /* app-config.json */; };
-		9EA4F7162E3928C100E6B7D3 /* app-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7132E3928C100E6B7D3 /* app-config.json */; };
 		9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */; };
 		9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08512E192E3A00DB73E7 /* ContentView.swift */; };
 		9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08532E192E3A00DB73E7 /* Item.swift */; };
@@ -117,7 +114,6 @@
 		9EA4F7012E39210A00E6B7D3 /* LeaderboardService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LeaderboardService.swift; path = services/Network/LeaderboardService.swift; sourceTree = "<group>"; };
 		9EA4F7022E39210A00E6B7D3 /* DifficultyAnalysisService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DifficultyAnalysisService.swift; path = services/Network/DifficultyAnalysisService.swift; sourceTree = "<group>"; };
 		9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PlayerService.swift; path = services/Network/PlayerService.swift; sourceTree = "<group>"; };
-		9EA4F7132E3928C100E6B7D3 /* app-config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = "app-config.json"; sourceTree = "<group>"; };
 		9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Anagram Game.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameApp.swift; sourceTree = "<group>"; };
 		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -166,7 +162,6 @@
 		9EAA08432E192E3A00DB73E7 = {
 			isa = PBXGroup;
 			children = (
-				9EA4F7132E3928C100E6B7D3 /* app-config.json */,
 				9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */,
 				9EA4F6F82E3920FC00E6B7D3 /* NetworkConfiguration.swift */,
 				9EA4F6F72E3920FC00E6B7D3 /* NetworkModels.swift */,
@@ -385,7 +380,6 @@
 			files = (
 				9E4790752E27ED6A0078A247 /* difficulty-algorithm-config.json in Resources */,
 				9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */,
-				9EA4F7142E3928C100E6B7D3 /* app-config.json in Resources */,
 				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
 				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
 			);
@@ -395,7 +389,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9EA4F7152E3928C100E6B7D3 /* app-config.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,7 +396,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9EA4F7162E3928C100E6B7D3 /* app-config.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

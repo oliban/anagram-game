@@ -7,7 +7,7 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
 2. **Plan**: Create detailed implementation plan, verify with me before coding
 3. **Implement**: Write production-quality Swift code following all best practices
-4. **Test**: Deploy to both simulators with `build_multi_sim.sh`, monitor server logs, await my feedback
+4. **Test**: Deploy with `build_and_test.sh` (includes server health checks), monitor logs, await my feedback
 5. **Never commit without explicit approval**
 
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
@@ -49,23 +49,22 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 ## TESTING & DEPLOYMENT
 
 ### Build Script Usage (NEW)
-**Environment-aware device configuration:**
+**Enhanced workflow with automatic server health checking:**
 
 ```bash
-# Local development (default) - iPhone 15 + iPhone 15 Pro with local server
-./build_multi_sim.sh                    
-./build_multi_sim.sh local
+# Recommended: Enhanced build with server health checks
+./build_and_test.sh local              # Local development with health checks
+./build_and_test.sh aws                # AWS production with health checks
+./build_and_test.sh local --clean      # Clean build with health checks
 
-# AWS production - iPhone SE with AWS infrastructure  
-./build_multi_sim.sh aws
-
-# Force clean builds (removes cache)
-./build_multi_sim.sh local --clean
-./build_multi_sim.sh aws --clean
-
-# Legacy environment variable support still works
-LOCAL=1 ./build_multi_sim.sh
+# Direct build (legacy) - no server health checks
+./build_multi_sim.sh local             # Local development only
+./build_multi_sim.sh aws               # AWS production only
+./build_multi_sim.sh local --clean     # Force clean build
 ```
+
+**Enhanced Workflow**: Pre-build server health checks, auto-start services, AWS status validation, post-build verification.  
+**Detailed Guide**: See `docs/aws-production-server-management.md` for full AWS server management documentation.
 
 ### Microservices Architecture (Local Development)
 **All servers run as Docker containers with separate services:**
@@ -117,15 +116,15 @@ docker-compose -f docker-compose.services.yml down
 6. **Verify**: Monitor Docker logs, check API calls, confirm connections
 
 ### Production Deployment (AWS)
+**For AWS production server management, see `docs/aws-production-server-management.md`**
+
 1. **Infrastructure**: Use AWS CDK for ECS Fargate + Aurora Serverless v2
-2. **Secrets**: Configure AWS Secrets Manager for environment variables
-3. **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate:
-   ```bash
-   docker build --platform linux/amd64 -t image-name .
-   ```
-   **Common Error**: Building on Apple Silicon creates ARM images that fail with "image Manifest does not contain descriptor matching platform 'linux/amd64'"
+2. **Secrets**: Configure AWS Secrets Manager for environment variables  
+3. **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate
 4. **Deploy**: GitHub Actions CI/CD pipeline to AWS
 5. **Monitor**: CloudWatch logs and health checks
+
+**Quick Health Check**: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
 
 ## ARCHITECTURE & ENVIRONMENT
 

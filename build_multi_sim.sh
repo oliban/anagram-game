@@ -179,15 +179,11 @@ build_and_install() {
         export USE_LOCAL_SERVER=false
     fi
     
-    # Pass environment variable to xcodebuild
-    USE_LOCAL_SERVER_VALUE="${USE_LOCAL_SERVER:-false}"
-    
     xcodebuild -project "$PROJECT_FILE" \
                -scheme "$SCHEME" \
                -destination "platform=iOS Simulator,id=$uuid" \
                -configuration Debug \
                $BUILD_ACTION \
-               USE_LOCAL_SERVER="$USE_LOCAL_SERVER_VALUE" \
                -quiet
     
     if [ $? -eq 0 ]; then
