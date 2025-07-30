@@ -101,7 +101,8 @@ struct AppConfig {
     
     static var baseURL: String {
         let host = isLocalServer ? sharedConfig.development.host : sharedConfig.production.host
-        let url = "http://\(host):\(serverPort)"
+        // AWS ALB doesn't need port specification (uses standard port 80)
+        let url = host.contains("amazonaws.com") ? "http://\(host)" : "http://\(host):\(serverPort)"
         print("🔧 CONFIG: Using \(isLocalServer ? "LOCAL" : "AWS") server: \(url)")
         return url
     }
