@@ -1,24 +1,25 @@
-# Game Server Dockerfile
+# Use Node.js 18 Alpine for smaller image size
 FROM node:18-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Install curl for health checks and create non-root user for security
-RUN apk add --no-cache curl && \
-    addgroup -g 1001 -S nodejs && \
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Copy package files first for better Docker layer caching
-COPY services/game-server/package*.json ./
+COPY server/package*.json ./
 
 # Install production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy application code
-COPY --chown=nodejs:nodejs services/game-server/ ./
+# Copy server application code
+COPY server/ ./
 
-# Copy shared modules
-COPY --chown=nodejs:nodejs services/shared/ ./shared/
+# Copy shared directories needed by the server
+COPY shared/ ./shared/
+COPY web-dashboard/ ./web-dashboard/
 
 # Create necessary directories
 RUN mkdir -p logs && \
@@ -27,7 +28,7 @@ RUN mkdir -p logs && \
 # Switch to non-root user
 USER nodejs
 
-# Expose port
+# Expose port (Fargate will map this dynamically)
 EXPOSE 3000
 
 # Health check endpoint

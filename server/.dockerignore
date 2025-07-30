@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Logs
+*.log
+logs/
+server_*.log
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Database files
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Test files
+test/
+*.test.js
+
+# Git
+.git/
+.gitignore
+
+# Build artifacts
+build/
+dist/
+
+# Documentation
+*.md
+!README.md
