@@ -220,6 +220,7 @@ const phraseRoutesFactory = require('./routes/phrases');
 const contributionRoutesFactory = require('./routes/contributions');
 const leaderboardRoutesFactory = require('./routes/leaderboards');
 const debugRoutesFactory = require('./routes/debug');
+const adminRoutesFactory = require('./routes/admin');
 
 // Initialize and use route modules after dependencies are ready
 const initializeRoutes = () => {
@@ -230,6 +231,7 @@ const initializeRoutes = () => {
   app.use(contributionRoutesFactory(deps));
   app.use(leaderboardRoutesFactory(deps));
   app.use(debugRoutesFactory(deps));
+  app.use(adminRoutesFactory(deps));
 };
 
 // Call this after database initialization

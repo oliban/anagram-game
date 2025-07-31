@@ -237,7 +237,7 @@ class DatabasePhrase {
           p.is_global,
           p.language,
           p.created_by_player_id as "senderId",
-          COALESCE(pl.name, 'Unknown Player') as "senderName",
+          COALESCE(pl.name, 'System') as "senderName",
           pp.target_player_id as "targetId",
           false as "isConsumed",
           'targeted' as phrase_type
@@ -288,7 +288,7 @@ class DatabasePhrase {
             p.is_global,
             p.language,
             p.created_by_player_id as "senderId",
-            COALESCE(pl.name, 'Unknown Player') as "senderName",
+            COALESCE(pl.name, 'System') as "senderName",
             null as "targetId",
             false as "isConsumed",
             'global' as phrase_type
