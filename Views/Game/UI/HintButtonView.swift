@@ -128,60 +128,26 @@ struct HintButtonView: View {
             isLoading = true
             errorMessage = nil
             
-            // Handle local phrases differently
-            if phraseId.hasPrefix("local-") {
-                await MainActor.run {
-                    // Get the actual difficulty score from gameModel
-                    let actualScore = gameModel.phraseDifficulty
-                    
-                    // Create a basic hint status for local phrases with actual scoring
-                    // Always start with fresh hints for each game session
-                    let nextHintScore = GameModel.applyHintPenalty(baseScore: actualScore, hintsUsed: 1)
-                    let newHintStatus = HintStatus(
-                        hintsUsed: [],
-                        nextHintLevel: 1,
-                        hintsRemaining: 3,
-                        currentScore: actualScore,
-                        nextHintScore: nextHintScore,
-                        canUseNextHint: true
-                    )
-                    self.hintStatus = newHintStatus
-                    self.isLoading = false
-                }
-            } else {
-                do {
-                    async let statusTask = networkManager.getHintStatus(phraseId: phraseId)
-                    async let previewTask = networkManager.getPhrasePreview(phraseId: phraseId)
-                    
-                    let status = await statusTask
-                    let preview = await previewTask
-                    
-                    await MainActor.run {
-                        // Override server hint status to always provide fresh hints for each game
-                        if let originalStatus = status {
-                            let freshHintStatus = HintStatus(
-                                hintsUsed: [],
-                                nextHintLevel: 1,
-                                hintsRemaining: 3,
-                                currentScore: originalStatus.currentScore,
-                                nextHintScore: originalStatus.nextHintScore,
-                                canUseNextHint: true
-                            )
-                            self.hintStatus = freshHintStatus
-                        } else {
-                            self.hintStatus = status
-                        }
-                        
-                        self.scorePreview = preview?.phrase.scorePreview
-                        
-                        // Store difficulty in GameModel for local score calculation
-                        if let difficulty = preview?.phrase.difficultyLevel {
-                            self.gameModel.phraseDifficulty = difficulty
-                        }
-                        
-                        self.isLoading = false
-                    }
-                }
+            // Use client-side hint system for all phrases (local and network)
+            await MainActor.run {
+                // Get the actual difficulty score from gameModel
+                let actualScore = gameModel.phraseDifficulty
+                
+                // Create client-side hint status for all phrases
+                // Always start with fresh hints for each game session
+                let nextHintScore = GameModel.applyHintPenalty(baseScore: actualScore, hintsUsed: 1)
+                let newHintStatus = HintStatus(
+                    hintsUsed: [],
+                    nextHintLevel: 1,
+                    hintsRemaining: 3,
+                    currentScore: actualScore,
+                    nextHintScore: nextHintScore,
+                    canUseNextHint: true
+                )
+                self.hintStatus = newHintStatus
+                self.isLoading = false
+                
+                print("🔍 HINT: Client-side hint system initialized for phrase \(phraseId) with score \(actualScore)")
             }
         }
     }
@@ -195,16 +161,22 @@ struct HintButtonView: View {
         Task {
             isLoading = true
             
-            // Get text clue from pre-loaded phrase data (no network calls needed!)
+            // Send basic debug to verify hint button is working
+            await DebugLogger.shared.sendToServer("iOS_HINT_START: useNextHint() called for level \(nextLevel)")
+            
+            // Get text clue from database - no fallbacks, clues should always exist
             let textClue: String
-            if let customPhrase = gameModel.currentCustomPhrase,
-               !customPhrase.clue.isEmpty {
+            if let customPhrase = gameModel.currentCustomPhrase {
                 textClue = customPhrase.clue
-            } else if let localClue = gameModel.getCurrentLocalClue(),
-                      !localClue.isEmpty {
+                print("🔍 HINT: Using database clue: '\(textClue)' for phrase '\(customPhrase.content)'")
+            } else if let localClue = gameModel.getCurrentLocalClue() {
                 textClue = localClue
+                print("🔍 HINT: Using local clue: '\(textClue)'")
+                await DebugLogger.shared.sendToServer("iOS_HINT_DEBUG: Using local clue: '\(textClue)'")
             } else {
-                textClue = generateLocalTextHint(sentence: gameModel.currentSentence)
+                textClue = "No clue available - database error"
+                print("❌ HINT: No clue available! currentCustomPhrase: \(gameModel.currentCustomPhrase?.content ?? "nil")")
+                await DebugLogger.shared.sendToServer("iOS_HINT_ERROR: No clue available! currentCustomPhrase: \(gameModel.currentCustomPhrase?.content ?? "nil")")
             }
             
             await MainActor.run {
@@ -227,6 +199,7 @@ struct HintButtonView: View {
                     // Hide button and show smoke effect for level 3
                     level3ClueText = textClue
                     showSmokeEffect = true
+                    print("🎯 HINT TILE: About to spawn message tile with text: '\(textClue)' (length: \(textClue.count))")
                     scene.spawnMessageTile(message: textClue)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         showSmokeEffect = false
@@ -255,6 +228,11 @@ struct HintButtonView: View {
                 scene.updateLanguageTile()
                 
                 isLoading = false
+            }
+            
+            // Send final debug info to server after UI updates
+            if nextLevel == 3 {
+                await DebugLogger.shared.sendToServer("iOS_TILE_DEBUG: Level 3 hint completed, tile spawned with text: '\(textClue)' (length: \(textClue.count))")
             }
         }
     }

@@ -131,8 +131,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     let difficultyLevel: Int // Server-provided difficulty score
     
     private enum CodingKeys: String, CodingKey {
-        case id, content, senderId, targetId, createdAt, isConsumed, senderName, language
-        case clue = "hint" // Server sends "hint" but we store as "clue"
+        case id, content, senderId, targetId, createdAt, isConsumed, senderName, language, clue
         case difficultyLevel
     }
     
@@ -145,7 +144,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
         isConsumed = try container.decode(Bool.self, forKey: .isConsumed)
         senderName = try container.decodeIfPresent(String.self, forKey: .senderName) ?? "Unknown Player"
         language = try container.decodeIfPresent(String.self, forKey: .language) ?? "en" // Default to English
-        clue = try container.decodeIfPresent(String.self, forKey: .clue) ?? "" // Server sends "hint" field, default to empty if missing
+        clue = try container.decodeIfPresent(String.self, forKey: .clue) ?? "" // Server sends "clue" field, default to empty if missing
         difficultyLevel = try container.decodeIfPresent(Int.self, forKey: .difficultyLevel) ?? 50 // Default to medium difficulty if missing
         
         // Handle date parsing - make optional since server might not include it
