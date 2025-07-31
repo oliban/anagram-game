@@ -338,6 +338,88 @@ class ScoringSystem {
       throw error;
     }
   }
+
+  /**
+   * Get player's rank in specific leaderboard
+   */
+  static async getPlayerRank(playerId, period = 'total') {
+    try {
+      const client = await pool.connect();
+      try {
+        // Calculate period start date based on period type
+        let periodStart;
+        const now = new Date();
+        
+        switch (period) {
+          case 'daily':
+            periodStart = now.toISOString().split('T')[0];
+            break;
+          case 'weekly':
+            const dayOfWeek = now.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + mondayOffset);
+            periodStart = monday.toISOString().split('T')[0];
+            break;
+          case 'total':
+            periodStart = '1970-01-01';
+            break;
+        }
+
+        const result = await client.query(
+          `SELECT rank_position
+           FROM leaderboards 
+           WHERE score_period = $1 
+           AND period_start = $2
+           AND player_id = $3`,
+          [period, periodStart, playerId]
+        );
+
+        if (result.rows.length === 0) {
+          return null; // Player not found in leaderboard
+        }
+
+        return result.rows[0].rank_position;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('❌ SCORING: Error getting player rank:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Record phrase completion with scoring
+   */
+  static async recordPhraseCompletion(playerId, phraseId, finalScore, hintsUsed, completionTime) {
+    try {
+      const client = await pool.connect();
+      try {
+        // Record the completion in completed_phrases table
+        await client.query(
+          `INSERT INTO completed_phrases (player_id, phrase_id, score, completion_time_ms, completed_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (player_id, phrase_id) DO UPDATE SET
+           score = EXCLUDED.score,
+           completion_time_ms = EXCLUDED.completion_time_ms,
+           completed_at = EXCLUDED.completed_at`,
+          [playerId, phraseId, finalScore, completionTime]
+        );
+
+        // Update player score aggregations
+        await this.updatePlayerScores(playerId);
+
+        console.log(`📊 SCORING: Recorded completion for player ${playerId}: ${finalScore} points`);
+        return true;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('❌ SCORING: Error recording phrase completion:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = ScoringSystem;

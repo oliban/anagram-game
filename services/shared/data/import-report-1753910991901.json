@@ -1,0 +1,102 @@
+{
+  "import": {
+    "timestamp": "2025-07-30T21:29:51.901Z",
+    "total_phrases": 26,
+    "successful": 0,
+    "failed": 26,
+    "duplicates": 0,
+    "success_rate": 0
+  },
+  "metadata": {
+    "input_file": "./server/data/analyzed-sv-50-100-50-manual.json",
+    "dry_run": false,
+    "batch_size": 50,
+    "use_api": true,
+    "original_count": 26,
+    "quality_filtered_count": 26
+  },
+  "errors": [
+    {
+      "phrase": "blå himmel",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "kall vinter",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "varm sommar",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "svart katt",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "glad flicka",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "gammal man",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "snabb häst",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "långt tåg",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "gammal stad",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "stark kaffe",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "söt kaka",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "mjuk kudde",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "lätt fjäder",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "mörk natt",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "tom flaska",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "öppen dörr",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "stängd fönster",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "kall glass",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "gul tulpan",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    },
+    {
+      "phrase": "grön gräs",
+      "error": "API error (404): <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/phrases/create</pre>\n</body>\n</html>\n"
+    }
+  ],
+  "difficulty_distribution": {},
+  "sample_imported": []
+}

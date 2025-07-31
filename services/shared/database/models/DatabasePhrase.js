@@ -237,20 +237,17 @@ class DatabasePhrase {
           p.is_global,
           p.language,
           p.created_by_player_id as "senderId",
-          COALESCE(
-            cl.contributor_name,
-            pl.name, 
-            'Unknown Player'
-          ) as "senderName",
+          COALESCE(pl.name, 'Unknown Player') as "senderName",
           pp.target_player_id as "targetId",
           false as "isConsumed",
           'targeted' as phrase_type
         FROM phrases p
         JOIN player_phrases pp ON p.id = pp.phrase_id
         LEFT JOIN players pl ON p.created_by_player_id = pl.id
-        LEFT JOIN contribution_links cl ON p.contribution_link_id = cl.id
+        LEFT JOIN players pl2 ON FALSE
         WHERE pp.target_player_id = $1 
           AND pp.is_delivered = false
+          AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
         ORDER BY p.created_at ASC
         LIMIT 10
       `, [playerId]);
@@ -291,17 +288,13 @@ class DatabasePhrase {
             p.is_global,
             p.language,
             p.created_by_player_id as "senderId",
-            COALESCE(
-              cl.contributor_name,
-              pl.name, 
-              'Unknown Player'
-            ) as "senderName",
+            COALESCE(pl.name, 'Unknown Player') as "senderName",
             null as "targetId",
             false as "isConsumed",
             'global' as phrase_type
           FROM phrases p
           LEFT JOIN players pl ON p.created_by_player_id = pl.id
-          LEFT JOIN contribution_links cl ON p.contribution_link_id = cl.id
+          LEFT JOIN players pl2 ON FALSE
           WHERE p.is_global = true 
             AND p.is_approved = true
             AND (p.created_by_player_id IS NULL OR p.created_by_player_id != $1)

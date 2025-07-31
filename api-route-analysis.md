@@ -124,17 +124,17 @@ Analysis of iOS app API calls vs refactored backend routes reveals **critical mi
 3. **✅ Updated iOS app** - Removed server-side hint calls, uses database clues directly
 4. **✅ Verified phrase completion flow** - Uses new `/api/phrases/:phraseId/complete` endpoint
 
-### Phase 3: Cleanup (Medium Priority)
-1. **Remove confirmed unused routes** from game server:
-   - `/api/config` (iOS uses `/api/config/levels`)
-   - `/api/admin/config` (no consumers)
-   - `/api/phrases/global` (not used by iOS)
-   - `/api/phrases/:phraseId/approve` (no consumers)
-   - `/api/phrases/download/:playerId` (not implemented in iOS)
-   - `/api/contribution/*` (legacy, replaced by Link Generator Service)
-   - `/api/leaderboards/:period` (iOS uses singular form)
-   - `/api/stats/global` (no consumers)
-   - `/api/scores/refresh` (no consumers)
+### Phase 3: Cleanup (Medium Priority) ✅ COMPLETED
+1. ✅ **Removed confirmed unused routes** from game server:
+   - ✅ `/api/config` (iOS uses `/api/config/levels`)
+   - ✅ `/api/admin/config` (no consumers)
+   - ✅ `/api/phrases/global` (not used by iOS)
+   - ✅ `/api/phrases/:phraseId/approve` (no consumers)
+   - ✅ `/api/phrases/download/:playerId` (not implemented in iOS)
+   - `/api/contribution/*` (legacy, replaced by Link Generator Service - **NOT REMOVED**: Still used by existing web dashboard)
+   - ✅ `/api/leaderboards/:period` (iOS uses singular form)
+   - ✅ `/api/stats/global` (no consumers)
+   - ✅ `/api/scores/refresh` (no consumers)
 2. **Keep web dashboard routes** but decide if they should remain in game server or move to web dashboard service:
    - `/monitoring` and `/contribute/:token` (UI pages)
    - `/api/stats` and `/api/players/online` (used by web dashboard frontend)

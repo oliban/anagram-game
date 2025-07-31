@@ -10,9 +10,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { query, pool } = require('../database/connection');
-// Use built-in fetch (Node.js 18+) for API calls
-const fetch = global.fetch;
+// Use built-in fetch (Node.js 18+) or fallback to node-fetch
+const fetch = global.fetch || require('node-fetch');
 
 // Configuration
 const CONFIG = {
@@ -20,8 +19,7 @@ const CONFIG = {
   duplicateCheck: true,
   validateSchema: true,
   outputDir: path.join(__dirname, '../data'),
-  apiUrl: 'http://localhost:3000',
-  systemUserId: '11111111-1111-1111-1111-111111111111' // SystemImporter for Docker database imports
+  apiUrl: 'http://localhost:3000'
 };
 
 /**
@@ -76,102 +74,6 @@ function validatePhraseData(phrase) {
 }
 
 /**
- * Check if phrase already exists in database
- */
-async function checkPhraseExists(phrase) {
-  try {
-    const result = await query(`
-      SELECT id, content, difficulty_level 
-      FROM phrases 
-      WHERE LOWER(TRIM(content)) = LOWER(TRIM($1))
-      LIMIT 1
-    `, [phrase.phrase]);
-    
-    return result.rows.length > 0 ? result.rows[0] : null;
-  } catch (error) {
-    console.warn(`⚠️ Error checking phrase existence: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Insert single phrase into database
- */
-async function insertPhrase(phrase, dryRun = false) {
-  const validation = validatePhraseData(phrase);
-  if (validation.length > 0) {
-    return {
-      success: false,
-      error: `Validation failed: ${validation.join(', ')}`,
-      phrase: phrase.phrase
-    };
-  }
-  
-  // Check for duplicates if enabled
-  if (CONFIG.duplicateCheck) {
-    const existing = await checkPhraseExists(phrase);
-    if (existing) {
-      return {
-        success: false,
-        error: `Duplicate phrase (existing ID: ${existing.id})`,
-        phrase: phrase.phrase,
-        isDuplicate: true
-      };
-    }
-  }
-  
-  if (dryRun) {
-    return {
-      success: true,
-      phrase: phrase.phrase,
-      action: 'would_insert',
-      dryRun: true
-    };
-  }
-  
-  try {
-    const result = await query(`
-      INSERT INTO phrases (
-        content, 
-        hint, 
-        difficulty_level, 
-        is_global, 
-        is_approved, 
-        created_by_player_id, 
-        phrase_type, 
-        language
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, content, difficulty_level
-    `, [
-      phrase.phrase,
-      phrase.clue,
-      Math.round(phrase.difficulty),
-      true, // is_global
-      true, // is_approved
-      null, // created_by_player_id (system generated)
-      'global', // phrase_type
-      phrase.language || 'en'
-    ]);
-    
-    const newPhrase = result.rows[0];
-    return {
-      success: true,
-      phrase: phrase.phrase,
-      id: newPhrase.id,
-      difficulty: newPhrase.difficulty_level,
-      action: 'inserted'
-    };
-    
-  } catch (error) {
-    return {
-      success: false,
-      error: `Database error: ${error.message}`,
-      phrase: phrase.phrase
-    };
-  }
-}
-
-/**
  * Insert single phrase via API (handles scoring automatically)
  */
 async function insertPhraseViaAPI(phrase, dryRun = false) {
@@ -204,7 +106,7 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
         hint: phrase.clue,
         language: phrase.language || 'en',
         isGlobal: true,
-        senderId: CONFIG.systemUserId,
+        senderId: "7949d9d4-6e31-428d-b2be-7b1efdc1342a", // System import user
         phraseType: 'global'
       })
     });
@@ -222,8 +124,8 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
     return {
       success: true,
       phrase: phrase.phrase,
-      id: result.phrase.id,
-      difficulty: result.phrase.difficultyLevel,
+      id: result.id,
+      difficulty: result.difficultyLevel,
       action: 'inserted_via_api'
     };
     
@@ -268,9 +170,7 @@ async function importPhrases(phrases, options = {}) {
     
     // Process batch
     for (const phrase of batch) {
-      const result = useAPI 
-        ? await insertPhraseViaAPI(phrase, dryRun)
-        : await insertPhrase(phrase, dryRun);
+      const result = await insertPhraseViaAPI(phrase, dryRun);
       results.details.push(result);
       
       if (result.success) {
@@ -338,169 +238,6 @@ function generateImportReport(results, metadata = {}) {
 }
 
 /**
- * Clean duplicate phrases from database
- */
-async function cleanDuplicates(dryRun = false) {
-  console.log(`🧹 ${dryRun ? 'Simulating' : 'Starting'} duplicate cleanup...`);
-  
-  try {
-    // Find duplicates
-    const duplicatesResult = await query(`
-      SELECT content, array_agg(id ORDER BY id) as ids, COUNT(*) as count
-      FROM phrases 
-      WHERE is_global = true 
-      GROUP BY LOWER(TRIM(content))
-      HAVING COUNT(*) > 1
-      ORDER BY COUNT(*) DESC
-    `);
-    
-    const duplicates = duplicatesResult.rows;
-    console.log(`📊 Found ${duplicates.length} sets of duplicate phrases`);
-    
-    let totalRemoved = 0;
-    
-    if (!dryRun) {
-      for (const duplicate of duplicates) {
-        const ids = duplicate.ids;
-        const keepId = ids[0]; // Keep the first one
-        const removeIds = ids.slice(1); // Remove the rest
-        
-        console.log(`🗑️  "${duplicate.content}": keeping ID ${keepId}, removing ${removeIds.length} duplicates`);
-        
-        // Remove duplicates
-        for (const id of removeIds) {
-          await query('DELETE FROM phrases WHERE id = $1', [id]);
-          totalRemoved++;
-        }
-      }
-    } else {
-      totalRemoved = duplicates.reduce((sum, dup) => sum + (dup.count - 1), 0);
-    }
-    
-    console.log(`✅ ${dryRun ? 'Would remove' : 'Removed'} ${totalRemoved} duplicate phrases`);
-    return totalRemoved;
-    
-  } catch (error) {
-    console.error('❌ Error cleaning duplicates:', error.message);
-    throw error;
-  }
-}
-
-/**
- * Verify import success by checking database
- */
-async function verifyImportSuccess(expectedCount, report) {
-  console.log(`\n🔍 Verifying import success...`);
-  
-  try {
-    // Get database stats before and after
-    const currentStats = await getDatabaseStats();
-    
-    // Check total phrases
-    const actualImported = report.import.successful;
-    const verificationResults = {
-      success: true,
-      issues: []
-    };
-    
-    // Verify expected vs actual
-    if (actualImported !== expectedCount) {
-      verificationResults.success = false;
-      verificationResults.issues.push(`Expected ${expectedCount} phrases, but ${actualImported} were imported`);
-    }
-    
-    // Verify database consistency
-    if (report.import.success_rate < 100) {
-      verificationResults.issues.push(`Import success rate was ${report.import.success_rate}%, some phrases failed`);
-    }
-    
-    if (report.import.failed > 0) {
-      verificationResults.issues.push(`${report.import.failed} phrases failed to import`);
-    }
-    
-    // Sample verification - check if some imported phrases exist in database
-    if (report.sample_imported.length > 0) {
-      const samplePhrase = report.sample_imported[0];
-      const checkResult = await query('SELECT id FROM phrases WHERE content = $1 LIMIT 1', [samplePhrase.phrase]);
-      
-      if (checkResult.rows.length === 0) {
-        verificationResults.success = false;
-        verificationResults.issues.push(`Sample phrase "${samplePhrase.phrase}" not found in database`);
-      }
-    }
-    
-    // Report verification results
-    if (verificationResults.success && verificationResults.issues.length === 0) {
-      console.log(`✅ Import verification PASSED`);
-      console.log(`   ✓ ${actualImported} phrases successfully imported`);
-      console.log(`   ✓ Database consistency verified`);
-      console.log(`   ✓ Sample phrases found in database`);
-      console.log(`   ✓ Current database total: ${currentStats.total} phrases`);
-    } else {
-      console.log(`❌ Import verification FAILED`);
-      verificationResults.issues.forEach(issue => {
-        console.log(`   ✗ ${issue}`);
-      });
-      if (verificationResults.success) console.log(`⚠️  Import succeeded but with warnings`);
-    }
-    
-    return verificationResults;
-    
-  } catch (error) {
-    console.log(`❌ Import verification ERROR: ${error.message}`);
-    return { success: false, issues: [`Verification failed: ${error.message}`] };
-  }
-}
-
-/**
- * Get database statistics
- */
-async function getDatabaseStats() {
-  try {
-    const totalResult = await query(`
-      SELECT COUNT(*) as total FROM phrases WHERE is_global = true AND is_approved = true
-    `);
-    
-    const difficultyResult = await query(`
-      SELECT 
-        CASE 
-          WHEN difficulty_level <= 50 THEN '0-50'
-          WHEN difficulty_level <= 100 THEN '51-100' 
-          WHEN difficulty_level <= 150 THEN '101-150'
-          WHEN difficulty_level <= 200 THEN '151-200'
-          ELSE '200+'
-        END as range,
-        COUNT(*) as count,
-        AVG(difficulty_level) as avg_difficulty
-      FROM phrases 
-      WHERE is_global = true AND is_approved = true
-      GROUP BY 
-        CASE 
-          WHEN difficulty_level <= 50 THEN '0-50'
-          WHEN difficulty_level <= 100 THEN '51-100'
-          WHEN difficulty_level <= 150 THEN '101-150'
-          WHEN difficulty_level <= 200 THEN '151-200'
-          ELSE '200+'
-        END
-      ORDER BY range
-    `);
-    
-    return {
-      total: parseInt(totalResult.rows[0].total),
-      by_difficulty: difficultyResult.rows.map(row => ({
-        range: row.range,
-        count: parseInt(row.count),
-        average_difficulty: parseFloat(parseFloat(row.avg_difficulty).toFixed(1))
-      }))
-    };
-    
-  } catch (error) {
-    console.error('❌ Error getting database stats:', error.message);
-    return null;
-  }
-}
-
-/**
  * Parse command line arguments
  */
 function parseArgs() {
@@ -510,10 +247,8 @@ function parseArgs() {
     output: null,
     dryRun: false,
     import: false,
-    cleanDuplicates: false,
-    stats: false,
     batchSize: CONFIG.batchSize,
-    useAPI: false,
+    useAPI: true, // Default to API mode
     help: false
   };
   
@@ -530,12 +265,6 @@ function parseArgs() {
         break;
       case '--import':
         parsed.import = true;
-        break;
-      case '--clean-duplicates':
-        parsed.cleanDuplicates = true;
-        break;
-      case '--stats':
-        parsed.stats = true;
         break;
       case '--batch-size':
         parsed.batchSize = parseInt(args[++i]);
@@ -565,24 +294,19 @@ Usage:
 
 Actions:
   --import               Import phrases from JSON file
-  --clean-duplicates     Remove duplicate phrases from database
-  --stats               Show database statistics
 
 Options:
   --input FILE          Input JSON file with analyzed phrases
   --output FILE         Output report file (default: auto-generated)
   --dry-run            Simulate import without making changes
-  --use-api            Use API endpoints for import (handles automatic scoring)
+  --use-api            Use API endpoints for import (handles automatic scoring) [DEFAULT]
   --batch-size SIZE     Number of phrases per batch (default: 50)
   --help, -h           Show this help
 
 Examples:
-  node phrase-importer.js --stats
   node phrase-importer.js --input analyzed-phrases.json --dry-run
   node phrase-importer.js --input analyzed-phrases.json --import
   node phrase-importer.js --input analyzed-phrases.json --import --use-api
-  node phrase-importer.js --clean-duplicates --dry-run
-  node phrase-importer.js --clean-duplicates
 `);
 }
 
@@ -595,26 +319,6 @@ async function main() {
   if (args.help) {
     showHelp();
     process.exit(0);
-  }
-  
-  // Show database stats
-  if (args.stats) {
-    console.log('📊 Database Statistics:');
-    const stats = await getDatabaseStats();
-    if (stats) {
-      console.log(`   Total phrases: ${stats.total}`);
-      console.log('   Distribution by difficulty:');
-      stats.by_difficulty.forEach(range => {
-        console.log(`     ${range.range}: ${range.count} phrases (avg: ${range.average_difficulty})`);
-      });
-    }
-    return;
-  }
-  
-  // Clean duplicates
-  if (args.cleanDuplicates) {
-    await cleanDuplicates(args.dryRun);
-    return;
   }
   
   // Import phrases
@@ -671,6 +375,7 @@ async function main() {
         input_file: args.input,
         dry_run: args.dryRun,
         batch_size: args.batchSize,
+        use_api: args.useAPI,
         original_count: phrases.length,
         quality_filtered_count: qualityPhrases.length
       });
@@ -706,15 +411,6 @@ async function main() {
         console.log(`\n📄 Report saved: ${outputFile}`);
       }
       
-      // Verify import success (only for live imports)
-      if (!args.dryRun && report.import.total_phrases > 0) {
-        const verification = await verifyImportSuccess(qualityPhrases.length, report);
-        if (!verification.success) {
-          console.log(`\n⚠️  Import completed but verification found issues!`);
-          process.exit(1);
-        }
-      }
-      
       console.log(`\n✅ Import ${args.dryRun ? 'simulation' : ''} complete!`);
       
     } catch (error) {
@@ -738,7 +434,5 @@ if (require.main === module) {
 
 module.exports = {
   importPhrases,
-  cleanDuplicates,
-  getDatabaseStats,
   validatePhraseData
 };

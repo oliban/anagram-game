@@ -1,0 +1,102 @@
+{
+  "import": {
+    "timestamp": "2025-07-30T21:59:16.835Z",
+    "total_phrases": 26,
+    "successful": 0,
+    "failed": 26,
+    "duplicates": 0,
+    "success_rate": 0
+  },
+  "metadata": {
+    "input_file": "../../server/data/analyzed-sv-50-100-50-manual.json",
+    "dry_run": false,
+    "batch_size": 50,
+    "use_api": true,
+    "original_count": 26,
+    "quality_filtered_count": 26
+  },
+  "errors": [
+    {
+      "phrase": "blå himmel",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "kall vinter",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "varm sommar",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "svart katt",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "glad flicka",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "gammal man",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "snabb häst",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "långt tåg",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "gammal stad",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "stark kaffe",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "söt kaka",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "mjuk kudde",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "lätt fjäder",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "mörk natt",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "tom flaska",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "öppen dörr",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "stängd fönster",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "kall glass",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "gul tulpan",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    },
+    {
+      "phrase": "grön gräs",
+      "error": "API error (400): {\"error\":\"Sender ID is required\"}"
+    }
+  ],
+  "difficulty_distribution": {},
+  "sample_imported": []
+}
