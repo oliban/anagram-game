@@ -119,21 +119,8 @@ struct PhysicsGameView: View {
                     
                     
                     
-                    // Celebration text - Large and visible
-                    if !celebrationMessage.isEmpty {
-                        Text(celebrationMessage)
-                            .font(.system(size: 20, weight: .black))
-                            .foregroundColor(.yellow)
-                            .shadow(color: .red, radius: 8, x: 4, y: 4)
-                            .padding(30)
-                            .background(Color.black.opacity(0.8))
-                            .cornerRadius(20)
-                            .scaleEffect(2.0)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color.white.opacity(0.1))
-                            .offset(y: -250)
-                            .zIndex(3000)
-                    }
+                    // Celebration is now handled entirely in SpriteKit scene
+                    // No SwiftUI text overlay needed
                     
                     
                     
@@ -218,7 +205,28 @@ struct PhysicsGameView: View {
                         .animation(.easeInOut(duration: 0.15), value: isJolting)
                         .padding(.leading, 20)
                         
-                        Spacer() // Push skip button to the right
+                        Spacer() // Push buttons to the right
+                        
+                        // Debug celebration button (only in debug builds)
+                        #if DEBUG
+                        Button(action: {
+                            print("🎉 DEBUG: Triggering celebration manually!")
+                            gameScene?.triggerCelebration()
+                        }) {
+                            HStack {
+                                Image(systemName: "party.popper")
+                                Text("🎉")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.purple.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                        .padding(.trailing, 8)
+                        #endif
                         
                         // Bottom-right: Skip button (moved from left)
                         Button(action: {
@@ -474,15 +482,11 @@ struct PhysicsGameView: View {
             // Set gameScene reference
             gameScene = sharedScene
             
-            // Set up celebration callback
+            // Set up celebration callback - no longer displays text messages
             sharedScene.onCelebration = { message in
-                DispatchQueue.main.async {
-                    self.celebrationMessage = message
-                    // Clear after delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                        self.celebrationMessage = ""
-                    }
-                }
+                // Celebration is now handled entirely in SpriteKit scene
+                // No SwiftUI text overlay needed
+                print("🎊 Celebration triggered: \(message)")
             }
             
             // Set up jolt callback for UI buttons
@@ -536,6 +540,20 @@ struct PhysicsGameView: View {
 class PhysicsGameScene: SKScene, MessageTileSpawner {
     // MARK: - Scale Factor for Easy Experimentation
     static let componentScaleFactor: CGFloat = 0.90  // 0.90 = 10% smaller, 1.1 = 10% larger (public for external access)
+    
+    // Congratulatory messages for celebration
+    private static let congratulatoryMessages = [
+        "YEY you rock!",
+        "Fantastic!",
+        "Awesome job!",
+        "Brilliant!",
+        "You're amazing!",
+        "Perfect!",
+        "Outstanding!",
+        "Incredible!",
+        "Well done!",
+        "Spectacular!"
+    ]
     
     private let gameModel: GameModel
     var motionManager: CMMotionManager?
@@ -1940,6 +1958,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         if isComplete {
             print("🎉 VICTORY TRIGGERED!")
             if !celebrationText.contains("🎉") { // Only celebrate once
+                // IMMEDIATELY drop shelves to the floor when victory is achieved
+                animateShelvesToFloor()
+                
                 gameModel.completeGame() // Calculate score immediately
                 // Trigger celebration on next run loop to ensure score is updated
                 DispatchQueue.main.async {
@@ -2113,55 +2134,47 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         return generateCombinations(remainingLetters: targetLetters, currentCombination: [], usedTiles: Set())
     }
     
-    private func triggerCelebration() {
-        // Random congratulatory messages
-        let messages = [
-            "YEY you rock!",
-            "Fantastic!",
-            "Awesome job!",
-            "Brilliant!",
-            "You're amazing!",
-            "Perfect!",
-            "Outstanding!",
-            "Incredible!",
-            "Well done!",
-            "Spectacular!"
-        ]
+    func triggerCelebration() {
+        print("🎊 Starting enhanced celebration sequence!")
         
-        let randomMessage = messages.randomElement() ?? "Congratulations!"
-        print("🎊 DEBUG: gameModel.currentScore = \(gameModel.currentScore)")
-        print("🎊 DEBUG: gameModel.phraseDifficulty = \(gameModel.phraseDifficulty)")
-        print("🎊 DEBUG: gameModel.hintsUsed = \(gameModel.hintsUsed)")
-        let scoreText = gameModel.currentScore > 0 ? "\n\(gameModel.currentScore) points!" : ""
-        let fullMessage = "\(randomMessage)\(scoreText)"
-        print("🎉 \(fullMessage)")
+        // Clear old celebration text - no more text displays
+        celebrationText = ""
         
-        // Show celebration message on screen
-        celebrationText = "🎉 \(fullMessage)"
-        print("🎊 CELEBRATION TEXT SET: '\(celebrationText)'")
-        print("🎊 CELEBRATION TEXT EMPTY? \(celebrationText.isEmpty)")
-        
-        // Trigger SwiftUI celebration display
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.onCelebration?(fullMessage)
-            print("🎊 TRIGGERED SWIFTUI CELEBRATION: '\(fullMessage)'")
-        }
-        
-        // Create fireworks effect
-        createFireworks()
-        
-        // Automatically start the next game after a delay
-        let startNewGameAction = SKAction.sequence([
-            SKAction.wait(forDuration: 4.0), // Allow time for celebration
+        // Start the cinematic celebration sequence
+        let celebrationSequence = SKAction.sequence([
+            // Phase 1: Drop celebration tiles and awesome message immediately
             SKAction.run { [weak self] in
-                self?.startNewGame()
+                self?.dropCelebrationTiles()
+                self?.dropAwesomeTile()
+            },
+            
+            // Wait 1.5 seconds before fade and fireworks
+            SKAction.wait(forDuration: 1.5),
+            
+            // Phase 2: Fade to black and start fireworks (1.0 seconds)
+            SKAction.run { [weak self] in
+                self?.createFadeToBlackOverlay()
+                self?.createRocketFireworks()
+            },
+            SKAction.wait(forDuration: 1.0),
+            
+            // Phase 3: Wait for fireworks to finish (3.0 seconds)
+            SKAction.wait(forDuration: 3.0),
+            
+            // Phase 4: Start new game with dramatic bookshelf drop (2.0 seconds)
+            SKAction.run { [weak self] in
+                self?.startNewGameWithBookshelfDrop()
+            },
+            SKAction.wait(forDuration: 2.0),
+            
+            // Phase 5: Clean up celebration tiles and fade back to normal (1.0 seconds)
+            SKAction.run { [weak self] in
+                self?.cleanupCelebrationTiles()
+                self?.removeFadeOverlay()
             }
         ])
-        run(startNewGameAction)
         
-        // Play celebration sound effect (if we had audio)
-        // AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) // Haptic feedback
+        run(celebrationSequence, withKey: "celebrationSequence")
     }
     
     private func startNewGame() {
@@ -2176,67 +2189,313 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         }
     }
     
-    private func createFireworks() {
-        print("🎆 Creating fireworks!")
+    private var fadeOverlay: SKSpriteNode?
+    
+    private func createFadeToBlackOverlay() {
+        // Remove existing overlay if any
+        fadeOverlay?.removeFromParent()
         
+        // Create full-screen black overlay
+        fadeOverlay = SKSpriteNode(color: .black, size: size)
+        fadeOverlay?.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        fadeOverlay?.zPosition = 200
+        fadeOverlay?.alpha = 0
+        
+        addChild(fadeOverlay!)
+        
+        // Animate fade to black
+        let fadeIn = SKAction.fadeAlpha(to: 0.85, duration: 0.8)
+        fadeOverlay?.run(fadeIn)
+        
+        print("🌑 Fade to black overlay created")
+    }
+    
+    private func removeFadeOverlay() {
+        guard let overlay = fadeOverlay else { return }
+        
+        let fadeOut = SKAction.fadeOut(withDuration: 0.8)
+        let remove = SKAction.removeFromParent()
+        let sequence = SKAction.sequence([fadeOut, remove])
+        
+        overlay.run(sequence) { [weak self] in
+            self?.fadeOverlay = nil
+        }
+        
+        print("🌕 Fade overlay removed")
+    }
+    
+    private func createRocketFireworks() {
+        print("🚀 Creating realistic rocket fireworks display!")
+        
+        // Create 6 rocket fireworks with realistic flight and explosion
         for i in 0..<6 {
-            // Create simple colored circles as fireworks instead of particle systems
-            let firework = SKShapeNode(circleOfRadius: 8)
+            let delay = Double(i) * 0.5 // Stagger rockets every 0.5 seconds
             
-            // Random position across screen
-            let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
-            let randomY = CGFloat.random(in: size.height * 0.6...size.height * 0.9)
-            firework.position = CGPoint(x: randomX, y: randomY)
-            
-            // Random bright colors
-            let colors: [UIColor] = [.red, .blue, .green, .yellow, .orange, .purple, .cyan, .magenta]
-            firework.fillColor = colors.randomElement() ?? .yellow
-            firework.strokeColor = .white
-            firework.lineWidth = 2
-            firework.zPosition = 100
-            
-            addChild(firework)
-            
-            // Animate the firework: scale up, fade out, and remove
-            let scaleUp = SKAction.scale(to: 3.0, duration: 0.5)
-            let fadeOut = SKAction.fadeOut(withDuration: 1.0)
-            let remove = SKAction.removeFromParent()
-            let sequence = SKAction.sequence([
-                SKAction.wait(forDuration: Double(i) * 0.2), // Stagger the fireworks
-                SKAction.group([scaleUp, fadeOut]),
-                remove
+            let rocketAction = SKAction.sequence([
+                SKAction.wait(forDuration: delay),
+                SKAction.run { [weak self] in
+                    self?.launchSingleRocket()
+                }
             ])
             
-            firework.run(sequence)
-            print("🎆 Added firework \(i) at position \(firework.position)")
+            run(rocketAction)
+        }
+    }
+    
+    private func launchSingleRocket() {
+        // Launch position at bottom of screen
+        let launchX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
+        let launchY = CGFloat(20)
+        
+        // Create rocket trail
+        let rocket = SKShapeNode(circleOfRadius: 3)
+        rocket.fillColor = .white
+        rocket.strokeColor = .yellow
+        rocket.lineWidth = 2
+        rocket.position = CGPoint(x: launchX, y: launchY)
+        rocket.zPosition = 250
+        
+        addChild(rocket)
+        
+        // Rocket flies up
+        let explosionY = CGFloat.random(in: size.height * 0.6...size.height * 0.9)
+        let flyUp = SKAction.moveTo(y: explosionY, duration: 1.2)
+        flyUp.timingMode = .easeOut
+        
+        // Create explosion at peak
+        let explode = SKAction.run { [weak self] in
+            self?.createExplosion(at: CGPoint(x: launchX, y: explosionY))
+            rocket.removeFromParent()
         }
         
-        // Add some sparkle effects around the screen
-        for i in 0..<12 {
-            let sparkle = SKShapeNode(circleOfRadius: 3)
-            sparkle.position = CGPoint(
-                x: CGFloat.random(in: 0...size.width),
-                y: CGFloat.random(in: 0...size.height)
-            )
-            sparkle.fillColor = .white
-            sparkle.alpha = 0.8
-            sparkle.zPosition = 99
+        let rocketSequence = SKAction.sequence([flyUp, explode])
+        rocket.run(rocketSequence)
+    }
+    
+    private func createExplosion(at position: CGPoint) {
+        // Create 12-16 explosion particles radiating outward
+        let particleCount = Int.random(in: 12...16)
+        let colors: [UIColor] = [.systemRed, .systemBlue, .systemGreen, .systemYellow, 
+                               .systemOrange, .systemPurple, .systemPink, .cyan, 
+                               .magenta, .white, .systemTeal, .systemIndigo]
+        
+        for i in 0..<particleCount {
+            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 4...8))
+            particle.fillColor = colors.randomElement() ?? .white
+            particle.strokeColor = .white
+            particle.lineWidth = 2
+            particle.position = position
+            particle.zPosition = 250
             
-            addChild(sparkle)
+            addChild(particle)
             
-            let twinkle = SKAction.sequence([
-                SKAction.fadeOut(withDuration: 0.3),
-                SKAction.fadeIn(withDuration: 0.3)
-            ])
-            let repeatAction = SKAction.repeat(twinkle, count: 3)
+            // Random direction for explosion particles
+            let angle = (Double(i) / Double(particleCount)) * 2 * Double.pi
+            let distance = CGFloat.random(in: 60...120)
+            let endX = position.x + cos(angle) * distance
+            let endY = position.y + sin(angle) * distance
+            
+            // Particle animation: shoot out, fade, and fall
+            let shootOut = SKAction.move(to: CGPoint(x: endX, y: endY), duration: 0.8)
+            let fadeOut = SKAction.fadeOut(withDuration: 1.5)
+            let gravity = SKAction.moveBy(x: 0, y: -100, duration: 1.5)
             let remove = SKAction.removeFromParent()
             
-            sparkle.run(SKAction.sequence([
-                SKAction.wait(forDuration: Double(i) * 0.1),
-                repeatAction,
+            let particleSequence = SKAction.sequence([
+                SKAction.group([shootOut, fadeOut, gravity]),
                 remove
-            ]))
+            ])
+            
+            particle.run(particleSequence)
         }
+    }
+    
+    private func dropCelebrationTiles() {
+        print("🎉 Dropping celebration emoji tiles!")
+        
+        // Celebration emojis including champagne bottle
+        let celebrationEmojis = ["🎉", "🎊", "✨", "🥳", "🍾", "🎆", "⭐", "💫"]
+        
+        for (index, emoji) in celebrationEmojis.enumerated() {
+            // Create emoji tile with same size as regular tiles
+            let baseTileSize: CGFloat = 40
+            let tileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
+                                height: baseTileSize * PhysicsGameScene.componentScaleFactor)
+            let emojiTile = EmojiIconTile(size: tileSize, emoji: emoji, fontSize: 24)
+            
+            // Position at top of visible screen for testing
+            let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
+            let startY = size.height - 50  // Start at top of visible screen
+            emojiTile.position = CGPoint(x: randomX, y: startY)
+            emojiTile.zPosition = 100
+            
+            print("🎉 Created \(emoji) tile at position (\(randomX), \(startY)), screen height: \(size.height)")
+            print("🎉 Tile physics body: \(String(describing: emojiTile.physicsBody))")
+            
+            addChild(emojiTile)
+            
+            // Add to tiles array so it can be cleaned up later
+            (allRespawnableTiles as? NSMutableArray)?.add(emojiTile)
+            
+            // Stagger the drops with debugging
+            let delay = SKAction.wait(forDuration: Double(index) * 0.2)
+            let giveInitialVelocity = SKAction.run {
+                print("🎉 Giving velocity to \(emoji) tile. Physics body: \(String(describing: emojiTile.physicsBody))")
+                // Give a strong downward velocity
+                emojiTile.physicsBody?.velocity = CGVector(dx: 0, dy: -200)
+                emojiTile.physicsBody?.applyImpulse(CGVector(dx: 0, dy: -100))
+            }
+            let dropAction = SKAction.sequence([delay, giveInitialVelocity])
+            emojiTile.run(dropAction)
+        }
+    }
+    
+    private func dropAwesomeTile() {
+        print("🔥 Dropping congratulatory information tile!")
+        
+        let randomMessage = PhysicsGameScene.congratulatoryMessages.randomElement() ?? "Congratulations!"
+        
+        // Create congratulatory information tile
+        let awesomeTile = MessageTile(message: randomMessage, sceneSize: size)
+        
+        // Position at top of visible screen center for testing
+        let startY = size.height - 100
+        awesomeTile.position = CGPoint(x: size.width / 2, y: startY)
+        awesomeTile.zPosition = 100
+        
+        print("🔥 Created '\(randomMessage)' tile at position (\(size.width / 2), \(startY)), screen height: \(size.height)")
+        print("🔥 Awesome tile physics body: \(String(describing: awesomeTile.physicsBody))")
+        
+        addChild(awesomeTile)
+        
+        // Add to tiles array
+        (allRespawnableTiles as? NSMutableArray)?.add(awesomeTile)
+        
+        // Give it a strong initial downward velocity
+        awesomeTile.physicsBody?.velocity = CGVector(dx: 0, dy: -200)
+        awesomeTile.physicsBody?.applyImpulse(CGVector(dx: 0, dy: -100))
+    }
+    
+    private func startNewGameWithBookshelfDrop() {
+        print("📚 Starting new game with dramatic bookshelf drop!")
+        
+        // First, prepare the new game content
+        Task {
+            await gameModel.startNewGame(isUserInitiated: true)
+            
+            // After new game is prepared, animate the entire bookshelf drop
+            DispatchQueue.main.async { [weak self] in
+                self?.animateEntireBookshelfDrop()
+            }
+        }
+    }
+    
+    private func animateEntireBookshelfDrop() {
+        print("📚 Animating entire bookshelf drop with preserved shelf positions!")
+        
+        // Move the entire bookshelf (including all shelves) way above screen
+        // while preserving their relative positions
+        
+        // 1. Move the main bookshelf container
+        let originalBookshelfY = bookshelf.position.y
+        bookshelf.position = CGPoint(x: bookshelf.position.x, y: size.height + 300)
+        
+        // 2. Move all individual shelves while maintaining their relative positions
+        var shelfDropActions: [SKAction] = []
+        
+        for shelf in shelves {
+            let originalPosition = shelfOriginalPositions[shelf] ?? shelf.position
+            shelf.position = CGPoint(x: shelf.position.x, y: originalPosition.y + size.height + 300)
+            
+            // Create drop animation for each shelf
+            let dropToOriginal = SKAction.moveTo(y: originalPosition.y, duration: 1.5)
+            dropToOriginal.timingMode = SKActionTimingMode.easeOut
+            shelfDropActions.append(dropToOriginal)
+        }
+        
+        // 3. Animate bookshelf container drop
+        let bookshelfDrop = SKAction.moveTo(y: originalBookshelfY, duration: 1.5)
+        bookshelfDrop.timingMode = SKActionTimingMode.easeOut
+        bookshelf.run(bookshelfDrop)
+        
+        // 4. Animate all shelves dropping to their original positions simultaneously
+        for (index, shelf) in shelves.enumerated() {
+            shelf.run(shelfDropActions[index])
+        }
+        
+        print("📚 Entire bookshelf dropping animation started!")
+    }
+    
+    private func animateShelvesToFloor() {
+        print("📚 IMMEDIATELY dropping all shelves to the floor!")
+        print("📚 Total shelves count: \(shelves.count)")
+        
+        // Get floor position (bottom of screen)
+        let floorY = CGFloat(60)  // Just above the bottom of the screen
+        
+        // Animate all shelves falling to the floor immediately
+        for (index, shelf) in shelves.enumerated() {
+            let currentY = shelf.position.y
+            
+            print("📚 Shelf \(index): current position Y=\(currentY), floor Y=\(floorY)")
+            
+            // Always animate all shelves regardless of current position
+            print("📚 Animating shelf \(index) from Y:\(currentY) to floor Y:\(floorY)")
+            
+            // Create falling animation
+            let fallAction = SKAction.moveTo(y: floorY, duration: 1.5)
+            fallAction.timingMode = SKActionTimingMode.easeIn  // Accelerate as it falls
+            
+            // Add some rotation for dramatic effect
+            let rotateAmount = CGFloat.random(in: -0.2...0.2)
+            let rotateAction = SKAction.rotate(byAngle: rotateAmount, duration: 1.5)
+            
+            // Run both animations together
+            let combinedAction = SKAction.group([fallAction, rotateAction])
+            shelf.run(combinedAction)
+            
+            print("📚 Started animation for shelf \(index)")
+        }
+        
+        print("📚 Finished setting up all shelf animations")
+    }
+    
+    private func cleanupCelebrationTiles() {
+        print("🧹 Cleaning up celebration tiles!")
+        
+        // Remove celebration emoji tiles and awesome tile
+        children.forEach { node in
+            if let emojiTile = node as? EmojiIconTile {
+                let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+                let remove = SKAction.removeFromParent()
+                let cleanup = SKAction.sequence([fadeOut, remove])
+                emojiTile.run(cleanup)
+                
+                // Also remove from respawnable tiles array
+                if let tilesArray = allRespawnableTiles as? NSMutableArray {
+                    tilesArray.remove(emojiTile)
+                }
+            }
+            if let messageTile = node as? MessageTile {
+                // Check if it's a congratulatory message tile
+                if PhysicsGameScene.congratulatoryMessages.contains(messageTile.messageText) || messageTile.messageText == "Congratulations!" {
+                    let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+                    let remove = SKAction.removeFromParent()
+                    let cleanup = SKAction.sequence([fadeOut, remove])
+                    messageTile.run(cleanup)
+                    
+                    // Also remove from respawnable tiles array
+                    if let tilesArray = allRespawnableTiles as? NSMutableArray {
+                        tilesArray.remove(messageTile)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func createFireworks() {
+        // Keep the old method for backward compatibility, but it's now unused
+        createRocketFireworks()
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -2934,6 +3193,47 @@ class InformationTile: SKSpriteNode, RespawnableTile {
     init(size: CGSize) {
         super.init(texture: nil, color: .clear, size: size)
         setupTileGeometry(size: size)
+        setupPhysicsBody(size: size)
+    }
+    
+    private func setupPhysicsBody(size: CGSize) {
+        // Set up physics body for information tiles
+        physicsBody = SKPhysicsBody(rectangleOf: size)
+        physicsBody?.isDynamic = true
+        physicsBody?.affectedByGravity = true
+        physicsBody?.mass = 0.5
+        physicsBody?.friction = 0.6
+        physicsBody?.restitution = 0.3
+        physicsBody?.linearDamping = 0.95
+        physicsBody?.angularDamping = 0.99
+        
+        physicsBody?.categoryBitMask = PhysicsCategories.tile
+        physicsBody?.contactTestBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
+        
+        physicsBody?.allowsRotation = true
+        physicsBody?.density = 0.8
+    }
+    
+    // Touch handling for dragging
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = true
+        physicsBody?.velocity = CGVector.zero
+        physicsBody?.angularVelocity = 0
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard isBeingDragged, let touch = touches.first else { return }
+        let location = touch.location(in: parent!)
+        position = location
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = false
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isBeingDragged = false
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -3269,85 +3569,74 @@ class MessageTile: InformationTile {
     }
 }
 
-class LanguageTile: InformationTile {
-    private var flagImageNode: SKSpriteNode?
+class IconTile: InformationTile {
+    private var iconImageNode: SKSpriteNode?
+    
+    override init(size: CGSize) {
+        super.init(size: size)
+        zPosition = 50
+    }
+    
+    func updateIcon(imageName: String) {
+        iconImageNode?.removeFromParent()
+        
+        let iconTexture = SKTexture(imageNamed: imageName)
+        let iconNode = SKSpriteNode(texture: iconTexture)
+        
+        let iconSize = CGSize(width: size.width * 0.7, height: size.height * 0.7)
+        iconNode.size = iconSize
+        iconNode.position = CGPoint(x: 0, y: 0)
+        iconNode.zPosition = 0.2
+        
+        iconImageNode = iconNode
+        addChild(iconNode)
+    }
+    
+    func updateIcon(emoji: String, fontSize: CGFloat = 40) {
+        iconImageNode?.removeFromParent()
+        
+        let emojiLabel = SKLabelNode(text: emoji)
+        emojiLabel.fontSize = fontSize
+        emojiLabel.fontName = "AppleColorEmoji"
+        emojiLabel.position = CGPoint(x: 0, y: -fontSize * 0.3)
+        emojiLabel.zPosition = 0.2
+        
+        let emojiNode = SKSpriteNode()
+        emojiNode.addChild(emojiLabel)
+        
+        iconImageNode = emojiNode
+        addChild(emojiNode)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+class LanguageTile: IconTile {
     var currentLanguage: String = "en"
     
     init(size: CGSize, language: String = "en") {
         super.init(size: size)
         self.currentLanguage = language
-        
-        // Add flag image on front face
         updateFlag(language: language)
-        
-        // Set up physics body
-        setupPhysics()
-        
-        // Set z-position for proper layering
-        zPosition = 50
-    }
-    
-    private func setupPhysics() {
-        physicsBody = SKPhysicsBody(rectangleOf: size)
-        physicsBody?.isDynamic = true
-        physicsBody?.affectedByGravity = true
-        physicsBody?.mass = 0.5  // Significantly heavier than letter tiles
-        physicsBody?.friction = 0.6
-        physicsBody?.restitution = 0.3
-        physicsBody?.linearDamping = 0.95
-        physicsBody?.angularDamping = 0.99
-        
-        physicsBody?.categoryBitMask = PhysicsCategories.tile
-        physicsBody?.contactTestBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
-        physicsBody?.collisionBitMask = PhysicsCategories.tile | PhysicsCategories.shelf | PhysicsCategories.floor
-        
-        physicsBody?.allowsRotation = true
-        physicsBody?.density = 0.8
     }
     
     func updateFlag(language: String) {
         currentLanguage = language
-        
-        // Remove existing flag image
-        flagImageNode?.removeFromParent()
-        
-        // Determine flag image name
         let flagImageName = language == "sv" ? "flag_sweden" : "flag_england"
-        
-        // Create flag image node
-        let flagTexture = SKTexture(imageNamed: flagImageName)
-        let flagNode = SKSpriteNode(texture: flagTexture)
-        
-        // Scale flag to fit nicely on the tile (about 70% of tile size)
-        let flagSize = CGSize(width: size.width * 0.7, height: size.height * 0.7)
-        flagNode.size = flagSize
-        flagNode.position = CGPoint(x: 0, y: 0)  // Center on front face
-        flagNode.zPosition = 0.2  // Above front face
-        
-        // Add flag to tile
-        flagImageNode = flagNode
-        addChild(flagNode)
+        updateIcon(imageName: flagImageName)
     }
     
-    // Touch handling for dragging
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        isBeingDragged = true
-        physicsBody?.velocity = CGVector.zero
-        physicsBody?.angularVelocity = 0
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard isBeingDragged, let touch = touches.first else { return }
-        let location = touch.location(in: parent!)
-        position = location
-    }
-    
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        isBeingDragged = false
-    }
-    
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        isBeingDragged = false
+}
+
+class EmojiIconTile: IconTile {
+    init(size: CGSize, emoji: String, fontSize: CGFloat = 40) {
+        super.init(size: size)
+        updateIcon(emoji: emoji, fontSize: fontSize)
     }
     
     required init?(coder aDecoder: NSCoder) {
