@@ -131,19 +131,86 @@ Analysis of iOS app API calls vs refactored backend routes reveals **critical mi
    - ✅ `/api/phrases/global` (not used by iOS)
    - ✅ `/api/phrases/:phraseId/approve` (no consumers)
    - ✅ `/api/phrases/download/:playerId` (not implemented in iOS)
-   - `/api/contribution/*` (legacy, replaced by Link Generator Service - **NOT REMOVED**: Still used by existing web dashboard)
    - ✅ `/api/leaderboards/:period` (iOS uses singular form)
    - ✅ `/api/stats/global` (no consumers)
    - ✅ `/api/scores/refresh` (no consumers)
-2. **Keep web dashboard routes** but decide if they should remain in game server or move to web dashboard service:
+2. ✅ **Removed all legacy routes** from game server:
+   - ✅ `/api/phrases` (legacy phrase creation)
+   - ✅ `/api/contribution/*` (replaced by Link Generator Service)
+3. **Keep web dashboard routes** but decide if they should remain in game server or move to web dashboard service:
    - `/monitoring` and `/contribute/:token` (UI pages)
    - `/api/stats` and `/api/players/online` (used by web dashboard frontend)
-3. **Document remaining routes** by consumer service (iOS vs Web Dashboard vs Link Generator)
+4. ✅ **Document remaining routes** by consumer service (iOS vs Web Dashboard vs Link Generator)
 
-### Phase 4: Optimization (Low Priority)
-1. **Consider route versioning** (`/api/v1/`, `/api/v2/`)
-2. **Add route usage analytics** to confirm which routes are actually called
-3. **Consolidate duplicate functionality** (plural vs singular endpoints)
+### Phase 4: Route Documentation by Consumer (Medium Priority) ✅ COMPLETED
+**Documented all remaining active routes by consumer service:**
+
+#### 📱 **iOS App Routes (Primary Consumer)**
+| Route | File | iOS Usage | Purpose |
+|-------|------|-----------|---------|
+| `GET /api/status` | `system.js` | `DifficultyAnalysisService.swift:25,124` | Health check before API calls |
+| `POST /api/players/register` | `players.js` | `PlayerService.swift:31` | Player registration with device UUID |
+| `GET /api/players/online` | `players.js` | `PlayerService.swift:131,232` | Multiplayer player discovery |
+| `GET /api/players/legends` | `players.js` | `LeaderboardService.swift:102` | Top players for social features |
+| `GET /api/scores/player/:playerId` | `players.js` | `PlayerService.swift:185` | Individual player score summary |
+| `GET /api/config/levels` | `system.js` | `GameModel.swift:891` | Level configuration for progression |
+| `GET /api/phrases/for/:playerId` | `phrases.js` | `NetworkManager.swift:189`, `PhraseService.swift:29` | **Core**: Fetch phrases to play |
+| `POST /api/phrases/create` | `phrases.js` | `PhraseService.swift:58` | **Core**: User-generated content |
+| `POST /api/phrases/:phraseId/complete` | `phrases.js` | `PhraseService.swift:138` | **Core**: Phrase completion with scoring |
+| `POST /api/phrases/:phraseId/skip` | `phrases.js` | `NetworkManager.swift:303` | **Core**: Skip unwanted phrases |
+| `POST /api/phrases/:phraseId/consume` | `phrases.js` | `NetworkManager.swift:435` | **Core**: Mark phrase as consumed |
+| `POST /api/phrases/analyze-difficulty` | `phrases.js` | `DifficultyAnalysisService.swift:54` | Real-time difficulty analysis |
+| `GET /api/leaderboard/:period` | `leaderboards.js` | `LeaderboardService.swift:42` | Leaderboard data for social features |
+| `GET /api/leaderboard/:type/player/:playerId` | `leaderboards.js` | `LeaderboardService.swift:136` | Player ranking lookup |
+| `POST /api/debug/log` | `debug.js` | `DebugLogger.swift:24`, `PhysicsGameView.swift:620,1777,1864,1920` | Debug logging |
+| `POST /api/debug/performance` | `debug.js` | `GameModel.swift:976`, `PhysicsGameView.swift:430,1090` | Performance monitoring |
+
+#### 🔧 **Admin Routes (New Category)**
+| Route | File | Usage | Purpose |
+|-------|------|-------|---------|
+| `POST /api/admin/phrases/batch-import` | `admin.js` | Admin tools/scripts | **Batch import phrases** - Accept up to 100 phrases per request |
+
+#### 🌐 **Web Dashboard Routes (Admin Interface)**
+| Route | File | Web Dashboard Usage | Purpose |
+|-------|------|---------------------|---------|
+| `GET /monitoring` | `system.js` | Direct browser access | Admin monitoring UI (HTML page) |
+| `GET /contribute/:token` | `system.js` | Direct browser access | Contribution form UI (HTML page) |
+| `GET /api/players/online` | `players.js` | `monitoring.js:133` (apiClient) | Live player list for admin monitoring |
+| `GET /api/stats` | `players.js` | `monitoring.js:134` (apiClient) | System statistics for admin dashboard |
+
+#### 🗑️ **Legacy Routes - ✅ REMOVED (Legacy Cleanup Complete)**
+| Route | File | Status | Replacement |
+|-------|------|--------|-------------|
+| `POST /api/phrases` | `phrases.js` | ✅ **REMOVED** | Use `POST /api/phrases/create` |
+| `GET /api/leaderboards/:period` | `leaderboards.js` | ✅ **REMOVED** | Use `GET /api/leaderboard/:period` |
+| `POST /api/contribution/request` | `contributions.js` | ✅ **REMOVED** | Use Link Generator Service (port 3002) |
+| `GET /api/contribution/:token` | `contributions.js` | ✅ **REMOVED** | Use Link Generator Service (port 3002) |
+| `POST /api/contribution/:token/submit` | `contributions.js` | ✅ **REMOVED** | Use Link Generator Service (port 3002) |
+
+#### 🔗 **Link Generator Service Routes (Port 3002) - Standalone Microservice**
+| Route | Service | Purpose |
+|-------|---------|---------| 
+| `GET /api/status` | Link Generator | Health check for service monitoring |
+| `POST /api/links/generate` | Link Generator | Generate secure contribution links |
+| `GET /api/links/validate/:token` | Link Generator | Validate contribution link tokens |
+
+#### 📊 **Web Dashboard Service Routes (Port 3001) - Currently Disabled**
+*These routes exist but are disabled. They should be activated when separating web dashboard from game server.*
+| Route | Service | Purpose |
+|-------|---------|---------| 
+| `GET /api/status` | Web Dashboard | Service health check |
+| `GET /api/monitoring/stats` | Web Dashboard | Monitoring statistics |
+| `POST /api/contribution/request` | Web Dashboard | Contribution link requests |
+| `GET /api/contribution/:token` | Web Dashboard | Contribution token validation |
+| `POST /api/contribution/:token/submit` | Web Dashboard | Contribution submission |
+
+### Phase 5: Architecture Improvements (Low Priority)
+1. **Complete microservices separation**: Move web dashboard routes from game server to web dashboard service
+2. **Enable web dashboard backend**: Activate disabled routes in web dashboard service  
+3. **Remove legacy contribution routes**: Complete migration to Link Generator Service
+4. **Consider route versioning** (`/api/v1/`, `/api/v2/`)
+5. **Add route usage analytics** to confirm which routes are actually called
+6. **Consolidate duplicate functionality** (plural vs singular endpoints)
 
 ## Testing Strategy
 

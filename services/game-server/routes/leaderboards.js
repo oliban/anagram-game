@@ -6,49 +6,7 @@ const router = express.Router();
 module.exports = (dependencies) => {
   const { getDatabaseStatus, ScoringSystem } = dependencies;
 
-  // Get leaderboards (plural endpoint)
-  router.get('/api/leaderboards/:period', async (req, res) => {
-    try {
-      if (!getDatabaseStatus()) {
-        return res.status(503).json({
-          error: 'Database connection required for leaderboards'
-        });
-      }
-
-      const { period } = req.params;
-      const limit = req.query.limit !== undefined ? Math.min(parseInt(req.query.limit), 100) : 50;
-      const offset = parseInt(req.query.offset) || 0;
-
-      // Validate period
-      if (!['daily', 'weekly', 'total'].includes(period)) {
-        return res.status(400).json({
-          error: 'Invalid period. Must be daily, weekly, or total'
-        });
-      }
-
-      // Validate pagination parameters
-      if (limit < 1 || offset < 0) {
-        return res.status(400).json({
-          error: 'Invalid pagination parameters'
-        });
-      }
-
-      // Get leaderboard
-      const leaderboardData = await ScoringSystem.getLeaderboard(period, limit, offset);
-
-      res.json({
-        success: true,
-        ...leaderboardData,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      console.error('❌ LEADERBOARD: Error getting leaderboard:', error.message);
-      res.status(500).json({
-        error: 'Failed to get leaderboard'
-      });
-    }
-  });
+  // REMOVED: /api/leaderboards/:period - Legacy plural endpoint (Legacy cleanup)
 
   // Get leaderboard (singular endpoint for iOS app compatibility)
   router.get('/api/leaderboard/:period', async (req, res) => {
