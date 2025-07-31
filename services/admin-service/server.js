@@ -10,35 +10,22 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Larger limit for batch operations
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check endpoint
 app.get('/api/status', (req, res) => {
   res.json({ 
     status: 'healthy', 
-    service: 'web-dashboard',
+    service: 'admin-service',
     timestamp: new Date().toISOString() 
   });
 });
 
-// Web dashboard routes - ENABLED for microservices separation
-app.use('/api', require('./web-routes'));
+// Admin routes
+app.use('/api/admin', require('./admin-routes'));
 
-// Serve dashboard pages
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/contribute', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'contribute', 'index.html'));
-});
-
-app.get('/monitoring', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'monitoring', 'index.html'));
-});
-
-const PORT = process.env.WEB_DASHBOARD_PORT || 3001;
+const PORT = process.env.ADMIN_SERVICE_PORT || 3003;
 
 // Initialize database and start server
 async function startServer() {
@@ -47,11 +34,11 @@ async function startServer() {
     console.log('✅ Database connected successfully');
     
     app.listen(PORT, () => {
-      console.log(`📊 Web Dashboard running on port ${PORT}`);
-      console.log(`🌐 Dashboard: http://localhost:${PORT}`);
+      console.log(`🔧 Admin Service running on port ${PORT}`);
+      console.log(`🛠️  Admin API: http://localhost:${PORT}/api/admin`);
     });
   } catch (error) {
-    console.error('❌ Failed to start web dashboard:', error);
+    console.error('❌ Failed to start admin service:', error);
     process.exit(1);
   }
 }

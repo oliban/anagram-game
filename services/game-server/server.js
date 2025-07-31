@@ -231,7 +231,7 @@ const initializeRoutes = () => {
   app.use(contributionRoutesFactory(deps));
   app.use(leaderboardRoutesFactory(deps));
   app.use(debugRoutesFactory(deps));
-  app.use(adminRoutesFactory(deps));
+  // MOVED: app.use(adminRoutesFactory(deps)); - Admin routes moved to Web Dashboard Service (port 3001)
 };
 
 // Call this after database initialization

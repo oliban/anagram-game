@@ -31,15 +31,8 @@ module.exports = (dependencies) => {
     }
   });
 
-  // Monitoring dashboard
-  router.get('/monitoring', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../web-dashboard/public/monitoring/index.html'));
-  });
-
-  // Contribution page
-  router.get('/contribute/:token', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../web-dashboard/public/contribute/index.html'));
-  });
+  // MOVED: /monitoring and /contribute/:token routes moved to Web Dashboard Service (port 3001)
+  // These admin UI routes are now properly separated from the game API
 
   // REMOVED: /api/config - iOS uses /api/config/levels instead (Phase 3 cleanup)
 
