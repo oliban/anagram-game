@@ -5,15 +5,20 @@ const express = require('express');
 const cors = require('cors');
 const { testConnection, shutdown: shutdownDb } = require('./shared/database/connection');
 const ContributionLinkGenerator = require('./link-generator');
+const RouteAnalytics = require('./shared/services/routeAnalytics');
 
 const app = express();
+
+// Initialize route analytics and link generator
+const routeAnalytics = new RouteAnalytics('link-generator');
+const linkGenerator = new ContributionLinkGenerator();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Initialize link generator
-const linkGenerator = new ContributionLinkGenerator();
+// Route analytics middleware (only for API routes)
+app.use('/api', routeAnalytics.createMiddleware());
 
 // Health check endpoint
 app.get('/api/status', (req, res) => {

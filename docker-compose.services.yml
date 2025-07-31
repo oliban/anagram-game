@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL database shared by all services
   postgres:
@@ -40,6 +38,8 @@ services:
       - PORT=${GAME_SERVER_PORT}
     ports:
       - "${GAME_SERVER_PORT}:${GAME_SERVER_PORT}"
+    volumes:
+      - ./services/logs:/app/logs
 
   # Web dashboard - admin interface
   web-dashboard:
@@ -61,6 +61,8 @@ services:
       - WEB_DASHBOARD_PORT=${WEB_DASHBOARD_PORT}
     ports:
       - "${WEB_DASHBOARD_PORT}:${WEB_DASHBOARD_PORT}"
+    volumes:
+      - ./services/logs:/app/logs
 
   # Link generator service
   link-generator:
@@ -82,6 +84,8 @@ services:
       - LINK_GENERATOR_PORT=${LINK_GENERATOR_PORT}
     ports:
       - "${LINK_GENERATOR_PORT}:${LINK_GENERATOR_PORT}"
+    volumes:
+      - ./services/logs:/app/logs
 
   # Admin service - content management and batch operations
   admin-service:
@@ -103,6 +107,8 @@ services:
       - ADMIN_SERVICE_PORT=${ADMIN_SERVICE_PORT:-3003}
     ports:
       - "${ADMIN_SERVICE_PORT:-3003}:${ADMIN_SERVICE_PORT:-3003}"
+    volumes:
+      - ./services/logs:/app/logs
 
 volumes:
   postgres_data:

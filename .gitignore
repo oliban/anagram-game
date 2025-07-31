@@ -146,6 +146,9 @@ server/server_output.log
 server/server_log.txt
 *.log
 
+# Route analytics logs (generated data, should not be committed)
+services/logs/analytics/
+
 # Generated phrase data (auto-generated, should not be committed)
 server/data/generated-*.json
 server/data/analyzed-*.json

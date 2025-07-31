@@ -5,13 +5,20 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { testConnection, shutdown: shutdownDb } = require('./shared/database/connection');
+const RouteAnalytics = require('./shared/services/routeAnalytics');
 
 const app = express();
+
+// Initialize route analytics
+const routeAnalytics = new RouteAnalytics('web-dashboard');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Route analytics middleware (only for API routes)
+app.use('/api', routeAnalytics.createMiddleware());
 
 // Health check endpoint
 app.get('/api/status', (req, res) => {
