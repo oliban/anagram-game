@@ -479,6 +479,93 @@ node server/scripts/phrase-importer.js --clean-outliers --ranges "0-50,51-100,10
 
 ## API Integration
 
+### Admin Batch Import API (NEW - v1.2.0)
+
+The new admin batch import endpoint provides a direct way to import phrases without file-based workflows:
+
+```bash
+# Import phrases directly via REST API
+curl -X POST http://localhost:3000/api/admin/phrases/batch-import \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phrases": [
+      {
+        "content": "bright sunny day",
+        "hint": "Perfect weather for outdoor activities", 
+        "language": "en",
+        "isGlobal": true,
+        "phraseType": "community"
+      },
+      {
+        "content": "kall vinter",
+        "hint": "Årstid som får termometern att krympa",
+        "language": "sv", 
+        "isGlobal": true,
+        "phraseType": "community"
+      }
+    ]
+  }'
+```
+
+#### Converting Generated Files to API Format
+
+Use this helper to convert analyzed phrase files for API import:
+
+```bash
+# Convert analyzed phrase file to admin API format
+jq '{
+  phrases: [
+    .phrases[] | select(.difficulty >= 50 and .difficulty <= 100) | {
+      content: .phrase,
+      hint: .clue,
+      language: .language,
+      isGlobal: true,
+      phraseType: "community"
+    }
+  ]
+}' server/data/analyzed-sv-50-100-50-manual.json > swedish_batch_import.json
+
+# Import via API
+curl -X POST http://localhost:3000/api/admin/phrases/batch-import \
+  -H "Content-Type: application/json" \
+  -d @swedish_batch_import.json
+```
+
+#### API Features
+- **Batch Processing**: Up to 100 phrases per request
+- **System-Generated**: Phrases created with null senderId (appear as "System")
+- **Automatic Difficulty**: Uses shared difficulty algorithm for scoring
+- **Multi-language**: Supports all game languages
+- **Validation**: Comprehensive phrase and hint validation
+- **Error Reporting**: Detailed success/failure reporting per phrase
+
+#### Response Format
+```json
+{
+  "success": true,
+  "message": "Batch import completed: 12 successful, 0 failed",
+  "results": {
+    "summary": {
+      "totalProcessed": 12,
+      "totalSuccessful": 12, 
+      "totalFailed": 0,
+      "successRate": 100
+    },
+    "successful": [
+      {
+        "index": 1,
+        "id": "uuid",
+        "content": "kall vinter",
+        "language": "sv",
+        "difficulty": 52
+      }
+    ]
+  }
+}
+```
+
+### Legacy Integration
+
 The phrase generation system integrates with the existing API:
 - Generated phrases use standard database schema
 - Compatible with existing phrase endpoints
@@ -486,6 +573,14 @@ The phrase generation system integrates with the existing API:
 - Supports multilingual content
 
 ## 🎉 Recent Improvements
+
+### 🚀 Admin Batch Import API (v1.2.0)
+- **Direct API Import**: No more file-based workflows - import phrases directly via REST API
+- **System-Generated Phrases**: Clean display as "System" sender instead of "Unknown Player"
+- **Batch Processing**: Up to 100 phrases per request with detailed progress reporting
+- **Multi-language Support**: Swedish, English, and all supported languages
+- **Automatic Difficulty**: Server-side difficulty calculation using shared algorithm
+- **Validation & Error Handling**: Comprehensive validation with per-phrase error reporting
 
 ### ✨ New Streamlined Workflow (v1.1.0)
 - **Single Command**: `./generate-and-preview.sh "0-50:15"` does everything
