@@ -83,6 +83,7 @@ docker-compose -f docker-compose.services.yml ps
 curl http://localhost:3000/api/status  # Game server
 curl http://localhost:3001/api/status  # Web dashboard  
 curl http://localhost:3002/api/status  # Link generator
+curl http://localhost:3003/api/status  # Admin service
 ```
 
 **Monitor logs:**
@@ -94,6 +95,7 @@ docker-compose -f docker-compose.services.yml logs -f
 docker-compose -f docker-compose.services.yml logs -f game-server
 docker-compose -f docker-compose.services.yml logs -f web-dashboard
 docker-compose -f docker-compose.services.yml logs -f link-generator
+docker-compose -f docker-compose.services.yml logs -f admin-service
 ```
 
 **Stop services:**
@@ -109,7 +111,7 @@ docker-compose -f docker-compose.services.yml down
 ## DEPLOYMENT SEQUENCE
 ### Local Development (NEW)
 1. **Start Services**: `docker-compose -f docker-compose.services.yml up -d`
-2. **Verify Health**: Check all service endpoints (3000, 3001, 3002)
+2. **Verify Health**: Check all service endpoints (3000, 3001, 3002, 3003)
 3. **Version**: Increment `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
 4. **Build iOS**: Clean build with local derived data (`-derivedDataPath ./build`)
 5. **Deploy**: Install and launch on both simulators
@@ -133,8 +135,9 @@ docker-compose -f docker-compose.services.yml down
 
 **Services:**
 - 🎮 **Game Server** (port 3000): Core multiplayer API + WebSocket
-- 📊 **Web Dashboard** (port 3001): Admin interface
+- 📊 **Web Dashboard** (port 3001): Monitoring interface
 - 🔗 **Link Generator** (port 3002): Contribution link service
+- 🔧 **Admin Service** (port 3003): Content management & batch operations
 - 🗄️ **PostgreSQL** (port 5432): Shared database
 
 **Patterns**: MVVM with @Observable GameModel, Socket.IO for multiplayer, URLSession for HTTP
@@ -170,7 +173,7 @@ docker-compose -f docker-compose.services.yml down
 
 #### Microservices (NEW - Primary Method)
 ```bash
-# Start all services (game-server, web-dashboard, link-generator, postgres)
+# Start all services (game-server, web-dashboard, link-generator, admin-service, postgres)
 docker-compose -f docker-compose.services.yml up -d
 
 # Stop all services
@@ -189,7 +192,8 @@ docker-compose -f docker-compose.services.yml up -d
 # Check service health
 curl http://localhost:3000/api/status  # Game server
 curl http://localhost:3001/api/status  # Web dashboard
-curl http://localhost:3002/api/status  # Link generator
+curl http://localhost:3002/api/status  # Link generator  
+curl http://localhost:3003/api/status  # Admin service
 ```
 
 #### Legacy Single Server (Deprecated)
@@ -237,11 +241,42 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 ```
 
 ### API Endpoints
+
+#### Game Server (3000)
 - `GET /api/status` - Server health check
 - `POST /api/players` - Player registration (returns UUID)
 - `GET /api/players/online` - Online player list
 - `GET /api/phrases/for/:playerId` - Get targeted phrases
 - `POST /api/phrases/create` - Create new phrase
+
+#### Web Dashboard (3001)
+- `GET /api/status` - Service health check
+- `GET /api/monitoring/stats` - System monitoring statistics
+- `POST /api/contribution/request` - Generate contribution link
+
+#### Link Generator (3002)
+- `GET /api/status` - Service health check
+- (Contribution link management endpoints)
+
+#### Admin Service (3003) - Content Management
+- `GET /api/status` - Service health check
+- `POST /api/admin/phrases/batch-import` - Batch phrase import for administrators
+
+**Admin Batch Import Example:**
+```bash
+curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phrases": [
+      {
+        "content": "hello world",
+        "hint": "A common greeting",
+        "language": "en"
+      }
+    ],
+    "adminId": "admin-user"
+  }'
+```
 
 ### MCP Tools Available
 - **iOS Simulator Control**: Screenshot, UI inspection, tap/swipe gestures, text input

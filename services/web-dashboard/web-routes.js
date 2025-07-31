@@ -4,8 +4,9 @@ const path = require('path');
 const { pool } = require('./shared/database/connection');
 const DatabasePlayer = require('./shared/database/models/DatabasePlayer');
 const DatabasePhrase = require('./shared/database/models/DatabasePhrase');
-const { HintSystem } = require('./shared/services/hintSystem');
-const { detectLanguage } = require('./shared/services/difficultyScorer');
+// Removed unused imports after admin functionality moved to dedicated service
+
+// Admin routes moved to dedicated Admin Service (port 3003)
 
 const router = express.Router();
 // Link generator is now a separate service - TODO: Use HTTP calls to link-generator service
@@ -50,11 +51,8 @@ router.post('/api/contribution/request', async (req, res) => {
 
         // TODO: Replace with HTTP call to link-generator service
         // const link = await linkGenerator.createContributionLink(playerId, {
-        const link = { error: 'Link generator service not connected yet' }; // {
-            expirationHours,
-            maxUses,
-            customMessage
-        });
+        // TODO: Connect to link generator service
+        const link = { error: 'Link generator service not connected yet' };
 
         res.status(201).json({
             success: true,
@@ -125,7 +123,7 @@ router.post('/api/contribution/:token/submit', async (req, res) => {
 
         // Create the phrase using the same logic as the app
         const finalClue = clue && clue.trim() ? clue.trim() : 'No clue provided';
-        const detectedLanguage = detectLanguage(trimmedPhrase) || language;
+        const detectedLanguage = language; // Use provided language since detectLanguage moved to admin service
         
         // Create phrase in database
         const phraseData = {
@@ -261,5 +259,8 @@ async function getMonitoringStats() {
         };
     }
 }
+
+// Admin routes moved to dedicated Admin Service (port 3003)
+// Web Dashboard now focuses solely on monitoring and contribution management
 
 module.exports = router;

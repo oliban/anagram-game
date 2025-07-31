@@ -16,7 +16,7 @@ curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/st
 ### Option 1: AWS Console (Recommended for Quick Start)
 1. **Login**: Go to AWS Console → ECS
 2. **Navigate**: eu-west-1 region → Clusters → anagram-game-cluster
-3. **Services**: Click on each service (game-server, web-dashboard, link-generator)
+3. **Services**: Click on each service (game-server, web-dashboard, link-generator, admin-service)
 4. **Scale Up**: Update service → Set desired count from 0 to 1
 5. **Wait**: 2-5 minutes for tasks to reach RUNNING state
 6. **Verify**: Check health endpoint again
@@ -27,9 +27,10 @@ curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/st
 aws ecs update-service --cluster anagram-game-cluster --service anagram-game-server --desired-count 1
 aws ecs update-service --cluster anagram-game-cluster --service anagram-web-dashboard --desired-count 1  
 aws ecs update-service --cluster anagram-game-cluster --service anagram-link-generator --desired-count 1
+aws ecs update-service --cluster anagram-game-cluster --service anagram-admin-service --desired-count 1
 
 # Check service status
-aws ecs describe-services --cluster anagram-game-cluster --services anagram-game-server anagram-web-dashboard anagram-link-generator
+aws ecs describe-services --cluster anagram-game-cluster --services anagram-game-server anagram-web-dashboard anagram-link-generator anagram-admin-service
 
 # Monitor deployment
 aws ecs wait services-stable --cluster anagram-game-cluster --services anagram-game-server
@@ -53,6 +54,7 @@ terraform apply -auto-approve
 aws ecs update-service --cluster anagram-game-cluster --service anagram-game-server --desired-count 0
 aws ecs update-service --cluster anagram-game-cluster --service anagram-web-dashboard --desired-count 0
 aws ecs update-service --cluster anagram-game-cluster --service anagram-link-generator --desired-count 0
+aws ecs update-service --cluster anagram-game-cluster --service anagram-admin-service --desired-count 0
 ```
 
 ## Monitoring AWS Production
@@ -61,6 +63,7 @@ aws ecs update-service --cluster anagram-game-cluster --service anagram-link-gen
 aws logs tail /ecs/anagram-game-server --follow
 aws logs tail /ecs/anagram-web-dashboard --follow
 aws logs tail /ecs/anagram-link-generator --follow
+aws logs tail /ecs/anagram-admin-service --follow
 
 # Check task health
 aws ecs describe-tasks --cluster anagram-game-cluster --tasks $(aws ecs list-tasks --cluster anagram-game-cluster --query 'taskArns[0]' --output text)
@@ -98,3 +101,50 @@ The `build_and_test.sh` script provides an automated workflow that:
 5. **Clear next-step guidance**
 
 This workflow ensures you never build apps against non-functional servers and provides immediate feedback on server status and required actions.
+
+## Microservices Architecture
+
+The system now uses a 4-service microservices architecture:
+
+### Service Responsibilities
+- **🎮 Game Server (3000)**: Core multiplayer API, WebSocket connections, player management
+- **📊 Web Dashboard (3001)**: Monitoring interface, system statistics, contribution management  
+- **🔗 Link Generator (3002)**: Contribution link generation and management
+- **🔧 Admin Service (3003)**: Content management, batch phrase imports, administrative operations
+- **🗄️ PostgreSQL Database**: Shared data store for all services
+
+### Service Health Endpoints
+```bash
+# Local Development
+curl http://localhost:3000/api/status  # Game server
+curl http://localhost:3001/api/status  # Web dashboard
+curl http://localhost:3002/api/status  # Link generator  
+curl http://localhost:3003/api/status  # Admin service
+
+# AWS Production (replace with your ALB endpoint)
+curl http://your-alb-endpoint.com/api/status      # Game server
+curl http://your-alb-endpoint.com:3001/api/status # Web dashboard
+curl http://your-alb-endpoint.com:3002/api/status # Link generator
+curl http://your-alb-endpoint.com:3003/api/status # Admin service
+```
+
+### Admin Service Usage
+The Admin Service provides content management capabilities:
+
+```bash
+# Batch import phrases (local)
+curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phrases": [
+      {
+        "content": "example phrase",
+        "hint": "A sample phrase",
+        "language": "en"
+      }
+    ],
+    "adminId": "admin-user"
+  }'
+```
+
+This separation ensures clean architectural boundaries and allows independent scaling of different service types.
