@@ -7,29 +7,27 @@ module.exports = (dependencies) => {
   const { configService } = dependencies;
 
   // Client debug logging
-  router.post('/api/debug/log', (req, res) => {
-    // Check if performance monitoring is enabled
-    if (!configService.isPerformanceMonitoringEnabled()) {
-      return res.status(403).json({
-        error: 'Performance monitoring is disabled'
-      });
+  router.post('/api/debug/log', async (req, res) => {
+    try {
+      // Performance monitoring is always enabled for debugging
+      console.log('📊 CLIENT DEBUG:', req.body);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ DEBUG LOG: Error processing debug log:', error);
+      res.status(500).json({ error: 'Failed to process debug log' });
     }
-    
-    console.log('📊 CLIENT DEBUG:', req.body);
-    res.json({ success: true });
   });
 
   // Client performance monitoring
-  router.post('/api/debug/performance', (req, res) => {
-    // Check if performance monitoring is enabled
-    if (!configService.isPerformanceMonitoringEnabled()) {
-      return res.status(403).json({
-        error: 'Performance monitoring is disabled'
-      });
+  router.post('/api/debug/performance', async (req, res) => {
+    try {
+      // Performance monitoring is always enabled for debugging
+      console.log('🎯 CLIENT PERFORMANCE:', req.body);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ DEBUG PERFORMANCE: Error processing performance data:', error);
+      res.status(500).json({ error: 'Failed to process performance data' });
     }
-    
-    console.log('🎯 CLIENT PERFORMANCE:', req.body);
-    res.json({ success: true });
   });
 
   return router;

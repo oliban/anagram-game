@@ -41,42 +41,9 @@ module.exports = (dependencies) => {
     res.sendFile(path.join(__dirname, '../../web-dashboard/public/contribute/index.html'));
   });
 
-  // Server configuration
-  router.get('/api/config', async (req, res) => {
-    try {
-      if (!getDatabaseStatus()) {
-        return res.status(503).json({
-          error: 'Database connection required for configuration'
-        });
-      }
-      
-      const serverConfig = await configService.getServerConfig();
-      
-      res.json({
-        performanceMonitoringEnabled: serverConfig.performanceMonitoringEnabled,
-        serverVersion: serverConfig.version,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('❌ Error getting server config:', error);
-      res.status(500).json({
-        error: 'Failed to get server configuration'
-      });
-    }
-  });
+  // REMOVED: /api/config - iOS uses /api/config/levels instead (Phase 3 cleanup)
 
-  // Admin configuration
-  router.get('/api/admin/config', async (req, res) => {
-    try {
-      const adminConfig = await configService.getAdminConfig();
-      res.json(adminConfig);
-    } catch (error) {
-      console.error('❌ Error getting admin config:', error);
-      res.status(500).json({
-        error: 'Failed to get admin configuration'
-      });
-    }
-  });
+  // REMOVED: /api/admin/config - Admin-only feature, no consumers found (Phase 3 cleanup)
 
   // Level configuration
   router.get('/api/config/levels', async (req, res) => {

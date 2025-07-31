@@ -11,8 +11,8 @@
 const fs = require('fs');
 const path = require('path');
 const { query, pool } = require('../database/connection');
-// Use built-in fetch (Node.js 18+) for API calls
-const fetch = global.fetch;
+// Use built-in fetch (Node.js 18+) or fallback to node-fetch
+const fetch = global.fetch || require('node-fetch');
 
 // Configuration
 const CONFIG = {
@@ -20,8 +20,7 @@ const CONFIG = {
   duplicateCheck: true,
   validateSchema: true,
   outputDir: path.join(__dirname, '../data'),
-  apiUrl: 'http://localhost:3000',
-  systemUserId: '11111111-1111-1111-1111-111111111111' // SystemImporter for Docker database imports
+  apiUrl: 'http://localhost:3000'
 };
 
 /**
@@ -204,7 +203,7 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
         hint: phrase.clue,
         language: phrase.language || 'en',
         isGlobal: true,
-        senderId: CONFIG.systemUserId,
+        senderId: null, // System import - no specific sender
         phraseType: 'global'
       })
     });
@@ -222,8 +221,8 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
     return {
       success: true,
       phrase: phrase.phrase,
-      id: result.phrase.id,
-      difficulty: result.phrase.difficultyLevel,
+      id: result.id,
+      difficulty: result.difficultyLevel,
       action: 'inserted_via_api'
     };
     
@@ -247,7 +246,7 @@ async function importPhrases(phrases, options = {}) {
     useAPI = false
   } = options;
   
-  console.log(`📥 ${dryRun ? 'Simulating' : 'Starting'} import of ${phrases.length} phrases via ${useAPI ? 'API' : 'direct database'}...`);
+  console.log(`📥 ${dryRun ? 'Simulating' : 'Starting'} import of ${phrases.length} phrases...`);
   
   const results = {
     total: phrases.length,

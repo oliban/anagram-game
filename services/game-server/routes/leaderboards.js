@@ -168,62 +168,9 @@ module.exports = (dependencies) => {
     }
   });
 
-  // Get global statistics
-  router.get('/api/stats/global', async (req, res) => {
-    try {
-      if (!getDatabaseStatus()) {
-        return res.status(503).json({
-          error: 'Database connection required for global statistics'
-        });
-      }
+  // REMOVED: /api/stats/global - Admin/monitoring feature, no consumers (Phase 3 cleanup)
 
-      // Get global statistics
-      const globalStats = await ScoringSystem.getGlobalStats();
-
-      res.json({
-        success: true,
-        stats: globalStats,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      console.error('❌ STATS: Error getting global statistics:', error.message);
-      res.status(500).json({
-        error: 'Failed to get global statistics'
-      });
-    }
-  });
-
-  // Refresh all leaderboards
-  router.post('/api/scores/refresh', async (req, res) => {
-    try {
-      if (!getDatabaseStatus()) {
-        return res.status(503).json({
-          error: 'Database connection required for leaderboard refresh'
-        });
-      }
-
-      // Refresh all leaderboards
-      const refreshResult = await ScoringSystem.refreshAllLeaderboards();
-
-      res.json({
-        success: true,
-        message: 'All leaderboards refreshed successfully',
-        updated: {
-          dailyUpdated: refreshResult.dailyUpdated,
-          weeklyUpdated: refreshResult.weeklyUpdated,
-          totalUpdated: refreshResult.totalUpdated
-        },
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      console.error('❌ REFRESH: Error refreshing leaderboards:', error.message);
-      res.status(500).json({
-        error: 'Failed to refresh leaderboards'
-      });
-    }
-  });
+  // REMOVED: /api/scores/refresh - Admin-only feature, no consumers (Phase 3 cleanup)
 
   return router;
 };

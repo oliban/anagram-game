@@ -1,0 +1,102 @@
+{
+  "import": {
+    "timestamp": "2025-07-30T22:11:25.679Z",
+    "total_phrases": 26,
+    "successful": 0,
+    "failed": 26,
+    "duplicates": 0,
+    "success_rate": 0
+  },
+  "metadata": {
+    "input_file": "../../server/data/analyzed-sv-50-100-50-manual.json",
+    "dry_run": false,
+    "batch_size": 50,
+    "use_api": true,
+    "original_count": 26,
+    "quality_filtered_count": 26
+  },
+  "errors": [
+    {
+      "phrase": "blå himmel",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "kall vinter",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "varm sommar",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "svart katt",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "glad flicka",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "gammal man",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "snabb häst",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "långt tåg",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "gammal stad",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "stark kaffe",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "söt kaka",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "mjuk kudde",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "lätt fjäder",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "mörk natt",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "tom flaska",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "öppen dörr",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "stängd fönster",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "kall glass",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "gul tulpan",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    },
+    {
+      "phrase": "grön gräs",
+      "error": "API error (503): {\"error\":\"Database connection required for phrase creation\"}"
+    }
+  ],
+  "difficulty_distribution": {},
+  "sample_imported": []
+}
