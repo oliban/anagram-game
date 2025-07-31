@@ -228,20 +228,6 @@ class GameModel: ObservableObject {
     
     func startNewGame(isUserInitiated: Bool = false) async {
         
-        // Performance monitoring - start game reset timer
-        if AppConfig.isPerformanceMonitoringEnabled {
-            let resetStartTime = CACurrentMediaTime()
-            print("🧪 PERFORMANCE: Game reset started at \(resetStartTime)")
-            
-            // Send performance data to server
-            Task {
-                await sendPerformanceToServer([
-                    "event": "game_reset_start",
-                    "start_time": resetStartTime,
-                    "memory_usage_mb": getMemoryUsage()
-                ])
-            }
-        }
         
         // Debug: Log entry to startNewGame
         await DebugLogger.shared.sendToServer("ENTERING_startNewGame: isUserInitiated=\(isUserInitiated)")
@@ -286,57 +272,8 @@ class GameModel: ObservableObject {
         let networkManager = NetworkManager.shared
         var phraseSource = "Unknown"
         
-        // PRIORITY 1: Fetch fresh phrases from server first (bypasses WebSocket queue issues)
-        print("🔍 GAME: Fetching fresh phrases from server")
-        await DebugLogger.shared.sendToServer("SERVER_FETCH_STARTING: fetching phrases from server")
-        let customPhrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
-        
-        // Debug: Log what we got from server
-        await DebugLogger.shared.sendToServer("SERVER_FETCH_RESULT: got \(customPhrases.count) phrases")
-        
-        if let firstPhrase = customPhrases.first {
-            // Distinguish between targeted and global server phrases
-            if firstPhrase.targetId != nil {
-                phraseSource = "Server-Targeted (\(firstPhrase.senderName))"
-                customPhraseInfo = "Custom phrase from \(firstPhrase.senderName)"
-            } else {
-                phraseSource = "Server-Global"
-                customPhraseInfo = "" // No sender info for global phrases
-            }
-            print("✅ GAME: Got fresh phrase from server: '\(firstPhrase.content)' (ID: \(firstPhrase.id))")
-            
-            // Calculate and log difficulty score for debugging
-            let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: firstPhrase.content, language: "en")
-            let maxAllowedDifficulty = currentSkillLevel.maxDifficulty
-            
-            print("🔍 PHRASE_DEBUG: Selected phrase '\(firstPhrase.content)'")
-            print("🔍 PHRASE_DEBUG: Difficulty score: \(difficultyAnalysis.score)")
-            print("🔍 PHRASE_DEBUG: Player level: \(currentLevel), max allowed: \(maxAllowedDifficulty)")
-            print("🔍 PHRASE_DEBUG: Source: \(firstPhrase.targetId != nil ? "Targeted" : "Global")")
-            print("🔍 PHRASE_DEBUG: Sender: \(firstPhrase.senderName)")
-            
-            // Send debug info to server
-            await DebugLogger.shared.sendToServer("PHRASE_DEBUG: phrase='\(firstPhrase.content)', difficulty=\(difficultyAnalysis.score), level=\(currentLevel), maxAllowed=\(maxAllowedDifficulty)")
-            
-            currentCustomPhrase = firstPhrase
-            currentSentence = firstPhrase.content
-            currentPhraseId = firstPhrase.id
-            
-            // DON'T consume targeted phrases immediately - only consume when completed
-            // This allows the player to skip and still have access to the phrase
-            if firstPhrase.targetId == nil {
-                // Only consume global phrases immediately
-                let consumeSuccess = await networkManager.consumePhrase(phraseId: firstPhrase.id)
-                
-                if consumeSuccess {
-                    print("✅ GAME: Successfully consumed global phrase \(firstPhrase.id)")
-                } else {
-                    print("❌ GAME: Failed to consume global phrase \(firstPhrase.id)")
-                }
-            } else {
-                print("📌 GAME: Targeted phrase \(firstPhrase.id) not consumed yet - will consume on completion")
-            }
-        } else if let queuedPhrase = getNextPhraseFromQueue() {
+        // Use phrases already loaded in the lobby
+        if let queuedPhrase = getNextPhraseFromQueue() {
             // DEBUG: Log the targetId value for debugging
             print("🐛 DEBUG: Queue phrase targetId = '\(queuedPhrase.targetId ?? "nil")' for phrase from \(queuedPhrase.senderName)")
             
@@ -354,14 +291,8 @@ class GameModel: ObservableObject {
             currentSentence = queuedPhrase.content
             currentPhraseId = queuedPhrase.id
             
-            // Mark as consumed on server
-            let consumeSuccess = await networkManager.consumePhrase(phraseId: queuedPhrase.id)
-            
-            if consumeSuccess {
-                print("✅ GAME: Successfully consumed queued phrase \(queuedPhrase.id)")
-            } else {
-                print("❌ GAME: Failed to consume queued phrase \(queuedPhrase.id)")
-            }
+            // No need to consume phrases anymore - we're using pre-loaded batches
+            print("📤 GAME: Using pre-loaded phrase \(queuedPhrase.id) from queue")
         } else {
             // PRIORITY 2: Check for push-delivered phrase (for user-initiated actions)
             if isUserInitiated && networkManager.hasNewPhrase, let pushedPhrase = networkManager.lastReceivedPhrase {
@@ -379,15 +310,9 @@ class GameModel: ObservableObject {
                 currentSentence = pushedPhrase.content
                 currentPhraseId = pushedPhrase.id
                 
-                // Mark as consumed and clear the push flag
-                let consumeSuccess = await networkManager.consumePhrase(phraseId: pushedPhrase.id)
+                // Clear the push flag
                 networkManager.hasNewPhrase = false
-                
-                if consumeSuccess {
-                    print("✅ GAME: Successfully consumed push-delivered phrase \(pushedPhrase.id)")
-                } else {
-                    print("❌ GAME: Failed to consume push-delivered phrase \(pushedPhrase.id)")
-                }
+                print("📤 GAME: Using push-delivered phrase \(pushedPhrase.id)")
             } else {
                 // FALLBACK: Use local phrases if no server phrases available
                 phraseSource = "Local-File"
@@ -429,28 +354,8 @@ class GameModel: ObservableObject {
                 currentSentence = selectedPhrase
                 customPhraseInfo = ""
                 
-                // Create local phrase on server so it can be properly completed for leaderboard
-                let matchingLocalPhrase = localPhrases.first { $0.content == selectedPhrase }
-                let hint = matchingLocalPhrase?.clue ?? ""
-                
-                // Create on server to get real phrase ID
-                print("🔍 LOCAL_PHRASE: Attempting to create '\(selectedPhrase)' on server...")
-                let creationSuccess = await networkManager.createGlobalPhrase(content: selectedPhrase, hint: hint)
-                print("🔍 LOCAL_PHRASE: Creation result: \(creationSuccess)")
-                if creationSuccess {
-                    // Get the newly created phrase to get its real ID
-                    let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
-                    if let createdPhrase = phrases.first(where: { $0.content == selectedPhrase }) {
-                        currentPhraseId = createdPhrase.id
-                        print("✅ LOCAL PHRASE: Created on server with ID: \(createdPhrase.id)")
-                    } else {
-                        currentPhraseId = "local-\(UUID().uuidString)"
-                        print("⚠️  LOCAL PHRASE: Created on server but couldn't retrieve ID, using fallback")
-                    }
-                } else {
-                    currentPhraseId = "local-\(UUID().uuidString)"
-                    print("⚠️  LOCAL PHRASE: Server creation failed, using fallback ID")
-                }
+                // Use a local ID for local phrases
+                currentPhraseId = "local-\(UUID().uuidString)"
                 
                 print("🔍 DEBUG: Selected local phrase: '\(selectedPhrase)' with ID: \(currentPhraseId ?? "none")")
                 print("🔍 DEBUG: Total local phrases available: \(localPhrases.count)")
@@ -530,23 +435,6 @@ class GameModel: ObservableObject {
         scrambleLetters()
         gameState = .playing
         wordsCompleted = 0
-        
-        // Performance monitoring - end game reset timer and record memory
-        if AppConfig.isPerformanceMonitoringEnabled {
-            let resetEndTime = CACurrentMediaTime()
-            let memoryUsage = getMemoryUsage()
-            print("🧪 PERFORMANCE: Game reset completed at \(resetEndTime)")
-            print("🧪 PERFORMANCE: Current memory usage: \(String(format: "%.1f", memoryUsage)) MB")
-            
-            // Send performance data to server
-            Task {
-                await sendPerformanceToServer([
-                    "event": "game_reset_complete",
-                    "end_time": resetEndTime,
-                    "memory_usage_mb": memoryUsage
-                ])
-            }
-        }
         
         // Reset hint state
         currentHints = []
@@ -666,19 +554,7 @@ class GameModel: ObservableObject {
     func skipCurrentGame() async {
         print("🚀🚀🚀 SKIP BUTTON PRESSED - skipCurrentGame() CALLED 🚀🚀🚀")
         
-        // Enhanced memory tracking for skip operation
-        let skipStartMemory: Double
-        if AppConfig.isPerformanceMonitoringEnabled {
-            skipStartMemory = getMemoryUsage()
-            await DebugLogger.shared.sendToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame() - Memory: \(String(format: "%.1f", skipStartMemory))MB")
-            
-            await sendPerformanceToServer([
-                "event": "skip_model_start",
-                "memory_mb": skipStartMemory
-            ])
-        } else {
-            skipStartMemory = 0.0
-        }
+        await DebugLogger.shared.sendToServer("SKIP_BUTTON_PRESSED: Starting skipCurrentGame()")
         
         // Prevent concurrent skip operations to avoid race conditions
         guard !isSkipping else {
@@ -690,34 +566,12 @@ class GameModel: ObservableObject {
         isSkipping = true
         print("🚀 Skip button pressed")
         
-        // If we have a current custom phrase, skip it on the server
+        // Simply move to the next phrase in the queue
         if let customPhrase = currentCustomPhrase {
-            await DebugLogger.shared.sendToServer("SKIP_SERVER_PHRASE: Skipping custom phrase: \(customPhrase.content)")
-            print("⏭️ Skipping custom phrase: \(customPhrase.content)")
+            print("⏭️ Skipping phrase: \(customPhrase.content)")
+            // No server calls needed - just move to next phrase in queue
             
-            let networkManager = NetworkManager.shared
-            await DebugLogger.shared.sendToServer("SKIP_CALLING_SKIP_PHRASE: About to call skipPhrase")
-            let skipSuccess = await networkManager.skipPhrase(phraseId: customPhrase.id)
-            await DebugLogger.shared.sendToServer("SKIP_PHRASE_RESULT: skipSuccess=\(skipSuccess)")
-            
-            if skipSuccess {
-                print("✅ Successfully skipped phrase on server")
-            } else {
-                print("❌ Failed to skip phrase on server")
-            }
-            
-            // CRITICAL: Also consume targeted phrases when skipped to prevent re-offering
-            if customPhrase.targetId != nil {
-                await DebugLogger.shared.sendToServer("SKIP_CONSUME_TARGETED: Consuming targeted phrase to prevent re-offering")
-                let consumeSuccess = await networkManager.consumePhrase(phraseId: customPhrase.id)
-                if consumeSuccess {
-                    print("✅ Successfully consumed skipped targeted phrase \(customPhrase.id)")
-                } else {
-                    print("❌ Failed to consume skipped targeted phrase \(customPhrase.id)")
-                }
-            }
-            
-            // CRITICAL FIX: Remove the skipped phrase from local queues
+            // Remove the skipped phrase from local queues
             let phraseIdToRemove = customPhrase.id
             let removedCounts = await MainActor.run {
                 // Remove from phraseQueue
@@ -741,11 +595,6 @@ class GameModel: ObservableObject {
             }
             
             await DebugLogger.shared.sendToServer("SKIP_QUEUE_CLEANUP: Removed phrase \(phraseIdToRemove) from local queues (phraseQueue: \(removedCounts.0), lobbyQueue: \(removedCounts.1))")
-            
-            // Clear any cached phrases from NetworkManager
-            await DebugLogger.shared.sendToServer("SKIP_CLEARING_CACHE: About to call clearCachedPhrase")
-            await networkManager.clearCachedPhrase()
-            await DebugLogger.shared.sendToServer("SKIP_CACHE_CLEARED: clearCachedPhrase completed")
         } else {
             await DebugLogger.shared.sendToServer("SKIP_NO_CUSTOM_PHRASE: No custom phrase to skip")
         }
@@ -755,19 +604,7 @@ class GameModel: ObservableObject {
         print("🚀 Starting new game after skip")
         await startNewGame(isUserInitiated: true)
         
-        // Enhanced memory tracking at skip completion
-        if AppConfig.isPerformanceMonitoringEnabled {
-            let skipEndMemory = getMemoryUsage()
-            let skipMemoryDelta = skipEndMemory - skipStartMemory
-            
-            await DebugLogger.shared.sendToServer("SKIP_COMPLETED: skipCurrentGame() finished - Memory: \(String(format: "%.1f", skipEndMemory))MB (Δ\(String(format: "%.1f", skipMemoryDelta))MB)")
-            
-            await sendPerformanceToServer([
-                "event": "skip_model_complete",
-                "memory_mb": skipEndMemory,
-                "memory_delta_mb": skipMemoryDelta
-            ])
-        }
+        await DebugLogger.shared.sendToServer("SKIP_COMPLETED: skipCurrentGame() finished")
         
         // Reset skip flag to allow future skip operations
         isSkipping = false
@@ -968,34 +805,6 @@ class GameModel: ObservableObject {
         }
         
         return Double(info.resident_size) / 1024.0 / 1024.0 // Convert to MB
-    }
-    
-    // Send performance metrics to server
-    func sendPerformanceToServer(_ metrics: [String: Any]) async {
-        guard AppConfig.isPerformanceMonitoringEnabled else { return }
-        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        var logData = metrics
-        logData["timestamp"] = ISO8601DateFormatter().string(from: Date())
-        logData["playerId"] = playerId ?? "unknown"
-        logData["deviceModel"] = await getDeviceInfo()
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: logData)
-            request.httpBody = jsonData
-            let _ = try await URLSession.shared.data(for: request)
-        } catch {
-            print("❌ Failed to send performance data: \(error)")
-        }
-    }
-    
-    private func getDeviceInfo() async -> String {
-        // Get simulator info from device ID or use device model
-        return ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "Unknown"
     }
     
     func refreshPhrasesForLobby() async {

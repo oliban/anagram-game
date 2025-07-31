@@ -111,7 +111,8 @@ struct AppConfig {
     static var contributionBaseURL: String {
         let host = isLocalServer ? sharedConfig.development.host : sharedConfig.production.host
         let port = sharedConfig.services.linkGenerator.port
-        return "http://\(host):\(port)"
+        // AWS ALB doesn't need port specification for production
+        return host.contains("amazonaws.com") ? "http://\(host)" : "http://\(host):\(port)"
     }
     
     static var contributionAPIURL: String {
@@ -124,14 +125,11 @@ struct AppConfig {
     static let playerListRefreshInterval: TimeInterval = 15.0  // 15 seconds
     static let notificationDisplayDuration: TimeInterval = 3.0  // 3 seconds
     
-    // Performance Monitoring Configuration - Server-driven
+    // Performance Monitoring Configuration - Disabled by default to reduce API calls
     static var isPerformanceMonitoringEnabled: Bool = {
-        // Default fallback based on build type
-        #if DEBUG
-        return true
-        #else
+        // Default to disabled for cleaner startup behavior
+        // Can be enabled later if needed for debugging
         return false
-        #endif
     }()
     
     // Update performance monitoring based on server configuration

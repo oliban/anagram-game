@@ -41,6 +41,41 @@ app.post('/api/links/generate', async (req, res) => {
   }
 });
 
+// Contribution link generation endpoint (for iOS compatibility)
+app.post('/api/contribution/request', async (req, res) => {
+  try {
+    const { playerId, expirationHours, maxUses } = req.body;
+    
+    console.log('📝 CONTRIBUTION: Received request:', { playerId, expirationHours, maxUses });
+    
+    if (!playerId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'playerId is required' 
+      });
+    }
+    
+    const link = await linkGenerator.createContributionLink(playerId, {
+      expirationHours: expirationHours || 24,
+      maxUses: maxUses || 3
+    });
+    
+    console.log('✅ CONTRIBUTION: Link created successfully:', link);
+    
+    res.json({ 
+      success: true, 
+      link
+    });
+  } catch (error) {
+    console.error('❌ CONTRIBUTION: Link generation error:', error);
+    console.error('❌ CONTRIBUTION: Full error details:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 app.get('/api/links/validate/:token', async (req, res) => {
   try {
     const { token } = req.params;
