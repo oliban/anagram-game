@@ -221,62 +221,44 @@ module.exports = (dependencies) => {
         });
       }
       
-      // Get the first available phrase
-      const phrase = phrases[0];
-      const phraseInfo = phrase.getPublicInfo();
-      
       // Import difficulty scoring algorithm for client-side hint system
       const { calculateScore } = require('../shared/services/difficultyScorer');
       
-      // Calculate base score for the phrase
-      const baseScore = calculateScore({ 
-        phrase: phraseInfo.content, 
-        language: phraseInfo.language || 'en' 
+      // Convert ALL phrases to CustomPhrase format that iOS NetworkManager expects
+      const customPhrasesFormat = phrases.map(phrase => {
+        const phraseInfo = phrase.getPublicInfo();
+        
+        // Calculate base score for each phrase
+        const baseScore = calculateScore({ 
+          phrase: phraseInfo.content, 
+          language: phraseInfo.language || 'en' 
+        });
+        
+        console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${phraseInfo.hint || ''}"`);
+        
+        return {
+          id: phraseInfo.id,
+          content: phraseInfo.content,
+          senderId: phraseInfo.senderId || '',
+          targetId: phraseInfo.targetId || null,
+          createdAt: new Date().toISOString(),
+          isConsumed: false,
+          senderName: phraseInfo.senderName || 'Server',
+          language: phraseInfo.language || 'en',
+          clue: phraseInfo.hint || '', // Map hint to clue field
+          difficultyLevel: phraseInfo.difficultyLevel || baseScore
+        };
       });
-      
-      // Generate client-side hint system data
-      const hintStatus = {
-        hintsUsed: [], // No hints used initially
-        nextHintLevel: 1, // First hint available
-        hintsRemaining: 3, // 3 hint levels available
-        currentScore: baseScore, // Full score initially
-        nextHintScore: Math.round(baseScore * 0.8), // 20% penalty for level 1 hint
-        canUseNextHint: true
-      };
-      
-      // Generate score preview for all hint levels
-      const scorePreview = {
-        noHints: baseScore,
-        level1: Math.round(baseScore * 0.8), // 20% penalty
-        level2: Math.round(baseScore * 0.6), // 40% penalty
-        level3: Math.round(baseScore * 0.4)  // 60% penalty
-      };
-      
-      // Convert to CustomPhrase format that iOS NetworkManager expects
-      const customPhraseFormat = {
-        id: phraseInfo.id,
-        content: phraseInfo.content,
-        senderId: phraseInfo.senderId || '',
-        targetId: phraseInfo.targetId || null,
-        createdAt: new Date().toISOString(),
-        isConsumed: false,
-        senderName: phraseInfo.senderName || 'Server',
-        language: phraseInfo.language || 'sv',
-        clue: phraseInfo.hint || '', // Map hint to clue field
-        difficultyLevel: phraseInfo.difficultyLevel
-      };
-      
-      console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${customPhraseFormat.clue}"`);
       
       // Return in the format iOS NetworkManager expects (array with phrases field)
       const response = {
-        phrases: [customPhraseFormat], // iOS expects array of CustomPhrase
-        count: 1,
+        phrases: customPhrasesFormat, // iOS expects array of CustomPhrase
+        count: customPhrasesFormat.length,
         timestamp: new Date().toISOString()
       };
       
-      console.log(`✅ PHRASE: Sent global Swedish phrase to iOS client (${phraseInfo.id})`);
-      console.log(`🔍 SERVER: Content: "${phraseInfo.content}", Language: ${phraseInfo.language}, Difficulty: ${phraseInfo.difficultyLevel}`);
+      console.log(`✅ PHRASE: Sent ${customPhrasesFormat.length} phrases to iOS client`);
+      console.log(`🔍 SERVER: First phrase: "${customPhrasesFormat[0].content}", Language: ${customPhrasesFormat[0].language}, Total: ${customPhrasesFormat.length}`);
       
       res.json(response);
       
