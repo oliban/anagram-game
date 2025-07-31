@@ -38,13 +38,16 @@ class ContributionLinkGenerator {
 
             const link = result.rows[0];
             
+            // Use link generator service URL for contribution links
+            const baseUrl = process.env.LINK_GENERATOR_URL || process.env.BASE_URL || 'http://localhost:3002';
+            
             return {
                 id: link.id,
                 token: link.token,
                 url: `/contribute/${link.token}`,
                 expiresAt: link.expires_at,
                 maxUses: link.max_uses,
-                shareableUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/contribute/${link.token}`
+                shareableUrl: `${baseUrl}/contribute/${link.token}`
             };
         } catch (error) {
             console.error('Error creating contribution link:', error);
@@ -178,11 +181,14 @@ class ContributionLinkGenerator {
         try {
             const result = await pool.query(query, [playerId]);
             
+            // Use link generator service URL for contribution links
+            const baseUrl = process.env.LINK_GENERATOR_URL || process.env.BASE_URL || 'http://localhost:3002';
+            
             return result.rows.map(link => ({
                 id: link.id,
                 token: link.token,
                 url: `/contribute/${link.token}`,
-                shareableUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/contribute/${link.token}`,
+                shareableUrl: `${baseUrl}/contribute/${link.token}`,
                 createdAt: link.created_at,
                 expiresAt: link.expires_at,
                 maxUses: link.max_uses,

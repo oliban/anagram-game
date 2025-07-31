@@ -441,8 +441,8 @@ struct LobbyView: View {
                         print("✅ CONTRIBUTION: Found shareableUrl: \(shareableUrl)")
                         
                         await MainActor.run {
-                            // Use the base URL from config for sharing
-                            self.contributionLink = shareableUrl.replacingOccurrences(of: "http://127.0.0.1:3000", with: AppConfig.contributionBaseURL)
+                            // The shareableUrl from the link generator already includes the correct base URL
+                            self.contributionLink = shareableUrl
                             self.isGeneratingLink = false
                             print("✅ CONTRIBUTION: Final generated link: \(self.contributionLink)")
                         }

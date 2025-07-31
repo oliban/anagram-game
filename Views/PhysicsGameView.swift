@@ -237,12 +237,6 @@ struct PhysicsGameView: View {
                                     // Log detailed pre-skip state
                                     await DebugLogger.shared.sendToServer("SKIP_PRESSED: Memory before: \(String(format: "%.1f", preSkipMemory))MB, Tiles: \(preSkipTiles), Scene children: \(preSkipChildren)")
                                     
-                                    await gameModel.sendPerformanceToServer([
-                                        "event": "skip_button_pressed",
-                                        "memory_before_mb": preSkipMemory,
-                                        "tiles_count_before": preSkipTiles,
-                                        "scene_children_before": preSkipChildren
-                                    ])
                                 } else {
                                     preSkipMemory = 0.0
                                     preSkipTiles = 0
@@ -270,15 +264,6 @@ struct PhysicsGameView: View {
                                     
                                     await DebugLogger.shared.sendToServer("SKIP_COMPLETE: Memory after: \(String(format: "%.1f", postSkipMemory))MB (Δ\(String(format: "%.1f", memoryDelta))MB), Tiles: \(postSkipTiles) (Δ\(tilesDelta)), Children: \(postSkipChildren) (Δ\(childrenDelta))")
                                     
-                                    await gameModel.sendPerformanceToServer([
-                                        "event": "skip_operation_complete",
-                                        "memory_after_mb": postSkipMemory,
-                                        "memory_delta_mb": memoryDelta,
-                                        "tiles_count_after": postSkipTiles,
-                                        "tiles_delta": tilesDelta,
-                                        "scene_children_after": postSkipChildren,
-                                        "scene_children_delta": childrenDelta
-                                    ])
                                 }
                                 
                                 isSkipping = false
@@ -615,28 +600,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Notify GameModel that connection is established (for pending debug tiles)
         gameModel.onMessageTileSpawnerConnected()
-        Task {
-            let debugMessage = "SCENE_CONNECTED: PhysicsGameScene connected as messageTileSpawner"
-            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let logData = [
-                "message": debugMessage,
-                "timestamp": ISO8601DateFormatter().string(from: Date()),
-                "playerId": "scene-connection"
-            ]
-            
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: logData)
-                request.httpBody = jsonData
-                let _ = try await URLSession.shared.data(for: request)
-            } catch {
-                print("Scene connection debug logging failed: \(error)")
-            }
-        }
+        // Scene connection debug logging removed to reduce API calls during startup
         
         // Don't create tiles automatically - wait for setupGame() to call resetGame()
         
@@ -1085,27 +1049,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
     }
     
     
-    // Send performance metrics to server
-    private func sendPerformanceToServer(_ metrics: [String: Any]) async {
-        guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        var logData = metrics
-        logData["timestamp"] = ISO8601DateFormatter().string(from: Date())
-        logData["playerId"] = gameModel.playerId ?? "unknown"
-        logData["component"] = "PhysicsGameView"
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: logData)
-            request.httpBody = jsonData
-            let _ = try await URLSession.shared.data(for: request)
-        } catch {
-            print("❌ Failed to send performance data: \(error)")
-        }
-    }
     
     func spawnMessageTile(message: String) {
         // Create new message tile - width calculated based on text length
@@ -1762,38 +1705,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         let tileResetStartTime = CACurrentMediaTime()
         print("🧪 PERFORMANCE: Tile reset started at \(tileResetStartTime) with \(tiles.count) existing tiles")
         
-        // Send performance data to server
-        Task {
-            await sendPerformanceToServer([
-                "event": "tile_reset_start",
-                "start_time": tileResetStartTime,
-                "existing_tiles_count": tiles.count
-            ])
-        }
         
-        // Add server debug logging - create a simple debug endpoint call
-        Task {
-            let debugMessage = "SCENE_RESET_CALLED: PhysicsGameScene.resetGame() started"
-            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let logData = [
-                "message": debugMessage,
-                "timestamp": ISO8601DateFormatter().string(from: Date()),
-                "playerId": "scene-debug"
-            ]
-            
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: logData)
-                request.httpBody = jsonData
-                let _ = try await URLSession.shared.data(for: request)
-            } catch {
-                print("Scene debug logging failed: \(error)")
-            }
-        }
+        // Scene reset debug logging removed to reduce API calls
         
         // Clear any existing celebration or game state
         celebrationText = ""
@@ -1858,29 +1771,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         print("🗑️ Removed \(removedCount) orphaned tiles from scene")
         print("🗑️ Total scene children after cleanup: \(children.count)")
         
-        // Debug: Send tile cleanup details to server
-        Task {
-            let debugMessage = "SCENE_CLEANUP: Removed \(removedCount) orphaned tiles, scene now has \(children.count) children"
-            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let logData = [
-                "message": debugMessage,
-                "timestamp": ISO8601DateFormatter().string(from: Date()),
-                "playerId": "scene-cleanup"
-            ]
-            
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: logData)
-                request.httpBody = jsonData
-                let _ = try await URLSession.shared.data(for: request)
-            } catch {
-                print("Scene cleanup debug logging failed: \(error)")
-            }
-        }
+        // Scene cleanup debug logging removed to reduce API calls
         
         // Stop any ongoing physics effects
         removeAction(forKey: "quakeForces")
@@ -1905,38 +1796,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         let tileResetEndTime = CACurrentMediaTime()
         print("🧪 PERFORMANCE: Tile reset completed at \(tileResetEndTime) with \(tiles.count) new tiles")
         
-        // Send performance data to server
-        Task {
-            await sendPerformanceToServer([
-                "event": "tile_reset_complete",
-                "end_time": tileResetEndTime,
-                "new_tiles_count": tiles.count
-            ])
-        }
         
-        // Notify that scene reset is completely finished
-        Task {
-            let debugMessage = "SCENE_RESET_COMPLETE: Scene reset and tile creation finished, \(tiles.count) tiles created"
-            guard let url = URL(string: "http://127.0.0.1:8080/api/debug/log") else { return }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let logData = [
-                "message": debugMessage,
-                "timestamp": ISO8601DateFormatter().string(from: Date()),
-                "playerId": "scene-complete"
-            ]
-            
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: logData)
-                request.httpBody = jsonData
-                let _ = try await URLSession.shared.data(for: request)
-            } catch {
-                print("Scene complete debug logging failed: \(error)")
-            }
-        }
+        // Scene reset complete debug logging removed to reduce API calls
     }
     
     

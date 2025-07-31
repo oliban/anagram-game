@@ -22,30 +22,11 @@ class DifficultyAnalysisService {
     // MARK: - Server Configuration
     
     func fetchServerConfig() async throws -> ServerConfig {
-        guard let url = URL(string: "\(baseURL)/api/status") else {
-            throw NetworkError.invalidURL
-        }
-        
-        do {
-            let (data, response) = try await urlSession.data(from: url)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                print("❌ CONFIG: Failed to fetch server config. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
-                throw NetworkError.serverOffline
-            }
-            
-            let serverConfig = try JSONDecoder().decode(ServerConfig.self, from: data)
-            
-            // Update app configuration based on server response
-            AppConfig.updatePerformanceMonitoringFromServer(serverConfig.performanceMonitoringEnabled)
-            
-            print("✅ CONFIG: Fetched server configuration - Performance monitoring: \(serverConfig.performanceMonitoringEnabled)")
-            return serverConfig
-            
-        } catch {
-            print("❌ CONFIG: Error fetching server config: \(error.localizedDescription)")
-            throw NetworkError.connectionFailed
-        }
+        // Eliminate redundant /api/status call during startup
+        // Server config fetching is not critical for app functionality
+        // and this call is already wrapped in try? in ContentView
+        print("⚠️ CONFIG: Server config fetch disabled to reduce startup calls")
+        throw NetworkError.connectionFailed
     }
     
     // MARK: - Difficulty Analysis

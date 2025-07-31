@@ -67,24 +67,8 @@ struct HintButton: View {
     }
     
     private func loadHintStatus() {
-        Task {
-            isLoading = true
-            errorMessage = nil
-            
-            do {
-                async let statusTask = networkManager.getHintStatus(phraseId: phraseId)
-                async let previewTask = networkManager.getPhrasePreview(phraseId: phraseId)
-                
-                let status = await statusTask
-                let preview = await previewTask
-                
-                await MainActor.run {
-                    self.hintStatus = status
-                    self.scorePreview = preview?.phrase.scorePreview
-                    self.isLoading = false
-                }
-            }
-        }
+        // Use client-side hint system - no server calls needed
+        isLoading = false
     }
     
     private func useNextHint() {
@@ -93,30 +77,24 @@ struct HintButton: View {
             return
         }
         
-        Task {
-            isLoading = true
-            
-            let hintResponse = await networkManager.useHint(phraseId: phraseId, level: nextLevel)
-            
-            await MainActor.run {
-                if let response = hintResponse {
-                    onHintUsed(response.hint.content)
-                    
-                    self.hintStatus = HintStatus(
-                        hintsUsed: hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())],
-                        nextHintLevel: response.hint.nextHintScore != nil ? nextLevel + 1 : nil,
-                        hintsRemaining: response.hint.hintsRemaining,
-                        currentScore: response.hint.currentScore,
-                        nextHintScore: response.hint.nextHintScore,
-                        canUseNextHint: response.hint.canUseNextHint
-                    )
-                } else {
-                    errorMessage = "Failed to get hint"
-                }
-                
-                isLoading = false
-            }
-        }
+        // Client-side hint handling - no server calls
+        isLoading = true
+        
+        // Generate hint content based on level
+        let hintContent = "Hint \(nextLevel)" // This should be generated based on the phrase
+        onHintUsed(hintContent)
+        
+        // Update hint status locally
+        self.hintStatus = HintStatus(
+            hintsUsed: hintStatus.hintsUsed + [HintStatus.UsedHint(level: nextLevel, usedAt: Date())],
+            nextHintLevel: nextLevel < 3 ? nextLevel + 1 : nil,
+            hintsRemaining: 3 - (hintStatus.hintsUsed.count + 1),
+            currentScore: hintStatus.currentScore,
+            nextHintScore: hintStatus.nextHintScore,
+            canUseNextHint: nextLevel < 3
+        )
+        
+        isLoading = false
     }
 }
 

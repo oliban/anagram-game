@@ -20,7 +20,8 @@ class DebugLogger {
     /// Sends debug message to server for performance monitoring
     /// - Parameter message: Debug message to send
     func sendToServer(_ message: String) async {
-        // Always send debug messages for troubleshooting, ignore performance monitoring setting
+        // Respect performance monitoring setting to reduce API calls
+        guard AppConfig.isPerformanceMonitoringEnabled else { return }
         guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/log") else { return }
         
         var request = URLRequest(url: url)

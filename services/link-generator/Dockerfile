@@ -9,16 +9,16 @@ RUN apk add --no-cache curl && \
     adduser -S nodejs -u 1001
 
 # Copy package files first for better Docker layer caching
-COPY services/link-generator/package*.json ./
+COPY link-generator/package*.json ./
 
 # Install production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy application code
-COPY --chown=nodejs:nodejs services/link-generator/ ./
+COPY --chown=nodejs:nodejs link-generator/ ./
 
 # Copy shared modules
-COPY --chown=nodejs:nodejs services/shared/ ./shared/
+COPY --chown=nodejs:nodejs shared/ ./shared/
 
 # Create necessary directories
 RUN mkdir -p logs && \
