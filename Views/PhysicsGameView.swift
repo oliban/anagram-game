@@ -1808,6 +1808,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         // Method 1: Remove tracked tiles from arrays
         print("🗑️ Clearing \(tiles.count) existing letter tiles")
         for tile in tiles {
+            // Clear physics body to stop any ongoing physics simulation
+            tile.physicsBody = nil
             tile.removeFromParent()
         }
         tiles.removeAll()
@@ -1841,6 +1843,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
             // Remove any LetterTile, ScoreTile, LanguageTile, or MessageTile that might have been missed
             if child is LetterTile || child is ScoreTile || child is LanguageTile || child is MessageTile {
                 print("🗑️ Found orphaned tile of type \(type(of: child)), removing...")
+                // Clear physics body to stop any ongoing physics simulation
+                (child as? SKSpriteNode)?.physicsBody = nil
                 childrenToRemove.append(child)
                 removedCount += 1
             }

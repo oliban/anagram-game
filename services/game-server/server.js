@@ -1755,7 +1755,7 @@ app.post('/api/phrases/:phraseId/complete', async (req, res) => {
     }
 
     const { phraseId } = req.params;
-    const { playerId, completionTime = 0 } = req.body;
+    const { playerId, completionTime = 0, hintsUsed = 0 } = req.body;
 
     // Validate input
     if (!playerId) {
@@ -1773,7 +1773,7 @@ app.post('/api/phrases/:phraseId/complete', async (req, res) => {
     }
 
     // Complete phrase with hint-based scoring
-    const result = await HintSystem.completePhrase(playerId, phraseId, completionTime);
+    const result = await HintSystem.completePhrase(playerId, phraseId, completionTime, hintsUsed);
 
     // Get player and phrase info for activity broadcast
     const player = await DatabasePlayer.getPlayerById(playerId);
