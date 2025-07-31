@@ -12,6 +12,7 @@ const DatabasePlayer = require('./shared/database/models/DatabasePlayer');
 const DatabasePhrase = require('./shared/database/models/DatabasePhrase');
 const ScoringSystem = require('./shared/services/scoringSystem');
 const ConfigService = require('./shared/services/config-service');
+const RouteAnalytics = require('./shared/services/routeAnalytics');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -23,8 +24,9 @@ const path = require('path');
 const app = express();
 const server = createServer(app);
 
-// Initialize configuration service
+// Initialize configuration service and route analytics
 const configService = new ConfigService(pool);
+const routeAnalytics = new RouteAnalytics('game-server');
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -194,6 +196,9 @@ function broadcastActivity(type, message, details = null) {
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Route analytics middleware (only for API routes)
+app.use('/api', routeAnalytics.createMiddleware());
 
 // Swagger API documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
