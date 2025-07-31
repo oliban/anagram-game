@@ -479,12 +479,14 @@ class GameModel: ObservableObject {
         hintsUsed = 0
         
         // Set difficulty score based on phrase type
-        if currentCustomPhrase != nil {
-            // For custom phrases, use a default difficulty score or analyze the phrase
-            phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
+        if let customPhrase = currentCustomPhrase {
+            // For custom phrases, use server-provided difficulty for consistency
+            phraseDifficulty = customPhrase.difficultyLevel
+            print("🎯 GAME DIFFICULTY: Using server difficulty \(phraseDifficulty) for '\(currentSentence)'")
         } else {
             // For default local phrases, calculate the actual difficulty score
             phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
+            print("🎯 GAME DIFFICULTY: Calculated local difficulty \(phraseDifficulty) for '\(currentSentence)'")
         }
         
         // Trigger scene reset after all game model updates are complete
@@ -496,6 +498,12 @@ class GameModel: ObservableObject {
             // Store phrase source for later spawning in resetGame
             currentPhraseSource = phraseSource
             print("🐛 Stored phrase source: \(phraseSource) for debug tile spawning")
+            
+            // Spawn "local" information tile if this is a local phrase
+            if phraseSource == "Local-File" {
+                messageTileSpawner?.spawnMessageTile(message: "local")
+                print("📍 LOCAL: Spawned 'local' information tile for anagrams.txt phrase")
+            }
             
             // Reset flag to allow future phrase checks
             isCheckingPhrases = false
@@ -547,7 +555,14 @@ class GameModel: ObservableObject {
         hintsUsed = 0
         
         // Recalculate difficulty for current phrase
-        phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
+        if let customPhrase = currentCustomPhrase {
+            // For custom phrases, use server-provided difficulty for consistency
+            phraseDifficulty = customPhrase.difficultyLevel
+            print("🎯 GAME DIFFICULTY: Using server difficulty \(phraseDifficulty) for '\(currentSentence)' in resetGame")
+        } else {
+            // For default local phrases, calculate the actual difficulty score
+            phraseDifficulty = calculateDifficultyForPhrase(currentSentence)
+        }
     }
     
     func validateWordCompletion(formedWords: [String]) -> Bool {
@@ -581,10 +596,10 @@ class GameModel: ObservableObject {
         
         // Complete phrase on server (critical for leaderboard updates)
         if let phraseId = currentPhraseId {
-            print("🔍 SERVER_COMPLETION: Attempting to complete phraseId: '\(phraseId)'")
+            print("🔍 SERVER_COMPLETION: Attempting to complete phraseId: '\(phraseId)' with \(hintsUsed) hints")
             Task {
                 let networkManager = NetworkManager.shared
-                if let result = await networkManager.completePhrase(phraseId: phraseId) {
+                if let result = await networkManager.completePhrase(phraseId: phraseId, hintsUsed: hintsUsed) {
                     if result.success {
                         print("✅ SERVER COMPLETION: Success! Server score: \(result.completion.finalScore), client: \(currentScore)")
                         

@@ -180,33 +180,48 @@ class HintSystem {
   /**
    * Complete phrase with hint-based scoring
    */
-  static async completePhrase(playerId, phraseId, completionTime = 0) {
+  static async completePhrase(playerId, phraseId, completionTime = 0, hintsUsed = 0) {
     try {
+      // Get phrase difficulty for score calculation
+      const phraseResult = await query(`
+        SELECT difficulty_level FROM phrases WHERE id = $1
+      `, [phraseId]);
+      
+      if (phraseResult.rows.length === 0) {
+        throw new Error('Phrase not found');
+      }
+      
+      const difficultyLevel = phraseResult.rows[0].difficulty_level;
+      
+      // Calculate final score using client-provided hintsUsed value
+      const finalScore = this.calculateScoreForHintLevel(difficultyLevel, hintsUsed);
+      
+      // Call basic completion function with calculated score
       const result = await query(`
-        SELECT success, final_score, hints_used
-        FROM complete_phrase_for_player_with_hints($1, $2, $3)
-      `, [playerId, phraseId, completionTime]);
+        SELECT complete_phrase_for_player($1, $2, $3, $4) as success
+      `, [playerId, phraseId, finalScore, completionTime]);
       
       if (result.rows.length === 0 || !result.rows[0].success) {
         throw new Error('Failed to complete phrase');
       }
       
-      const completion = result.rows[0];
-      
-      console.log(`✅ COMPLETION: Player ${playerId} completed phrase with ${completion.hints_used} hints, score: ${completion.final_score}`);
+      console.log(`✅ COMPLETION: Player ${playerId} completed phrase with ${hintsUsed} hints (client), score: ${finalScore}`);
       
       // Update player score aggregations and leaderboards
       try {
+        console.log(`📊 COMPLETION: Updating player scores for ${playerId}`);
         await ScoringSystem.updatePlayerScores(playerId);
+        console.log(`✅ COMPLETION: Successfully updated player scores for ${playerId}`);
       } catch (error) {
         console.error('⚠️ COMPLETION: Failed to update player scores:', error.message);
+        console.error('⚠️ COMPLETION: Full error:', error);
         // Don't fail the completion if scoring update fails
       }
       
       return {
         success: true,
-        finalScore: completion.final_score,
-        hintsUsed: completion.hints_used,
+        finalScore: finalScore,
+        hintsUsed: hintsUsed,
         completionTime
       };
       

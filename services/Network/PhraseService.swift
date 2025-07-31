@@ -275,7 +275,7 @@ class PhraseService: PhraseServiceDelegate {
 // MARK: - CustomPhrase Initializer Extension
 
 extension CustomPhrase {
-    init(id: String, content: String, senderId: String, targetId: String?, createdAt: Date, isConsumed: Bool, senderName: String, language: String, clue: String) {
+    init(id: String, content: String, senderId: String, targetId: String?, createdAt: Date, isConsumed: Bool, senderName: String, language: String, clue: String, difficultyLevel: Int = 50) {
         self.id = id
         self.content = content
         self.senderId = senderId
@@ -285,6 +285,7 @@ extension CustomPhrase {
         self.senderName = senderName
         self.language = language
         self.clue = clue
+        self.difficultyLevel = difficultyLevel
     }
 }
 

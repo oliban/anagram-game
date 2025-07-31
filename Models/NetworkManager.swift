@@ -275,7 +275,7 @@ class NetworkManager: ObservableObject {
         }
     }
     
-    func completePhrase(phraseId: String, completionTime: Int = 0) async -> CompletionResult? {
+    func completePhrase(phraseId: String, hintsUsed: Int = 0, completionTime: Int = 0) async -> CompletionResult? {
         guard let currentPlayer = currentPlayer else {
             print("❌ COMPLETE: No current player to complete phrase")
             return nil
@@ -285,7 +285,7 @@ class NetworkManager: ObservableObject {
             return try await phraseService.completePhraseOnServer(
                 phraseId: phraseId,
                 playerId: currentPlayer.id,
-                hintsUsed: 0,
+                hintsUsed: hintsUsed,
                 completionTime: completionTime
             )
         } catch {

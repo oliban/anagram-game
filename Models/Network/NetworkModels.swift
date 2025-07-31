@@ -128,10 +128,12 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     let senderName: String
     let language: String // Language code for LanguageTile feature
     let clue: String // Hint clue for level 3 hints
+    let difficultyLevel: Int // Server-provided difficulty score
     
     private enum CodingKeys: String, CodingKey {
         case id, content, senderId, targetId, createdAt, isConsumed, senderName, language
         case clue = "hint" // Server sends "hint" but we store as "clue"
+        case difficultyLevel
     }
     
     init(from decoder: Decoder) throws {
@@ -144,6 +146,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
         senderName = try container.decodeIfPresent(String.self, forKey: .senderName) ?? "Unknown Player"
         language = try container.decodeIfPresent(String.self, forKey: .language) ?? "en" // Default to English
         clue = try container.decodeIfPresent(String.self, forKey: .clue) ?? "" // Server sends "hint" field, default to empty if missing
+        difficultyLevel = try container.decodeIfPresent(Int.self, forKey: .difficultyLevel) ?? 50 // Default to medium difficulty if missing
         
         // Handle date parsing - make optional since server might not include it
         if let dateString = try container.decodeIfPresent(String.self, forKey: .createdAt) {

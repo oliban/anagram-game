@@ -237,9 +237,8 @@ if [ "$USE_MULTI_SIM" = true ]; then
     sleep 5
     
     echo -e "${BLUE}🔨 Building and installing on both simulators...${NC}"
-    build_and_install "$SIM1_UUID" "$SIM1_NAME" &
-    build_and_install "$SIM2_UUID" "$SIM2_NAME" &
-    wait
+    build_and_install "$SIM1_UUID" "$SIM1_NAME"
+    build_and_install "$SIM2_UUID" "$SIM2_NAME"
     
     echo ""
     echo -e "${GREEN}🎉 Multi-simulator setup complete!${NC}"
