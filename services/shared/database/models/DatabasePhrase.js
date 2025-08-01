@@ -18,6 +18,7 @@ class DatabasePhrase {
     this.usageCount = data.usage_count || 0;
     this.phraseType = data.phrase_type || 'custom';
     this.language = data.language || LANGUAGES.ENGLISH;
+    this.theme = data.theme || null;
   }
 
   /**
@@ -34,6 +35,7 @@ class DatabasePhrase {
       language: this.language,
       phraseType: this.phraseType,
       usageCount: this.usageCount,
+      theme: this.theme,
       createdAt: this.createdAt ? this.createdAt.toISOString() : new Date().toISOString(),
       // Legacy fields for backward compatibility
       senderId: this.senderId || this.createdByPlayerId || 'system',
@@ -146,7 +148,8 @@ class DatabasePhrase {
       targetId,
       hint,
       language = LANGUAGES.ENGLISH,
-      contributionLinkId = null
+      contributionLinkId = null,
+      theme = null
     } = options;
 
     // Basic validation
@@ -170,10 +173,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const result = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language, contribution_link_id)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language, contribution_link_id, theme)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language, contributionLinkId]);
+        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language, contributionLinkId, theme]);
 
         const phraseData = result.rows[0];
         console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
@@ -690,7 +693,8 @@ class DatabasePhrase {
       targetIds = [], // Array for multi-player targeting
       isGlobal = false,
       phraseType = 'custom',
-      language = LANGUAGES.ENGLISH // Language parameter for LanguageTile feature
+      language = LANGUAGES.ENGLISH, // Language parameter for LanguageTile feature
+      theme = null // Theme for categorizing phrases and themed clue generation
     } = options;
 
     // Comprehensive validation
@@ -715,10 +719,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const phraseResult = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true]);
+        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 

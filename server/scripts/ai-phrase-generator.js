@@ -9,13 +9,20 @@
  * Generate grammatically correct phrases using REAL AI
  * Works for any language - no hardcoded rules needed
  */
-async function generateGrammaticallyCorrectPhrases(count, difficultyLevel, language = 'en') {
-  console.log(`🤖 REAL AI generating ${count} grammatically correct ${language} phrases (${difficultyLevel})`);
+async function generateGrammaticallyCorrectPhrases(count, difficultyLevel, language = 'en', theme = null) {
+  const themeText = theme ? ` with theme: ${theme}` : '';
+  console.log(`🤖 REAL AI generating ${count} grammatically correct ${language} phrases (${difficultyLevel})${themeText}`);
   
   const languageSpecificInstructions = language === 'sv' 
     ? 'PERFECT Swedish grammar with correct adjective-noun agreement (en/ett gender system)'
     : 'PERFECT grammar following standard language rules';
   
+  const themeInstructions = theme 
+    ? `- ALL phrases and clues must be related to the theme: ${theme}
+- Phrases should contain words that naturally fit the ${theme} theme
+- Clues should use ${theme}-related metaphors and references`
+    : '- Phrases can be about any topic (no specific theme)';
+
   const prompt = `Generate exactly ${count} ${language} phrases with clever clues for an anagram word puzzle game.
 
 REQUIREMENTS:
@@ -24,6 +31,7 @@ REQUIREMENTS:
 - Each phrase gets a clever clue requiring lateral thinking
 - CRITICAL: Both phrase AND clue must be in ${language} language
 - NEVER mix languages: ${language} phrases must have ${language} clues
+${themeInstructions}
 
 Return ALL ${count} phrases in this JSON format:
 [

@@ -203,7 +203,8 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
         phrases: [{
           content: phrase.phrase,
           hint: phrase.clue,
-          language: phrase.language || 'en'
+          language: phrase.language || 'en',
+          theme: phrase.theme || null
         }],
         adminId: CONFIG.systemUserId
       })

@@ -60,7 +60,8 @@ router.post('/phrases/batch-import', async (req, res) => {
         targetIds = [],
         isGlobal = true, // Default to global for admin imports
         phraseType = 'community', // Default to community for admin imports  
-        language = 'en'
+        language = 'en',
+        theme = null // Optional theme for categorization
       } = phrase;
 
       // Validate content length
@@ -92,6 +93,15 @@ router.post('/phrases/batch-import', async (req, res) => {
       // Validate targetIds if provided
       if (targetIds && (!Array.isArray(targetIds) || targetIds.some(id => typeof id !== 'string'))) {
         validationErrors.push(`Phrase ${index}: targetIds must be an array of strings`);
+      }
+
+      // Validate theme if provided
+      if (theme && (typeof theme !== 'string' || theme.trim().length === 0)) {
+        validationErrors.push(`Phrase ${index}: theme must be a non-empty string if provided`);
+      }
+      
+      if (theme && theme.length > 100) {
+        validationErrors.push(`Phrase ${index}: theme too long (max 100 characters)`);
       }
     }
 
@@ -126,7 +136,8 @@ router.post('/phrases/batch-import', async (req, res) => {
           targetIds = [],
           isGlobal = true,
           phraseType = 'community',
-          language = 'en'
+          language = 'en',
+          theme = null
         } = phraseData;
 
         // Create enhanced phrase using existing logic
@@ -138,7 +149,8 @@ router.post('/phrases/batch-import', async (req, res) => {
           targetIds: targetIds,
           isGlobal,
           phraseType,
-          language
+          language,
+          theme: theme ? theme.trim() : null
         });
 
         const { phrase, targetCount, isGlobal: phraseIsGlobal } = result;

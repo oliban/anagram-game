@@ -33,7 +33,8 @@ module.exports = (dependencies) => {
         isGlobal = false,
         difficultyLevel = 1,
         phraseType = 'custom',
-        language = 'en'
+        language = 'en',
+        theme = null // Add theme support for phrase creation
       } = req.body;
 
       console.log(`🔍 DEBUG /api/phrases/create - Full request body:`, JSON.stringify(req.body, null, 2));
@@ -93,7 +94,8 @@ module.exports = (dependencies) => {
         targetIds: allTargetIds,
         isGlobal,
         phraseType,
-        language: language
+        language: language,
+        theme: theme // Pass theme to database layer
       });
 
       const { phrase, targetCount, isGlobal: phraseIsGlobal } = result;
@@ -234,7 +236,7 @@ module.exports = (dependencies) => {
           language: phraseInfo.language || 'en' 
         });
         
-        console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${phraseInfo.hint || ''}"`);
+        console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${phraseInfo.hint || ''}", theme: "${phraseInfo.theme || 'null'}"`);
         
         return {
           id: phraseInfo.id,
@@ -246,9 +248,12 @@ module.exports = (dependencies) => {
           senderName: phraseInfo.senderName || 'Server',
           language: phraseInfo.language || 'en',
           clue: phraseInfo.hint || '', // Map hint to clue field
+          theme: phraseInfo.theme || null, // Add theme support for iOS app
           difficultyLevel: phraseInfo.difficultyLevel || baseScore
         };
       });
+      
+      console.log(`🚀 ROUTE: First formatted phrase theme:`, customPhrasesFormat[0]?.theme);
       
       // Return in the format iOS NetworkManager expects (array with phrases field)
       const response = {

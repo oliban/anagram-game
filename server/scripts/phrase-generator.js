@@ -82,12 +82,12 @@ function generateFallbackClue(phrase, language = 'en') {
 /**
  * Generate AI-powered phrases using the universal AI system
  */
-async function generateAIPhrases(difficultyRange, count, language, difficultyLevel) {
+async function generateAIPhrases(difficultyRange, count, language, difficultyLevel, theme = null) {
   console.log(`🤖 Using universal AI to generate ${count} high-quality phrases for ${difficultyRange} (${language})`);
   
   try {
     // Use the same AI system for both English and Swedish
-    const aiPhrases = await generateGrammaticallyCorrectPhrases(count, difficultyLevel, language);
+    const aiPhrases = await generateGrammaticallyCorrectPhrases(count, difficultyLevel, language, theme);
     return aiPhrases;
   } catch (error) {
     console.error(`🚨 AI phrase generation failed: ${error.message}`);
@@ -263,7 +263,7 @@ async function generateSwedishPhrasesWithClues(level) {
 /**
  * Generate phrases for a specific difficulty range using AI - ITERATE UNTIL TARGET COUNT
  */
-async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language = 'en') {
+async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language = 'en', theme = null) {
   console.log(`🎯 Generating ${targetCount} AI-powered phrases for difficulty range ${minDiff}-${maxDiff} (${language})`);
   
   const difficultyLevel = getDifficultyLevel(minDiff, maxDiff);
@@ -283,7 +283,7 @@ async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language =
     console.log(`🔄 Attempt ${attempts}: Generating batch of ${batchSize} phrases (need ${targetCount - generatedPhrases.length} more)`);
     
     // Generate meaningful phrases using AI
-    const aiPhrases = await generateAIPhrases(difficultyRange, batchSize, language, difficultyLevel);
+    const aiPhrases = await generateAIPhrases(difficultyRange, batchSize, language, difficultyLevel, theme);
     
     for (const aiPhrase of aiPhrases) {
       totalProcessed++;
@@ -351,6 +351,7 @@ function parseArgs() {
     count: 100,
     output: null,
     language: 'en',
+    theme: null,
     help: false
   };
   
@@ -367,6 +368,9 @@ function parseArgs() {
         break;
       case '--language':
         parsed.language = args[++i];
+        break;
+      case '--theme':
+        parsed.theme = args[++i];
         break;
       case '--help':
       case '-h':
@@ -393,12 +397,14 @@ Options:
   --count COUNT        Number of phrases to generate (default: 100)
   --output FILE        Output JSON file (default: auto-generated)
   --language LANG      Language code (default: en)
+  --theme THEME        Theme for clue generation (e.g., gaming, nature, technology)
   --help, -h          Show this help
 
 Examples:
   node phrase-generator.js --range "0-50" --count 100
   node phrase-generator.js --range "200-250" --count 50 --output expert-phrases.json
   node phrase-generator.js --range "101-150" --count 75 --language sv
+  node phrase-generator.js --range "0-50" --count 10 --theme gaming --language en
 `);
 }
 
@@ -449,11 +455,14 @@ async function main() {
   console.log(`   Range: ${minDiff}-${maxDiff}`);
   console.log(`   Count: ${args.count}`);
   console.log(`   Language: ${args.language}`);
+  if (args.theme) {
+    console.log(`   Theme: ${args.theme}`);
+  }
   console.log(`   Output: ${args.output}`);
   
   try {
     // Generate phrases
-    const phrases = await generatePhrasesForRange(minDiff, maxDiff, args.count, args.language);
+    const phrases = await generatePhrasesForRange(minDiff, maxDiff, args.count, args.language, args.theme);
     
     // Create output data
     const output = {
@@ -463,6 +472,7 @@ async function main() {
         requested_count: args.count,
         actual_count: phrases.length,
         language: args.language,
+        theme: args.theme || null,
         generator_version: '1.0.0'
       },
       phrases: phrases

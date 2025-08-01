@@ -18,6 +18,7 @@ class DatabasePhrase {
     this.usageCount = data.usage_count || 0;
     this.phraseType = data.phrase_type || 'custom';
     this.language = data.language || LANGUAGES.ENGLISH;
+    this.theme = data.theme || null;
   }
 
   /**
@@ -34,6 +35,7 @@ class DatabasePhrase {
       language: this.language,
       phraseType: this.phraseType,
       usageCount: this.usageCount,
+      theme: this.theme,
       createdAt: this.createdAt ? this.createdAt.toISOString() : new Date().toISOString(),
       // Legacy fields for backward compatibility
       senderId: this.senderId || this.createdByPlayerId || 'system',
@@ -41,9 +43,6 @@ class DatabasePhrase {
       targetId: this.targetId,
       isConsumed: this.isConsumed || false
     };
-    
-    // Debug logging to see what targetId is being sent
-    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${this.senderName || 'Unknown Player'}`);
     
     return publicInfo;
   }
@@ -236,6 +235,7 @@ class DatabasePhrase {
           p.difficulty_level,
           p.is_global,
           p.language,
+          p.theme,
           p.created_by_player_id as "senderId",
           COALESCE(
             cl.contributor_name,
@@ -264,7 +264,8 @@ class DatabasePhrase {
           is_global: row.is_global,
           created_by_player_id: row.senderId,
           phrase_type: row.phrase_type,
-          language: row.language
+          language: row.language,
+          theme: row.theme
         });
         
         // Add legacy properties for backward compatibility
@@ -282,6 +283,7 @@ class DatabasePhrase {
         // Include NULL check to exclude phrases without difficulty scores
         const globalDifficultyFilter = maxDifficulty ? `AND p.difficulty_level IS NOT NULL AND p.difficulty_level <= $2` : '';
         const globalParams = maxDifficulty ? [playerId, maxDifficulty] : [playerId];
+        
         const globalResult = await query(`
           SELECT 
             p.id,
@@ -290,6 +292,7 @@ class DatabasePhrase {
             p.difficulty_level,
             p.is_global,
             p.language,
+            p.theme,
             p.created_by_player_id as "senderId",
             COALESCE(
               cl.contributor_name,
@@ -312,7 +315,7 @@ class DatabasePhrase {
           LIMIT 10
         `, globalParams);
 
-        phrases = globalResult.rows.map(row => {
+        phrases = globalResult.rows.map((row, index) => {
           const phrase = new DatabasePhrase({
             id: row.id,
             content: row.content,
@@ -321,7 +324,8 @@ class DatabasePhrase {
             is_global: row.is_global,
             created_by_player_id: row.senderId,
             phrase_type: row.phrase_type,
-            language: row.language
+            language: row.language,
+            theme: row.theme
           });
           
           // Add legacy properties for backward compatibility
