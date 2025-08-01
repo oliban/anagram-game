@@ -222,19 +222,19 @@ psql -d anagram_game -f server/database/schema.sql
 # API Documentation
 npm run docs  # Generate automated API docs at /api-docs endpoint
 
-# Phrase Generation (AI-Powered with Clever Clues)
-# Interactive workflow - generates phrases and shows immediate preview
-./server/scripts/generate-and-preview.sh "0-50:15"      # 15 English phrases (easy)
-./server/scripts/generate-and-preview.sh "0-50:15" sv   # 15 Swedish phrases (easy)
-./server/scripts/generate-and-preview.sh "0-100:50" sv  # 50 Swedish phrases (easy-medium)
+# Phrase Generation (Streamlined Admin Service Integration)
+# Interactive workflow - generates phrases with Swedish language consistency
+./server/scripts/generate-and-preview.sh "1-50:15"      # 15 English phrases (easy)
+./server/scripts/generate-and-preview.sh "1-50:15" sv   # 15 Swedish phrases (easy)
+./server/scripts/generate-and-preview.sh "25-75:50" sv  # 50 Swedish phrases (easy-medium)
 ./server/scripts/generate-and-preview.sh "101-150:20"   # 20 English phrases (hard)
 
-# Advanced multi-range generation
-./server/scripts/generate-phrases.sh "0-50:100,51-100:100" --no-import  # Generate only
-./server/scripts/generate-phrases.sh "200-250:25"                       # Generate and import
+# Direct import using Admin Service API (port 3003)
+node server/scripts/phrase-importer.js --input data/phrases-file.json --import
 
-# Generated files use format: analyzed-{lang}-{range}-{count}-{timestamp}.json
-# Example: analyzed-sv-0-100-50-2025-07-28T11-11-08.json
+# Generated files use format: phrases-{lang}-{range}-{count}-{timestamp}.json
+# Example: phrases-sv-25-75-50-2025-08-01T09-02-00.json
+# Import reports: import-report-{timestamp}.json (automatically saved, ignored by git)
 
 # Shared Algorithm Testing
 node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.calculateScore({phrase: 'test phrase', language: 'en'}));"
@@ -258,9 +258,15 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 - `GET /api/status` - Service health check
 - (Contribution link management endpoints)
 
-#### Admin Service (3003) - Content Management
-- `GET /api/status` - Service health check
-- `POST /api/admin/phrases/batch-import` - Batch phrase import for administrators
+#### Admin Service (3003) - Content Management & Phrase Import
+- `GET /api/status` - Service health check  
+- `POST /api/admin/phrases/batch-import` - **PRIMARY** phrase import endpoint (auto-approved)
+
+**Key Features:**
+- ✅ **Auto-approval**: All imported phrases automatically set to `is_approved = true`
+- ✅ **Health checks**: Pre-import verification of service availability
+- ✅ **Enhanced reporting**: Detailed success/failure breakdown with difficulty distribution
+- ✅ **Language consistency**: Enforced Swedish phrase + Swedish clue matching
 
 **Admin Batch Import Example:**
 ```bash
@@ -269,13 +275,22 @@ curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
   -d '{
     "phrases": [
       {
-        "content": "hello world",
-        "hint": "A common greeting",
-        "language": "en"
+        "content": "test phrase",
+        "hint": "Creative Swedish clue",
+        "language": "sv"
       }
     ],
     "adminId": "admin-user"
   }'
+```
+
+**Streamlined Import Workflow:**
+```bash
+# 1. Generate phrases (interactive)
+./server/scripts/generate-and-preview.sh "25-75:50" sv
+
+# 2. Import via Admin Service (with health checks + reporting)
+node server/scripts/phrase-importer.js --input data/phrases-sv-25-75-50-timestamp.json --import
 ```
 
 ### MCP Tools Available
