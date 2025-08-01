@@ -48,6 +48,13 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 
 ## TESTING & DEPLOYMENT
 
+### ⚠️ IMPORTANT: Docker Network Access
+**NEVER use localhost curl commands** - This is a legacy pattern that doesn't work with Docker containers.
+- ❌ WRONG: `curl http://localhost:3000/api/status`
+- ✅ CORRECT: `docker-compose -f docker-compose.services.yml exec game-server wget -q -O - http://localhost:3000/api/status`
+- ✅ CORRECT: Use Docker exec to run commands inside containers
+- ✅ CORRECT: Test from iOS simulators which connect via host network
+
 ### Build Script Usage (NEW)
 **Enhanced workflow with automatic server health checking:**
 
@@ -79,11 +86,9 @@ docker-compose -f docker-compose.services.yml up -d
 # View all running containers
 docker-compose -f docker-compose.services.yml ps
 
-# Test health endpoints
-curl http://localhost:3000/api/status  # Game server
-curl http://localhost:3001/api/status  # Web dashboard  
-curl http://localhost:3002/api/status  # Link generator
-curl http://localhost:3003/api/status  # Admin service
+# Test health endpoints (from host machine - for iOS simulator access)
+# Note: These work from host machine if ports are properly mapped in docker-compose.yml
+# For debugging inside containers, use docker exec commands instead
 ```
 
 **Monitor logs:**
@@ -126,7 +131,9 @@ docker-compose -f docker-compose.services.yml down
 4. **Deploy**: GitHub Actions CI/CD pipeline to AWS
 5. **Monitor**: CloudWatch logs and health checks
 
-**Quick Health Check**: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
+**Quick Health Check**: 
+- From external: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
+- From container: `docker-compose -f docker-compose.services.yml exec game-server wget -q -O - http://localhost:3000/api/status`
 
 ## ARCHITECTURE & ENVIRONMENT
 
@@ -189,11 +196,11 @@ docker-compose -f docker-compose.services.yml logs -f game-server
 docker-compose -f docker-compose.services.yml build
 docker-compose -f docker-compose.services.yml up -d
 
-# Check service health
-curl http://localhost:3000/api/status  # Game server
-curl http://localhost:3001/api/status  # Web dashboard
-curl http://localhost:3002/api/status  # Link generator  
-curl http://localhost:3003/api/status  # Admin service
+# Check service health (from inside containers)
+docker-compose -f docker-compose.services.yml exec game-server wget -q -O - http://localhost:3000/api/status
+docker-compose -f docker-compose.services.yml exec web-dashboard wget -q -O - http://localhost:3001/api/status
+docker-compose -f docker-compose.services.yml exec link-generator wget -q -O - http://localhost:3002/api/status
+docker-compose -f docker-compose.services.yml exec admin-service wget -q -O - http://localhost:3003/api/status
 ```
 
 #### Legacy Single Server (Deprecated)
@@ -270,18 +277,12 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 
 **Admin Batch Import Example:**
 ```bash
-curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
-  -H "Content-Type: application/json" \
-  -d '{
-    "phrases": [
-      {
-        "content": "test phrase",
-        "hint": "Creative Swedish clue",
-        "language": "sv"
-      }
-    ],
-    "adminId": "admin-user"
-  }'
+# From inside container:
+docker-compose -f docker-compose.services.yml exec admin-service wget -O - \
+  --post-data='{
+phrases": [{"content": "test phrase", "hint": "Creative Swedish clue", "language": "sv"}], "adminId": "admin-user"}' \
+  --header="Content-Type: application/json" \
+  http://localhost:3003/api/admin/phrases/batch-import
 ```
 
 **Streamlined Import Workflow:**

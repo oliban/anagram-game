@@ -1091,6 +1091,12 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         print("Message tile spawned with text: \(message) (Total: \(messageTiles.count))")
     }
     
+    func spawnThemeTile(theme: String) {
+        let newThemeTile = ThemeInformationTile(size: CGSize(width: 120, height: 60), theme: theme)
+        newThemeTile.position = CGPoint(x: size.width * 0.7, y: size.height * 0.95)
+        addChild(newThemeTile)
+    }
+    
     func updateGravity(from gravity: CMAcceleration) {
         // Determine the desired quake state based on device tilt
         let desiredState: QuakeState
@@ -1338,6 +1344,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         for i in 0..<shelvesToHighlight {
             lightUpShelf(shelves[i], wordIndex: i)
+        }
+        
+        // Show theme tile on first hint if phrase has a theme
+        print("🎯 THEME DEBUG: hintsUsed=\(gameModel.hintsUsed), currentPhrase=\(gameModel.currentCustomPhrase?.content ?? "nil"), theme=\(gameModel.currentCustomPhrase?.theme ?? "nil")")
+        if gameModel.hintsUsed == 0, let theme = gameModel.currentCustomPhrase?.theme, !theme.isEmpty {
+            print("🎯 THEME: Spawning theme tile with theme: \(theme)")
+            spawnThemeTile(theme: theme)
+        } else {
+            print("🎯 THEME: Not spawning tile - hintsUsed=\(gameModel.hintsUsed), theme=\(gameModel.currentCustomPhrase?.theme ?? "nil")")
         }
         
         // Apply jolt effect when hint is used
@@ -3637,6 +3652,26 @@ class EmojiIconTile: IconTile {
     init(size: CGSize, emoji: String, fontSize: CGFloat = 40) {
         super.init(size: size)
         updateIcon(emoji: emoji, fontSize: fontSize)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+class ThemeInformationTile: InformationTile {
+    init(size: CGSize, theme: String) {
+        super.init(size: size)
+        color = UIColor(red: 0.2, green: 0.4, blue: 0.8, alpha: 1.0) // Blue color
+        
+        let label = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
+        label.text = theme.capitalized
+        label.fontSize = InformationTile.primaryFontSize
+        label.fontColor = .white
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        label.zPosition = 10.0
+        addChild(label)
     }
     
     required init?(coder aDecoder: NSCoder) {

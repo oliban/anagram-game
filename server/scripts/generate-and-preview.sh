@@ -2,8 +2,10 @@
 
 # Interactive Phrase Generation and Preview Script
 # 
-# Usage: ./generate-and-preview.sh "RANGE:COUNT" [LANGUAGE]
+# Usage: ./generate-and-preview.sh "RANGE:COUNT" [LANGUAGE] [THEME]
 # Example: ./generate-and-preview.sh "0-50:15" en
+# Example: ./generate-and-preview.sh "0-50:15" en gaming
+# Example: ./generate-and-preview.sh "0-50:15" sv nature
 
 set -e
 
@@ -17,20 +19,25 @@ NC='\033[0m' # No Color
 
 # Check arguments
 if [ $# -lt 1 ]; then
-    echo -e "${RED}❌ Usage: $0 \"RANGE:COUNT\" [LANGUAGE]${NC}"
+    echo -e "${RED}❌ Usage: $0 \"RANGE:COUNT\" [LANGUAGE] [THEME]${NC}"
     echo -e "${BLUE}Examples:${NC}"
-    echo "  $0 \"0-50:15\"      # 15 English phrases for difficulty 0-50"
-    echo "  $0 \"0-50:15\" sv   # 15 Swedish phrases for difficulty 0-50"
-    echo "  $0 \"51-100:20\"    # 20 English phrases for difficulty 51-100"
+    echo "  $0 \"0-50:15\"             # 15 English phrases for difficulty 0-50"
+    echo "  $0 \"0-50:15\" sv          # 15 Swedish phrases for difficulty 0-50"
+    echo "  $0 \"51-100:20\" en gaming # 20 English gaming-themed phrases"
+    echo "  $0 \"0-50:10\" sv nature   # 10 Swedish nature-themed phrases"
     exit 1
 fi
 
 RANGES="$1"
 LANGUAGE="${2:-en}"
+THEME="${3:-}"
 
 echo "🎯 Interactive Phrase Generation"
 echo "   Ranges: $RANGES"
 echo "   Language: $LANGUAGE"
+if [ -n "$THEME" ]; then
+    echo "   Theme: $THEME"
+fi
 echo ""
 
 # Step 1: Generate phrases (no import)
@@ -40,7 +47,13 @@ echo "📝 Step 1: Generating phrases..."
 RANGE_PART=$(echo "$RANGES" | cut -d':' -f1)
 COUNT_PART=$(echo "$RANGES" | cut -d':' -f2)
 
-node scripts/phrase-generator.js --range "$RANGE_PART" --count "$COUNT_PART" --language "$LANGUAGE"
+# Build command with optional theme parameter
+COMMAND="node scripts/phrase-generator.js --range \"$RANGE_PART\" --count \"$COUNT_PART\" --language \"$LANGUAGE\""
+if [ -n "$THEME" ]; then
+    COMMAND="$COMMAND --theme \"$THEME\""
+fi
+
+eval $COMMAND
 
 # Extract the generated file path from the generation
 LATEST_GENERATED=$(ls -t ../data/phrases-sv-*-*.json 2>/dev/null | head -n 1)

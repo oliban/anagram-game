@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-01T09:28:00.000Z",
+    "target_range": "0-50",
+    "requested_count": 3,
+    "actual_count": 3,
+    "language": "en",
+    "theme": "gaming",
+    "generator_version": "1.0.0"
+  },
+  "phrases": [
+    {
+      "phrase": "power up",
+      "clue": "What Mario needs to grow bigger",
+      "difficulty": 42,
+      "language": "en",
+      "theme": "gaming",
+      "source": "ai_generated",
+      "generated_at": "2025-08-01T09:28:00.000Z",
+      "quality": {
+        "passesThreshold": true,
+        "score": 0.85
+      }
+    },
+    {
+      "phrase": "boss fight",
+      "clue": "Epic showdown at level's end",
+      "difficulty": 48,
+      "language": "en", 
+      "theme": "gaming",
+      "source": "ai_generated",
+      "generated_at": "2025-08-01T09:28:00.000Z",
+      "quality": {
+        "passesThreshold": true,
+        "score": 0.92
+      }
+    },
+    {
+      "phrase": "game over",
+      "clue": "Every arcade player's nightmare",
+      "difficulty": 45,
+      "language": "en",
+      "theme": "gaming", 
+      "source": "ai_generated",
+      "generated_at": "2025-08-01T09:28:00.000Z",
+      "quality": {
+        "passesThreshold": true,
+        "score": 0.88
+      }
+    }
+  ]
+}

@@ -115,11 +115,11 @@ The system now uses a 4-service microservices architecture:
 
 ### Service Health Endpoints
 ```bash
-# Local Development
-curl http://localhost:3000/api/status  # Game server
-curl http://localhost:3001/api/status  # Web dashboard
-curl http://localhost:3002/api/status  # Link generator  
-curl http://localhost:3003/api/status  # Admin service
+# Local Development (from inside Docker containers)
+docker-compose -f docker-compose.services.yml exec game-server wget -q -O - http://localhost:3000/api/status
+docker-compose -f docker-compose.services.yml exec web-dashboard wget -q -O - http://localhost:3001/api/status
+docker-compose -f docker-compose.services.yml exec link-generator wget -q -O - http://localhost:3002/api/status
+docker-compose -f docker-compose.services.yml exec admin-service wget -q -O - http://localhost:3003/api/status
 
 # AWS Production (replace with your ALB endpoint)
 curl http://your-alb-endpoint.com/api/status      # Game server
@@ -132,19 +132,11 @@ curl http://your-alb-endpoint.com:3003/api/status # Admin service
 The Admin Service provides content management capabilities:
 
 ```bash
-# Batch import phrases (local)
-curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
-  -H "Content-Type: application/json" \
-  -d '{
-    "phrases": [
-      {
-        "content": "example phrase",
-        "hint": "A sample phrase",
-        "language": "en"
-      }
-    ],
-    "adminId": "admin-user"
-  }'
+# Batch import phrases (local - from inside container)
+docker-compose -f docker-compose.services.yml exec admin-service wget -O - \
+  --post-data='{"phrases": [{"content": "example phrase", "hint": "A sample phrase", "language": "en"}], "adminId": "admin-user"}' \
+  --header="Content-Type: application/json" \
+  http://localhost:3003/api/admin/phrases/batch-import
 ```
 
 This separation ensures clean architectural boundaries and allows independent scaling of different service types.

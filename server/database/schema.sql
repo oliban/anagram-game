@@ -15,7 +15,7 @@ CREATE TABLE players (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Global phrase bank with hints
+-- Global phrase bank with hints and themes
 CREATE TABLE phrases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content VARCHAR(200) NOT NULL,
@@ -25,7 +25,11 @@ CREATE TABLE phrases (
     created_by_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_approved BOOLEAN DEFAULT false,
-    usage_count INTEGER DEFAULT 0
+    usage_count INTEGER DEFAULT 0,
+    phrase_type VARCHAR(50) DEFAULT 'custom',
+    language VARCHAR(10) DEFAULT 'en',
+    theme VARCHAR(100) DEFAULT NULL,
+    contribution_link_id UUID DEFAULT NULL
 );
 
 -- Player-specific phrase queue for targeting
@@ -72,6 +76,8 @@ CREATE TABLE offline_phrases (
 -- Performance indexes
 CREATE INDEX idx_phrases_global ON phrases(is_global, is_approved) WHERE is_global = true AND is_approved = true;
 CREATE INDEX idx_phrases_difficulty ON phrases(difficulty_level, is_global, is_approved);
+CREATE INDEX idx_phrases_theme ON phrases(theme) WHERE theme IS NOT NULL;
+CREATE INDEX idx_phrases_language ON phrases(language);
 CREATE INDEX idx_player_phrases_target ON player_phrases(target_player_id, priority, is_delivered) WHERE is_delivered = false;
 CREATE INDEX idx_player_phrases_delivered ON player_phrases(target_player_id, delivered_at) WHERE is_delivered = true;
 CREATE INDEX idx_completed_phrases_player ON completed_phrases(player_id, completed_at);
@@ -79,18 +85,24 @@ CREATE INDEX idx_players_active ON players(is_active, last_seen) WHERE is_active
 CREATE INDEX idx_skipped_phrases_player ON skipped_phrases(player_id, skipped_at);
 CREATE INDEX idx_offline_phrases_player ON offline_phrases(player_id, is_used);
 
--- Insert default global phrases with hints from existing anagrams.txt
-INSERT INTO phrases (content, hint, difficulty_level, is_global, is_approved) VALUES
-('be kind', 'A simple act of compassion', 1, true, true),
-('hello world', 'The classic first program greeting', 1, true, true),
-('time flies', 'What happens when you''re having fun', 2, true, true),
-('open door', 'Access point that''s not closed', 1, true, true),
-('quick brown fox jumps', 'Famous typing test animal in motion', 3, true, true),
-('make it count', 'Ensure your effort has value', 2, true, true),
-('lost keys', 'Common household frustration', 2, true, true),
-('coffee break', 'Mid-day caffeine pause', 2, true, true),
-('bright sunny day', 'Perfect weather for outdoor activities', 2, true, true),
-('code works', 'Developer''s dream outcome', 2, true, true);
+-- Insert default global phrases with hints and themes
+INSERT INTO phrases (content, hint, difficulty_level, is_global, is_approved, theme, language, phrase_type) VALUES
+('be kind', 'A simple act of compassion', 1, true, true, NULL, 'en', 'global'),
+('hello world', 'The classic first program greeting', 1, true, true, 'technology', 'en', 'global'),
+('time flies', 'What happens when you''re having fun', 2, true, true, NULL, 'en', 'global'),
+('open door', 'Access point that''s not closed', 1, true, true, NULL, 'en', 'global'),
+('quick brown fox jumps', 'Famous typing test animal in motion', 3, true, true, 'animals', 'en', 'global'),
+('make it count', 'Ensure your effort has value', 2, true, true, NULL, 'en', 'global'),
+('lost keys', 'Common household frustration', 2, true, true, NULL, 'en', 'global'),
+('coffee break', 'Mid-day caffeine pause', 2, true, true, 'food', 'en', 'global'),
+('bright sunny day', 'Perfect weather for outdoor activities', 2, true, true, 'nature', 'en', 'global'),
+('code works', 'Developer''s dream outcome', 2, true, true, 'technology', 'en', 'global'),
+('power up', 'What Mario needs to grow bigger', 2, true, true, 'gaming', 'en', 'global'),
+('final boss', 'The ultimate challenge at game''s end', 3, true, true, 'gaming', 'en', 'global'),
+('level up', 'Character progression milestone', 2, true, true, 'gaming', 'en', 'global'),
+('spring rain', 'Nature''s gentle awakening shower', 2, true, true, 'nature', 'en', 'global'),
+('ocean waves', 'Rhythmic dance of the sea', 3, true, true, 'nature', 'en', 'global'),
+('mountain peak', 'Summit of earthly ambition', 3, true, true, 'nature', 'en', 'global');
 
 -- Update usage count for initial phrases
 UPDATE phrases SET usage_count = 0 WHERE is_global = true;
@@ -104,6 +116,8 @@ SELECT
     p.difficulty_level,
     p.is_global,
     p.created_by_player_id,
+    p.theme,
+    p.language,
     CASE 
         WHEN pp.target_player_id IS NOT NULL THEN 'targeted'
         WHEN p.is_global THEN 'global'
@@ -131,7 +145,9 @@ RETURNS TABLE(
     hint VARCHAR(300),
     difficulty_level INTEGER,
     phrase_type TEXT,
-    priority INTEGER
+    priority INTEGER,
+    theme VARCHAR(100),
+    language VARCHAR(10)
 ) AS $$
 BEGIN
     -- First, try to get targeted phrases (highest priority)
@@ -142,7 +158,9 @@ BEGIN
         p.hint,
         p.difficulty_level,
         'targeted'::TEXT,
-        pp.priority
+        pp.priority,
+        p.theme,
+        p.language
     FROM phrases p
     INNER JOIN player_phrases pp ON p.id = pp.phrase_id
     WHERE pp.target_player_id = player_uuid
@@ -165,17 +183,22 @@ BEGIN
         p.hint,
         p.difficulty_level,
         'global'::TEXT,
-        1 as priority
+        1 as priority,
+        p.theme,
+        p.language
     FROM phrases p
     WHERE p.is_global = true
         AND p.is_approved = true
-        AND p.created_by_player_id != player_uuid  -- Don't give players their own phrases
+        AND (p.created_by_player_id != player_uuid OR p.created_by_player_id IS NULL)  -- Don't give players their own phrases
         AND p.id NOT IN (SELECT phrase_id FROM completed_phrases WHERE player_id = player_uuid)
         AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = player_uuid)
     ORDER BY RANDOM()
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Add comment explaining theme feature
+COMMENT ON COLUMN phrases.theme IS 'Optional theme for categorizing phrases and enabling themed clue generation (e.g., gaming, nature, science, history, technology). When set, iOS app displays a blue theme information tile on first hint click.';
 
 -- Function to mark phrase as completed
 CREATE OR REPLACE FUNCTION complete_phrase_for_player(
