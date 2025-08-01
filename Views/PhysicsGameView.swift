@@ -3662,7 +3662,6 @@ class EmojiIconTile: IconTile {
 class ThemeInformationTile: InformationTile {
     init(size: CGSize, theme: String) {
         super.init(size: size)
-        color = UIColor(red: 0.2, green: 0.4, blue: 0.8, alpha: 1.0) // Blue color
         
         let label = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
         label.text = theme.capitalized

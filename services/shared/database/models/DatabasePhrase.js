@@ -238,6 +238,7 @@ class DatabasePhrase {
           p.hint,
           p.difficulty_level,
           p.is_global,
+          p.theme,
           p.language,
           p.created_by_player_id as "senderId",
           COALESCE(pl.name, 'System') as "senderName",
@@ -264,7 +265,8 @@ class DatabasePhrase {
           is_global: row.is_global,
           created_by_player_id: row.senderId,
           phrase_type: row.phrase_type,
-          language: row.language
+          language: row.language,
+          theme: row.theme
         });
         
         // Add legacy properties for backward compatibility
@@ -289,6 +291,7 @@ class DatabasePhrase {
             p.hint,
             p.difficulty_level,
             p.is_global,
+            p.theme,
             p.language,
             p.created_by_player_id as "senderId",
             COALESCE(pl.name, 'System') as "senderName",
@@ -317,7 +320,8 @@ class DatabasePhrase {
             is_global: row.is_global,
             created_by_player_id: row.senderId,
             phrase_type: row.phrase_type,
-            language: row.language
+            language: row.language,
+            theme: row.theme
           });
           
           // Add legacy properties for backward compatibility
