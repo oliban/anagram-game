@@ -1,134 +1,150 @@
-# Phrase Generation System
+# Phrase Generation System (Streamlined)
 
 ## Overview
-Automated system for generating, analyzing, and importing anagram game phrases with precise difficulty targeting.
+**NEW STREAMLINED SYSTEM**: Single workflow using Admin Service API with auto-approval, health checks, and enhanced reporting.
 
 ## Quick Start Commands
 
-### 🚀 Streamlined Workflow (Recommended):
+### 🚀 **PRIMARY WORKFLOW** - Admin Service Integration:
 ```bash
-# Generate phrases and see immediate preview
-./server/scripts/generate-and-preview.sh "0-50:15"      # 15 English phrases
-./server/scripts/generate-and-preview.sh "0-50:15" sv   # 15 Swedish phrases
-./server/scripts/generate-and-preview.sh "51-100:20"    # 20 medium difficulty
+# Generate phrases with automatic import via Admin Service
+./server/scripts/generate-and-preview.sh "25-75:50" sv   # 50 Swedish phrases (medium)
+./server/scripts/generate-and-preview.sh "1-50:15" en    # 15 English phrases (easy)
+./server/scripts/generate-and-preview.sh "101-150:20"    # 20 hard phrases
 
 # This will:
-# 1. Generate phrases for your range
-# 2. Automatically show table preview with clever clues
-# 3. Give you clear file path and import options
-# 4. Ask if you want to import immediately
+# 1. Generate AI-powered phrases with Swedish language consistency
+# 2. Show immediate table preview with creative clues  
+# 3. Import via Admin Service API (port 3003) with auto-approval
+# 4. Provide beautiful final report with difficulty distribution
+# 5. All phrases immediately playable in game
 ```
 
-### 🔧 Advanced Multi-Range Generation:
+### 🔧 **Direct Import** (Skip Interactive):
 ```bash
-# Generate multiple ranges at once (batch processing)
-./server/scripts/generate-phrases.sh "0-50:100,51-100:100,101-150:100"
-./server/scripts/generate-phrases.sh "200-250:100,251-300:50"
+# Import existing phrase files directly
+node server/scripts/phrase-importer.js --input data/phrases-sv-25-75-50-timestamp.json --import
+
+# Features:
+# - Health checks before import
+# - Admin Service API (port 3003) 
+# - Auto-approval (is_approved=true)
+# - Enhanced final reporting
 ```
 
 ## System Architecture & Workflow
 
-### Process Flow Diagram (Docker Microservices)
+### **NEW STREAMLINED WORKFLOW** (v2.0 - Admin Service)
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  1. AI GENERATE │───▶│  2. ANALYZE     │───▶│  3. PREVIEW     │───▶│  4. DOCKER      │
-│  🤖 AI-powered  │    │  phrase-        │    │  Review JSON    │    │  IMPORT         │
-│  meaningful     │    │  analyzer.js    │    │  Files          │    │  🐳 Container   │
-│  phrases        │    │                 │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │                       │
-         ▼                       ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ 🎯 Coherent     │    │   analyzed-     │    │ User Decision   │    │ 🗄️ PostgreSQL   │
-│ phrases like    │    │   phrases.json  │    │ Point           │    │ Docker DB       │
-│ "fresh air"     │    │ + clever hints  │    │                 │    │ localhost:5432  │
-│ "happy child"   │    │                 │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
-
-🐳 DOCKER WORKFLOW:
-   1. Generate phrases on host: `node server/scripts/phrase-generator.js`
-   2. Copy files to container: `docker cp analyzed-phrases.json anagram-game-server:/app/`
-   3. Import in container: `docker exec anagram-game-server node phrase-importer.js --import`
-   4. Verify via API: `curl http://localhost:3000/api/phrases/for/{playerId}`
-
-🔍 PREVIEW POINTS:
-   • After Step 1: AI-generated meaningful phrases with difficulty scores
-   • After Step 2: Analyzed phrases with quality metrics (RECOMMENDED)
-   • Before Step 4: Final review before database import
-
-🤖 AI ENHANCEMENT:
-   • Generates coherent, meaningful phrase combinations
-   • Replaces random word combinations with contextual phrases
-   • Creates thematic clues without using phrase words
-   • Supports multiple languages (English/Swedish)
-
-🏗️ MICROSERVICES ARCHITECTURE:
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   📱 iOS App    │───▶│  🎮 Game Server │───▶│ 🗄️ PostgreSQL   │
-│  SwiftUI +      │    │  Docker:3000    │    │  Docker:5432    │
-│  SpriteKit      │    │  + WebSocket    │    │  Shared DB      │
+│  1. AI GENERATE │───▶│  2. ADMIN API   │───▶│  3. AUTO-PLAY   │
+│  🤖 Claude AI   │    │  🔧 Port 3003   │    │  🎮 Immediate   │
+│  Swedish/English│    │  Health Checks  │    │  Game Ready     │
+│  Consistency    │    │  Auto-Approval  │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  HTTP/REST API  │    │ DatabasePhrase  │    │ Global Phrases  │
-│  Phrase Fetch   │    │ Query Engine    │    │ 140+ with Hints │
-│  Score Submit   │    │ Consumption     │    │ Approval System │
+│ 🇸🇪 "kall vinter"│    │ ✅ is_approved  │    │ 🎯 180 Global   │
+│ "Snögubbens     │    │ = true          │    │ Phrases Ready   │
+│ favoritårstid"  │    │ Enhanced Report │    │ For Players     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+
+✨ **KEY IMPROVEMENTS:**
+   • **One Command**: ./generate-and-preview.sh "25-75:50" sv
+   • **Auto-Approval**: All phrases immediately playable (is_approved=true)
+   • **Health Checks**: Pre-import Admin Service verification
+   • **Language Consistency**: Swedish phrases ALWAYS get Swedish clues
+   • **Enhanced Reports**: Beautiful final summaries with difficulty distribution
+   • **No Legacy Scripts**: Removed generate-phrases.sh complexity
+
+🔧 **ADMIN SERVICE INTEGRATION:**
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   📱 iOS App    │───▶│  🎮 Game Server │    │ 🔧 Admin Service│───▶│ 🗄️ PostgreSQL   │
+│  Gets 180       │    │  Port 3000      │    │  Port 3003      │    │  Shared DB      │
+│  Global Phrases │    │  Serves Phrases │    │  Batch Import   │    │  Auto-Approved  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### File Structure
+### **UPDATED File Structure** (v2.0)
 ```
 📁 server/scripts/
-├── generate-phrases.sh          # Master orchestration script
-├── phrase-generator.js          # 🤖 AI-powered meaningful phrase generation
-├── phrase-analyzer.js           # Tests phrases against difficulty algorithm
-├── phrase-importer.js           # Imports validated phrases to database
+├── generate-and-preview.sh      # 🚀 PRIMARY: Interactive generation + Admin Service import
+├── phrase-generator.js          # 🤖 AI-powered Claude phrase generation
+├── phrase-importer.js           # 🔧 Admin Service API integration (port 3003)
 ├── preview-phrases.js           # Preview generated phrases before import
-├── phrase-data-en.js            # English phrase data for AI simulation
-└── phrase-data-sv.js            # Swedish phrase data for AI simulation
+├── ai-phrase-generator.js       # Language consistency enforcement
+└── [REMOVED] generate-phrases.sh # ❌ Legacy script deleted
 
 📁 server/data/
-├── generated-{lang}-{range}-{count}-{timestamp}.json   # Raw generated phrases
-├── analyzed-{lang}-{range}-{count}-{timestamp}.json    # Analyzed phrases with quality scores
-├── combined-analyzed-*.json                            # Multi-range combined file
-├── import-report-*.json                                # Import results and statistics
-└── generation-log-*.log                                # Detailed process logs
+├── phrases-{lang}-{range}-{count}-{timestamp}.json     # Generated phrases (NEW format)
+├── import-report-{timestamp}.json                      # Enhanced reports (auto-ignored by git)
+└── [REMOVED] analyzed-* files                          # ❌ Legacy analysis step removed
+
+📁 services/admin-service/
+├── admin-routes.js              # 🔧 Batch import endpoint
+├── Dockerfile                   # ✅ Fixed relative paths
+└── package.json
+
+📁 services/shared/database/models/
+└── DatabasePhrase.js            # ✅ Auto-approval logic (is_approved=true)
 ```
 
-## Detailed Usage
+**KEY CHANGES:**
+- ✅ **Simplified**: Single `generate-and-preview.sh` script for all workflows
+- ✅ **Direct Import**: No intermediate analysis files needed
+- ✅ **Auto-Approval**: All Admin Service imports immediately playable
+- ✅ **Enhanced Reporting**: Beautiful final reports with difficulty distribution
+- ❌ **Removed Complexity**: Deleted legacy generate-phrases.sh and analysis step
 
-### 1. Streamlined Interactive Workflow (Recommended)
+## 🚀 **NEW STREAMLINED USAGE** (v2.0)
+
+### **Primary Workflow** - One Command Does Everything:
 ```bash
-# Single command that does everything:
-./server/scripts/generate-and-preview.sh "0-50:15"
+# Generate + Import 50 Swedish phrases (auto-approved & playable)
+./server/scripts/generate-and-preview.sh "25-75:50" sv
 
 # This automatically:
-# - Generates phrases for difficulty range 0-50
-# - Shows table preview with clever clues
-# - Displays clear file path
-# - Offers immediate import option
-# - Provides next step commands
+# 1. Generates 50 AI-powered Swedish phrases with perfect language consistency
+# 2. Shows table preview with creative Swedish clues
+# 3. Imports via Admin Service API (port 3003) with health checks
+# 4. Auto-approves all phrases (is_approved=true) 
+# 5. Provides beautiful final report with difficulty distribution
+# 6. All phrases immediately available to players (game server: 180+ global phrases)
 ```
 
-**Example Output:**
+### **NEW Enhanced Final Report:**
 ```
-📁 GENERATED PHRASES FILE:
-   ../data/analyzed-en-0-50-15-2025-07-28T11-12-22.json
+📋 FINAL IMPORT REPORT
+════════════════════════════════════════
+📅 Date: 8/1/2025, 11:00:31 AM
+📊 Total Processed: 50 phrases
+✅ Successful: 50
+❌ Failed: 0
+🔄 Duplicates: 0
+📈 Success Rate: 100%
 
-📊 Phrase Preview:
-DIFFICULTY  PHRASE         CLUE
-──────────────────────────────────────────
-43          fresh air      What city dwellers crave most
-45          happy child    Playground giggles source
-46          cold winter    Jack Frost's favorite season
+🎯 Difficulty Distribution:
+   40-49: 3 phrases
+   50-59: 12 phrases
+   60-69: 15 phrases
+   70-79: 13 phrases
+   80-89: 6 phrases
 
-🎯 Next Steps - Your file is:
-   ../data/analyzed-en-0-50-15-2025-07-28T11-12-22.json
-
-✅ Import to database:
-   node phrase-importer.js --input "../data/analyzed-en-0-50-15-2025-07-28T11-12-22.json" --import
+✨ Successfully Imported Phrases:
+   • "stor elefant" (difficulty: 58, ID: 9fee26f1...)
+   • "blinkande stjärnhimmel" (difficulty: 87, ID: 57cd184c...)
+   • "dansande nordljus" (difficulty: 73, ID: 94a8ec04...)
+════════════════════════════════════════
 ```
+
+### **Key Benefits of New System:**
+- ✅ **Immediate Playability**: All phrases auto-approved and ready for game
+- ✅ **Language Consistency**: Swedish phrases ALWAYS get Swedish clues  
+- ✅ **Health Checks**: Pre-import verification that Admin Service is running
+- ✅ **Enhanced Reports**: Beautiful summaries with difficulty distribution
+- ✅ **Single Command**: No complex multi-step workflows
+- ✅ **Error Recovery**: Clear error messages if services aren't running
 
 ### 2. Manual Step-by-Step Workflow
 ```bash
