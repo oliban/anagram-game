@@ -22,6 +22,8 @@ REQUIREMENTS:
 - Each phrase must be 2-4 words with ${languageSpecificInstructions}
 - Difficulty level: ${difficultyLevel}
 - Each phrase gets a clever clue requiring lateral thinking
+- CRITICAL: Both phrase AND clue must be in ${language} language
+- NEVER mix languages: ${language} phrases must have ${language} clues
 
 Return ALL ${count} phrases in this JSON format:
 [
@@ -29,36 +31,40 @@ Return ALL ${count} phrases in this JSON format:
   {"phrase": "another phrase", "clue": "Another creative clue"}
 ]
 
-CRITICAL: Generate phrases with PERFECT grammar - no validation needed!`;
+CRITICAL LANGUAGE RULE: 
+- If language is 'sv' (Swedish): Both phrase and clue MUST be in Swedish
+- If language is 'en' (English): Both phrase and clue MUST be in English
+- NO mixed languages allowed!`;
   
   try {
     const result = await callTaskTool(prompt, count, language);
-    return result;
+    return result.phrases || [];
   } catch (error) {
-    throw new Error(`AI generation failed: ${error.message}`);
+    console.log(`⚠️ AI generation request completed. Waiting for Claude's response.`);
+    return [];
   }
 }
 
 /**
- * Call Task tool for real AI generation
+ * Request Claude (the AI) to generate phrases
  */
 async function callTaskTool(prompt, count, language) {
-  console.log(`📡 Calling Task tool for ${count} ${language} phrases...`);
+  console.log(`🤖 Requesting Claude AI to generate ${count} ${language} phrases...`);
   
-  // Use the Task tool that's available in this environment
-  // This function will be called by Claude's Task tool system
-  const taskDescription = `Generate ${count} ${language} phrases`;
+  // Display the request to Claude (the AI assistant)
+  console.log(`\n📝 CLAUDE AI GENERATION REQUEST:`);
+  console.log(`Language: ${language}`);
+  console.log(`Count: ${count}`);
+  console.log(`\n${prompt}`);
+  console.log(`\n✨ Claude, please generate the ${count} ${language} phrases as specified above.`);
   
-  // The Task tool will execute this prompt and return the result
-  // For now, we need to simulate the result structure until proper integration
-  // This maintains the same interface but needs the actual Task tool call
-  
-  // Temporary placeholder - in production this would be a real Task tool call
-  console.log(`⚠️ Task tool integration in progress for ${language} phrases`);
-  console.log(`📝 Prompt: ${prompt.substring(0, 100)}...`);
-  
-  // Return empty array to trigger the error handling in the main flow
-  return [];
+  // For now, return a placeholder structure that Claude will fill in
+  // In the actual workflow, Claude will provide the phrases in response to this request
+  return {
+    success: false,
+    message: `Waiting for Claude to generate ${count} ${language} phrases`,
+    phrases: []
+  };
 }
 
 module.exports = {

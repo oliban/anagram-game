@@ -20,7 +20,7 @@ const CONFIG = {
   duplicateCheck: true,
   validateSchema: true,
   outputDir: path.join(__dirname, '../data'),
-  apiUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:3003',
   systemUserId: '11111111-1111-1111-1111-111111111111' // SystemImporter for Docker database imports
 };
 
@@ -194,18 +194,18 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
   }
   
   try {
-    const response = await fetch(`${CONFIG.apiUrl}/api/phrases/create`, {
+    const response = await fetch(`${CONFIG.apiUrl}/api/admin/phrases/batch-import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        content: phrase.phrase,
-        hint: phrase.clue,
-        language: phrase.language || 'en',
-        isGlobal: true,
-        senderId: CONFIG.systemUserId,
-        phraseType: 'global'
+        phrases: [{
+          content: phrase.phrase,
+          hint: phrase.clue,
+          language: phrase.language || 'en'
+        }],
+        adminId: CONFIG.systemUserId
       })
     });
     
@@ -219,13 +219,25 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
     }
     
     const result = await response.json();
-    return {
-      success: true,
-      phrase: phrase.phrase,
-      id: result.phrase.id,
-      difficulty: result.phrase.difficultyLevel,
-      action: 'inserted_via_api'
-    };
+    
+    // Extract the first successful import from the batch response
+    if (result.results && result.results.successful && result.results.successful.length > 0) {
+      const importedPhrase = result.results.successful[0];
+      return {
+        success: true,
+        phrase: phrase.phrase,
+        id: importedPhrase.id,
+        difficulty: importedPhrase.difficulty,
+        action: 'inserted_via_api'
+      };
+    } else {
+      // Handle case where import was marked successful but no phrase data returned
+      return {
+        success: false,
+        error: `API returned success but no phrase data found`,
+        phrase: phrase.phrase
+      };
+    }
     
   } catch (error) {
     return {
@@ -237,17 +249,52 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
 }
 
 /**
+ * Check if Admin Service is available
+ */
+async function checkAdminServiceHealth() {
+  try {
+    console.log(`🔍 Checking Admin Service health at ${CONFIG.apiUrl}...`);
+    const response = await fetch(`${CONFIG.apiUrl}/api/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    });
+    
+    if (response.ok) {
+      const status = await response.json();
+      console.log(`✅ Admin Service is running (${response.status})`);
+      return { available: true, status };
+    } else {
+      console.log(`⚠️ Admin Service responded with status ${response.status}`);
+      return { available: false, error: `HTTP ${response.status}` };
+    }
+  } catch (error) {
+    console.log(`❌ Admin Service is not available: ${error.message}`);
+    return { available: false, error: error.message };
+  }
+}
+
+/**
  * Import phrases in batches
  */
 async function importPhrases(phrases, options = {}) {
   const {
     dryRun = false,
     batchSize = CONFIG.batchSize,
-    onProgress = null,
-    useAPI = false
+    onProgress = null
   } = options;
   
-  console.log(`📥 ${dryRun ? 'Simulating' : 'Starting'} import of ${phrases.length} phrases via ${useAPI ? 'API' : 'direct database'}...`);
+  // Check Admin Service health before proceeding
+  if (!dryRun) {
+    const healthCheck = await checkAdminServiceHealth();
+    if (!healthCheck.available) {
+      throw new Error(`Admin Service is not available: ${healthCheck.error}. Please start the Admin Service on port 3003 before importing.`);
+    }
+  }
+  
+  console.log(`📥 ${dryRun ? 'Simulating' : 'Starting'} import of ${phrases.length} phrases via Admin Service API...`);
   
   const results = {
     total: phrases.length,
@@ -266,11 +313,9 @@ async function importPhrases(phrases, options = {}) {
     
     console.log(`📦 Processing batch ${batchNum}/${totalBatches} (${batch.length} phrases)...`);
     
-    // Process batch
+    // Process batch via Admin Service API only
     for (const phrase of batch) {
-      const result = useAPI 
-        ? await insertPhraseViaAPI(phrase, dryRun)
-        : await insertPhrase(phrase, dryRun);
+      const result = await insertPhraseViaAPI(phrase, dryRun);
       results.details.push(result);
       
       if (result.success) {
@@ -298,6 +343,49 @@ async function importPhrases(phrases, options = {}) {
   }
   
   return results;
+}
+
+/**
+ * Display final readable report
+ */
+function displayFinalReport(report, dryRun = false) {
+  console.log(`\n📋 FINAL ${dryRun ? 'SIMULATION' : 'IMPORT'} REPORT`);
+  console.log(`════════════════════════════════════════`);
+  console.log(`📅 Date: ${new Date(report.import.timestamp).toLocaleString()}`);
+  console.log(`📊 Total Processed: ${report.import.total_phrases} phrases`);
+  console.log(`✅ Successful: ${report.import.successful}`);
+  console.log(`❌ Failed: ${report.import.failed}`);
+  console.log(`🔄 Duplicates: ${report.import.duplicates}`);
+  console.log(`📈 Success Rate: ${report.import.success_rate}%`);
+  
+  if (Object.keys(report.difficulty_distribution).length > 0) {
+    console.log(`\n🎯 Difficulty Distribution:`);
+    Object.entries(report.difficulty_distribution)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .forEach(([range, count]) => {
+        console.log(`   ${range}: ${count} phrases`);
+      });
+  }
+  
+  if (report.sample_imported.length > 0) {
+    console.log(`\n✨ Successfully Imported Phrases:`);
+    report.sample_imported.forEach(phrase => {
+      const idDisplay = phrase.id ? `ID: ${phrase.id.substring(0, 8)}...` : 'simulation mode';
+      console.log(`   • "${phrase.phrase}" (difficulty: ${phrase.difficulty || 'N/A'}, ${idDisplay})`);
+    });
+  }
+  
+  if (report.errors && report.errors.length > 0) {
+    console.log(`\n❌ Errors Encountered:`);
+    report.errors.slice(0, 3).forEach(error => {
+      console.log(`   • "${error.phrase}": ${error.error}`);
+    });
+    if (report.errors.length > 3) {
+      console.log(`   ... and ${report.errors.length - 3} more errors`);
+    }
+  }
+  
+  console.log(`════════════════════════════════════════`);
 }
 
 /**
@@ -513,7 +601,6 @@ function parseArgs() {
     cleanDuplicates: false,
     stats: false,
     batchSize: CONFIG.batchSize,
-    useAPI: false,
     help: false
   };
   
@@ -539,9 +626,6 @@ function parseArgs() {
         break;
       case '--batch-size':
         parsed.batchSize = parseInt(args[++i]);
-        break;
-      case '--use-api':
-        parsed.useAPI = true;
         break;
       case '--help':
       case '-h':
@@ -572,7 +656,6 @@ Options:
   --input FILE          Input JSON file with analyzed phrases
   --output FILE         Output report file (default: auto-generated)
   --dry-run            Simulate import without making changes
-  --use-api            Use API endpoints for import (handles automatic scoring)
   --batch-size SIZE     Number of phrases per batch (default: 50)
   --help, -h           Show this help
 
@@ -580,9 +663,10 @@ Examples:
   node phrase-importer.js --stats
   node phrase-importer.js --input analyzed-phrases.json --dry-run
   node phrase-importer.js --input analyzed-phrases.json --import
-  node phrase-importer.js --input analyzed-phrases.json --import --use-api
   node phrase-importer.js --clean-duplicates --dry-run
   node phrase-importer.js --clean-duplicates
+
+Note: All imports use the Admin Service API endpoint (port 3003)
 `);
 }
 
@@ -634,7 +718,7 @@ async function main() {
     console.log(`🚀 Starting phrase import...`);
     console.log(`   Input: ${args.input}`);
     console.log(`   Mode: ${args.dryRun ? 'DRY RUN' : 'LIVE IMPORT'}`);
-    console.log(`   Method: ${args.useAPI ? 'API' : 'Direct Database'}`);
+    console.log(`   Method: Admin Service API`);
     console.log(`   Batch size: ${args.batchSize}`);
     
     try {
@@ -659,11 +743,10 @@ async function main() {
         console.log(`📊 Filtered to ${qualityPhrases.length} high-quality phrases (${phrases.length - qualityPhrases.length} excluded)`);
       }
       
-      // Import phrases
+      // Import phrases via Admin Service API only
       const results = await importPhrases(qualityPhrases, {
         dryRun: args.dryRun,
-        batchSize: args.batchSize,
-        useAPI: args.useAPI
+        batchSize: args.batchSize
       });
       
       // Generate report
@@ -690,6 +773,38 @@ async function main() {
         });
       }
       
+      // Detailed phrase breakdown
+      if (results.details && results.details.length > 0) {
+        console.log(`\n📝 Detailed Phrase Report:`);
+        
+        // Successfully imported phrases
+        const successful = results.details.filter(d => d.success && !d.isDuplicate);
+        if (successful.length > 0) {
+          console.log(`\n   ✅ Successfully imported (${successful.length}):`);
+          successful.forEach(d => {
+            console.log(`      "${d.phrase}" - ${d.clue || 'No clue'} (difficulty: ${d.difficulty || 'N/A'})`);
+          });
+        }
+        
+        // Duplicate phrases (rejected)
+        const duplicates = results.details.filter(d => d.isDuplicate);
+        if (duplicates.length > 0) {
+          console.log(`\n   🔄 Rejected as duplicates (${duplicates.length}):`);
+          duplicates.forEach(d => {
+            console.log(`      "${d.phrase}" - Already exists in database`);
+          });
+        }
+        
+        // Failed phrases (other errors)
+        const failed = results.details.filter(d => !d.success && !d.isDuplicate);
+        if (failed.length > 0) {
+          console.log(`\n   ❌ Failed validation (${failed.length}):`);
+          failed.forEach(d => {
+            console.log(`      "${d.phrase}" - ${d.error}`);
+          });
+        }
+      }
+      
       // Show errors if any
       if (results.errors.length > 0) {
         console.log(`\n⚠️  First ${Math.min(5, results.errors.length)} errors:`);
@@ -714,6 +829,9 @@ async function main() {
           process.exit(1);
         }
       }
+      
+      // Display final readable report
+      displayFinalReport(report, args.dryRun);
       
       console.log(`\n✅ Import ${args.dryRun ? 'simulation' : ''} complete!`);
       

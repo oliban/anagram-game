@@ -28,19 +28,29 @@ fi
 RANGES="$1"
 LANGUAGE="${2:-en}"
 
-echo -e "${BLUE}🎯 Interactive Phrase Generation${NC}"
+echo "🎯 Interactive Phrase Generation"
 echo "   Ranges: $RANGES"
 echo "   Language: $LANGUAGE"
 echo ""
 
 # Step 1: Generate phrases (no import)
-echo -e "${YELLOW}📝 Step 1: Generating phrases...${NC}"
-./generate-phrases.sh "$RANGES" --language "$LANGUAGE" --no-import
+echo "📝 Step 1: Generating phrases..."
 
-# Extract the analyzed file path from the generation
-LATEST_ANALYZED=$(ls -t ../data/analyzed-*.json | head -n 1)
+# Parse RANGES format "MIN-MAX:COUNT" into separate arguments
+RANGE_PART=$(echo "$RANGES" | cut -d':' -f1)
+COUNT_PART=$(echo "$RANGES" | cut -d':' -f2)
 
-if [ ! -f "$LATEST_ANALYZED" ]; then
+node scripts/phrase-generator.js --range "$RANGE_PART" --count "$COUNT_PART" --language "$LANGUAGE"
+
+# Extract the generated file path from the generation
+LATEST_GENERATED=$(ls -t ../data/phrases-sv-*-*.json 2>/dev/null | head -n 1)
+
+# If no Swedish file found, look for any phrases file
+if [ -z "$LATEST_GENERATED" ]; then
+    LATEST_GENERATED=$(ls -t ../data/phrases-*.json 2>/dev/null | head -n 1)
+fi
+
+if [ ! -f "$LATEST_GENERATED" ]; then
     echo -e "${RED}❌ Error: Could not find generated phrases file${NC}"
     exit 1
 fi
@@ -49,30 +59,30 @@ fi
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}📁 GENERATED PHRASES FILE:${NC}"
-echo -e "${CYAN}   $LATEST_ANALYZED${NC}"
+echo -e "${CYAN}   $LATEST_GENERATED${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
 # Step 2: Show table preview
 echo -e "${YELLOW}📊 Step 2: Phrase Preview${NC}"
-node preview-phrases.js --input "$LATEST_ANALYZED" --format table
+node scripts/preview-phrases.js --input "$LATEST_GENERATED" --format table
 
 echo ""
 echo -e "${BLUE}🎯 Next Steps - Your file is:${NC}"
-echo -e "${CYAN}   $LATEST_ANALYZED${NC}"
+echo -e "${CYAN}   $LATEST_GENERATED${NC}"
 echo ""
 echo -e "${GREEN}✅ Import to database:${NC}"
-echo "   node phrase-importer.js --input \"$LATEST_ANALYZED\" --import"
+echo "   node scripts/phrase-importer.js --input \"$LATEST_GENERATED\" --import"
 echo ""
 echo -e "${YELLOW}🔄 Generate new batch:${NC}"
 echo "   $0 \"RANGE:COUNT\" [LANGUAGE]"
 echo ""
 echo -e "${CYAN}📋 Other preview formats:${NC}"
-echo "   node preview-phrases.js --input \"$LATEST_ANALYZED\" --format detailed"
-echo "   node preview-phrases.js --input \"$LATEST_ANALYZED\" --format csv"
+echo "   node scripts/preview-phrases.js --input \"$LATEST_GENERATED\" --format detailed"
+echo "   node scripts/preview-phrases.js --input \"$LATEST_GENERATED\" --format csv"
 echo ""
 echo -e "${BLUE}📄 View raw JSON data:${NC}"
-echo "   cat \"$LATEST_ANALYZED\""
+echo "   cat \"$LATEST_GENERATED\""
 echo ""
 echo -e "${GREEN}💡 TIP: Your phrases are saved in the file path shown above${NC}"
 echo ""
@@ -82,7 +92,7 @@ read -p "Import these phrases to database now? (y/N): " -n 1 -r
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${GREEN}📥 Importing phrases to database...${NC}"
-    node phrase-importer.js --input "$LATEST_ANALYZED" --import
+    node scripts/phrase-importer.js --input "$LATEST_GENERATED" --import
     echo -e "${GREEN}✅ Import completed!${NC}"
 else
     echo -e "${YELLOW}⏸️  Import skipped. Use the commands above when ready.${NC}"
