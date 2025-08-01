@@ -5,16 +5,16 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files
-COPY services/admin-service/package*.json ./
+COPY admin-service/package*.json ./
 
 # Install dependencies
 RUN npm install --only=production
 
 # Copy shared dependencies
-COPY services/shared/ ./shared/
+COPY shared/ ./shared/
 
 # Copy admin service source
-COPY services/admin-service/ ./
+COPY admin-service/ ./
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs

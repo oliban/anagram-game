@@ -715,10 +715,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const phraseResult = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language]);
+        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 
