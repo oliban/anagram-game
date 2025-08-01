@@ -5,6 +5,7 @@ struct LegendsView: View {
     @ObservedObject var gameModel: GameModel
     @Environment(\.dismiss) private var dismiss
     @State private var legendPlayers: [LegendPlayer] = []
+    @State private var minimumSkillTitle: String = "Wretched"
     @State private var isLoading = false
     @State private var errorMessage: String?
     
@@ -51,7 +52,7 @@ struct LegendsView: View {
                 Spacer()
             }
             
-            Text("These are the mighty players who have reached the wretched skill level and beyond")
+            Text("These are the mighty players who have reached the \(minimumSkillTitle) skill level and beyond")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.leading)
@@ -99,7 +100,7 @@ struct LegendsView: View {
                     Text("No legends yet")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text("Be the first to reach wretched skill level!")
+                    Text("Be the first to reach \(minimumSkillTitle) skill level!")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -142,9 +143,10 @@ struct LegendsView: View {
         }
         
         do {
-            let players = try await networkManager.getLegendPlayers()
+            let response = try await networkManager.getLegendPlayers()
             await MainActor.run {
-                self.legendPlayers = players
+                self.legendPlayers = response.players
+                self.minimumSkillTitle = response.minimumSkillTitle
                 self.isLoading = false
             }
         } catch {
@@ -194,7 +196,7 @@ struct LegendPlayerCard: View {
                     .lineLimit(2)
                 
                 // Skill title
-                Text(player.skillTitle.capitalized)
+                Text(player.skillTitle)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.orange)

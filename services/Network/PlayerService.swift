@@ -205,6 +205,8 @@ class PlayerService: PlayerServiceDelegate {
                 let totalScore = scoresData["totalScore"] as? Int ?? 0
                 let totalRank = scoresData["totalRank"] as? Int ?? 0
                 let totalPhrases = scoresData["totalPhrases"] as? Int ?? 0
+                let skillTitle = scoresData["skillTitle"] as? String
+                let skillLevel = scoresData["skillLevel"] as? Int
                 
                 let stats = PlayerStats(
                     dailyScore: dailyScore,
@@ -213,7 +215,9 @@ class PlayerService: PlayerServiceDelegate {
                     weeklyRank: weeklyRank,
                     totalScore: totalScore,
                     totalRank: totalRank,
-                    totalPhrases: totalPhrases
+                    totalPhrases: totalPhrases,
+                    skillTitle: skillTitle,
+                    skillLevel: skillLevel
                 )
                 
                 print("📊 STATS: Retrieved stats for player \(playerId)")

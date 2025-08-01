@@ -2296,12 +2296,19 @@ app.get('/api/scores/player/:playerId', async (req, res) => {
 
     // Get player score summary
     const scores = await ScoringSystem.getPlayerScoreSummary(playerId);
+    
+    // Get skill level and title based on total score
+    const skillInfo = ScoringSystem.getSkillLevel(scores.totalScore);
 
     res.json({
       success: true,
       playerId,
       playerName: player.name,
-      scores,
+      scores: {
+        ...scores,
+        skillTitle: skillInfo.title,
+        skillLevel: skillInfo.level
+      },
       timestamp: new Date().toISOString()
     });
 

@@ -2142,19 +2142,19 @@ class PhysicsGameScene: SKScene, MessageTileSpawner {
         
         // Start the cinematic celebration sequence
         let celebrationSequence = SKAction.sequence([
-            // Phase 1: Drop celebration tiles and awesome message immediately
+            // Phase 1: Drop celebration tiles, awesome message, and start fireworks immediately
             SKAction.run { [weak self] in
                 self?.dropCelebrationTiles()
                 self?.dropAwesomeTile()
+                self?.createRocketFireworks()
             },
             
-            // Wait 1.5 seconds before fade and fireworks
+            // Wait 1.5 seconds before fade to black
             SKAction.wait(forDuration: 1.5),
             
-            // Phase 2: Fade to black and start fireworks (1.0 seconds)
+            // Phase 2: Fade to black (1.0 seconds)
             SKAction.run { [weak self] in
                 self?.createFadeToBlackOverlay()
-                self?.createRocketFireworks()
             },
             SKAction.wait(forDuration: 1.0),
             

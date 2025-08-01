@@ -203,7 +203,7 @@ module.exports = (dependencies) => {
       const configPath = path.join(__dirname, '../shared/config', 'level-config.json');
       
       let minimumSkillLevel = 2; // Default to wretched (level 2)
-      let minimumSkillTitle = 'wretched';
+      let minimumSkillTitle = 'Wretched';
       let minimumPoints = 230;
       
       try {
@@ -214,7 +214,7 @@ module.exports = (dependencies) => {
         const wretchedLevel = levelConfig.skillLevels?.find(level => level.title === 'wretched');
         if (wretchedLevel) {
           minimumSkillLevel = wretchedLevel.id;
-          minimumSkillTitle = wretchedLevel.title;
+          minimumSkillTitle = wretchedLevel.title.charAt(0).toUpperCase() + wretchedLevel.title.slice(1);
           minimumPoints = wretchedLevel.pointsRequired;
         }
       } catch (configError) {
@@ -244,28 +244,10 @@ module.exports = (dependencies) => {
       const legendPlayers = result.rows.map(row => {
         const totalScore = parseInt(row.total_score);
         
-        // Calculate skill level based on total score
-        let skillLevel = minimumSkillLevel;
-        let skillTitle = minimumSkillTitle;
-        
-        try {
-          // Re-read config to calculate exact skill level
-          const fs = require('fs');
-          const configData = fs.readFileSync(configPath, 'utf8');
-          const levelConfig = JSON.parse(configData);
-          
-          // Find the highest skill level this player has achieved
-          for (let i = levelConfig.skillLevels.length - 1; i >= 0; i--) {
-            const level = levelConfig.skillLevels[i];
-            if (totalScore >= level.pointsRequired) {
-              skillLevel = level.id;
-              skillTitle = level.title;
-              break;
-            }
-          }
-        } catch (error) {
-          console.error('❌ LEGENDS: Error calculating skill level:', error.message);
-        }
+        // Calculate skill level based on total score using ScoringSystem
+        const skillInfo = ScoringSystem.getSkillLevel(totalScore);
+        const skillLevel = skillInfo.level;
+        const skillTitle = skillInfo.title;
         
         return {
           id: row.id,
@@ -325,12 +307,19 @@ module.exports = (dependencies) => {
 
       // Get player score summary
       const scores = await ScoringSystem.getPlayerScoreSummary(playerId);
+      
+      // Get skill level and title based on total score
+      const skillInfo = ScoringSystem.getSkillLevel(scores.totalScore);
 
       res.json({
         success: true,
         playerId,
         playerName: player.name,
-        scores,
+        scores: {
+          ...scores,
+          skillTitle: skillInfo.title,
+          skillLevel: skillInfo.level
+        },
         timestamp: new Date().toISOString()
       });
 
