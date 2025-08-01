@@ -46,13 +46,17 @@ echo -e "${BLUE}🚀 Starting build and test workflow for ${ENV_MODE} environmen
 
 # Function to check server health
 check_server_health() {
-    local url=$1
+    local service_name=$1
     local name=$2
     local timeout=${3:-10}
+    local port=${4:-3000}
     
-    echo -e "${YELLOW}🔍 Checking ${name} server health: ${url}${NC}"
+    # Get the local network IP address
+    LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "192.168.1.133")
     
-    if curl -s --connect-timeout $timeout "${url}/api/status" > /dev/null 2>&1; then
+    echo -e "${YELLOW}🔍 Checking ${name} server health (Docker service: ${service_name}) at ${LOCAL_IP}:${port}${NC}"
+    
+    if curl -s --connect-timeout $timeout "http://${LOCAL_IP}:${port}/api/status" > /dev/null 2>&1; then
         echo -e "${GREEN}✅ ${name} server is healthy${NC}"
         return 0
     else
@@ -80,8 +84,7 @@ show_server_startup_guide() {
 if [ "$ENV_MODE" = "local" ]; then
     echo -e "${BLUE}🔍 Checking local development servers...${NC}"
     
-    LOCAL_SERVER_URL="http://192.168.1.133:3000"
-    if ! check_server_health "$LOCAL_SERVER_URL" "Local Game Server" 3; then
+    if ! check_server_health "game-server" "Local Game Server" 3; then
         echo -e "${RED}❌ Local servers are not running!${NC}"
         echo ""
         show_server_startup_guide "local"
@@ -96,7 +99,7 @@ if [ "$ENV_MODE" = "local" ]; then
             sleep 15
             
             # Re-check health
-            if check_server_health "$LOCAL_SERVER_URL" "Local Game Server" 5; then
+            if check_server_health "game-server" "Local Game Server" 5; then
                 echo -e "${GREEN}✅ Local servers are now ready!${NC}"
             else
                 echo -e "${RED}❌ Local servers failed to start properly${NC}"

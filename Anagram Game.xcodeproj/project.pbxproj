@@ -57,6 +57,19 @@
 		9EA4F7102E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
 		9EA4F7112E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
 		9EA4F7122E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
+		9EA4F7182E3CFA0E00E6B7D3 /* Tiles in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7172E3CFA0E00E6B7D3 /* Tiles */; };
+		9EA4F7192E3CFA0E00E6B7D3 /* Tiles in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7172E3CFA0E00E6B7D3 /* Tiles */; };
+		9EA4F71A2E3CFA0E00E6B7D3 /* Tiles in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7172E3CFA0E00E6B7D3 /* Tiles */; };
+		9EA4F7252E3CFC4600E6B7D3 /* EmojiIconTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F71B2E3CFC4600E6B7D3 /* EmojiIconTile.swift */; };
+		9EA4F7262E3CFC4600E6B7D3 /* IconTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F71C2E3CFC4600E6B7D3 /* IconTile.swift */; };
+		9EA4F7272E3CFC4600E6B7D3 /* MessageTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F71D2E3CFC4600E6B7D3 /* MessageTile.swift */; };
+		9EA4F7282E3CFC4600E6B7D3 /* LanguageTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F71E2E3CFC4600E6B7D3 /* LanguageTile.swift */; };
+		9EA4F7292E3CFC4600E6B7D3 /* ScoreTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F71F2E3CFC4600E6B7D3 /* ScoreTile.swift */; };
+		9EA4F72A2E3CFC4600E6B7D3 /* InformationTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7202E3CFC4600E6B7D3 /* InformationTile.swift */; };
+		9EA4F72B2E3CFC4600E6B7D3 /* LetterTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7212E3CFC4600E6B7D3 /* LetterTile.swift */; };
+		9EA4F72C2E3CFC4600E6B7D3 /* BaseTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7222E3CFC4600E6B7D3 /* BaseTile.swift */; };
+		9EA4F72D2E3CFC4600E6B7D3 /* TileColorScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7232E3CFC4600E6B7D3 /* TileColorScheme.swift */; };
+		9EA4F72E2E3CFC4600E6B7D3 /* ThemeInformationTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7242E3CFC4600E6B7D3 /* ThemeInformationTile.swift */; };
 		9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */; };
 		9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08512E192E3A00DB73E7 /* ContentView.swift */; };
 		9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08532E192E3A00DB73E7 /* Item.swift */; };
@@ -114,6 +127,17 @@
 		9EA4F7012E39210A00E6B7D3 /* LeaderboardService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LeaderboardService.swift; path = services/Network/LeaderboardService.swift; sourceTree = "<group>"; };
 		9EA4F7022E39210A00E6B7D3 /* DifficultyAnalysisService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DifficultyAnalysisService.swift; path = services/Network/DifficultyAnalysisService.swift; sourceTree = "<group>"; };
 		9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PlayerService.swift; path = services/Network/PlayerService.swift; sourceTree = "<group>"; };
+		9EA4F7172E3CFA0E00E6B7D3 /* Tiles */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tiles; path = Views/Game/Tiles; sourceTree = "<group>"; };
+		9EA4F71B2E3CFC4600E6B7D3 /* EmojiIconTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EmojiIconTile.swift; path = Views/Game/Tiles/EmojiIconTile.swift; sourceTree = "<group>"; };
+		9EA4F71C2E3CFC4600E6B7D3 /* IconTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = IconTile.swift; path = Views/Game/Tiles/IconTile.swift; sourceTree = "<group>"; };
+		9EA4F71D2E3CFC4600E6B7D3 /* MessageTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = MessageTile.swift; path = Views/Game/Tiles/MessageTile.swift; sourceTree = "<group>"; };
+		9EA4F71E2E3CFC4600E6B7D3 /* LanguageTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LanguageTile.swift; path = Views/Game/Tiles/LanguageTile.swift; sourceTree = "<group>"; };
+		9EA4F71F2E3CFC4600E6B7D3 /* ScoreTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ScoreTile.swift; path = Views/Game/Tiles/ScoreTile.swift; sourceTree = "<group>"; };
+		9EA4F7202E3CFC4600E6B7D3 /* InformationTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = InformationTile.swift; path = Views/Game/Tiles/InformationTile.swift; sourceTree = "<group>"; };
+		9EA4F7212E3CFC4600E6B7D3 /* LetterTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LetterTile.swift; path = Views/Game/Tiles/LetterTile.swift; sourceTree = "<group>"; };
+		9EA4F7222E3CFC4600E6B7D3 /* BaseTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = BaseTile.swift; path = Views/Game/Tiles/BaseTile.swift; sourceTree = "<group>"; };
+		9EA4F7232E3CFC4600E6B7D3 /* TileColorScheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TileColorScheme.swift; path = Views/Game/Tiles/TileColorScheme.swift; sourceTree = "<group>"; };
+		9EA4F7242E3CFC4600E6B7D3 /* ThemeInformationTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ThemeInformationTile.swift; path = Views/Game/Tiles/ThemeInformationTile.swift; sourceTree = "<group>"; };
 		9EAA084C2E192E3A00DB73E7 /* Anagram Game.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Anagram Game.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA084F2E192E3A00DB73E7 /* Anagram_GameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anagram_GameApp.swift; sourceTree = "<group>"; };
 		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -162,8 +186,11 @@
 		9EAA08432E192E3A00DB73E7 = {
 			isa = PBXGroup;
 			children = (
+				9EA4F7242E3CFC4600E6B7D3 /* ThemeInformationTile.swift */,
+				9EA4F7232E3CFC4600E6B7D3 /* TileColorScheme.swift */,
 				9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */,
 				9EA4F6F82E3920FC00E6B7D3 /* NetworkConfiguration.swift */,
+				9EA4F7172E3CFA0E00E6B7D3 /* Tiles */,
 				9EA4F6F72E3920FC00E6B7D3 /* NetworkModels.swift */,
 				9EA4F6F02E39146300E6B7D3 /* Color+SkillLevel.swift */,
 				9EA4F6EF2E39146300E6B7D3 /* PhysicsCategories.swift */,
@@ -175,6 +202,14 @@
 				9EA4F7012E39210A00E6B7D3 /* LeaderboardService.swift */,
 				9EA4F6FF2E39210A00E6B7D3 /* PhraseService.swift */,
 				9EA4F7002E39210A00E6B7D3 /* ConnectionService.swift */,
+				9EA4F7222E3CFC4600E6B7D3 /* BaseTile.swift */,
+				9EA4F71B2E3CFC4600E6B7D3 /* EmojiIconTile.swift */,
+				9EA4F71C2E3CFC4600E6B7D3 /* IconTile.swift */,
+				9EA4F7212E3CFC4600E6B7D3 /* LetterTile.swift */,
+				9EA4F71D2E3CFC4600E6B7D3 /* MessageTile.swift */,
+				9EA4F7202E3CFC4600E6B7D3 /* InformationTile.swift */,
+				9EA4F71E2E3CFC4600E6B7D3 /* LanguageTile.swift */,
+				9EA4F71F2E3CFC4600E6B7D3 /* ScoreTile.swift */,
 				9EAA084E2E192E3A00DB73E7,
 				9EAA08632E192E3B00DB73E7 /* Anagram GameTests */,
 				9EAA086D2E192E3B00DB73E7 /* Anagram GameUITests */,
@@ -382,6 +417,7 @@
 				9EAA08592E192E3B00DB73E7 /* Preview Assets.xcassets in Resources */,
 				9EAA08562E192E3B00DB73E7 /* Assets.xcassets in Resources */,
 				9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */,
+				9EA4F7182E3CFA0E00E6B7D3 /* Tiles in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,6 +425,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EA4F7192E3CFA0E00E6B7D3 /* Tiles in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,6 +433,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EA4F71A2E3CFA0E00E6B7D3 /* Tiles in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -408,28 +446,38 @@
 			files = (
 				9EA4F6EC2E39145300E6B7D3 /* SpriteKitView.swift in Sources */,
 				9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */,
+				9EA4F72E2E3CFC4600E6B7D3 /* ThemeInformationTile.swift in Sources */,
 				9EA4F6F12E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
 				9EA4F7072E39210A00E6B7D3 /* ConnectionService.swift in Sources */,
 				3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */,
+				9EA4F7272E3CFC4600E6B7D3 /* MessageTile.swift in Sources */,
 				9EA4F70A2E39210A00E6B7D3 /* LeaderboardService.swift in Sources */,
+				9EA4F7282E3CFC4600E6B7D3 /* LanguageTile.swift in Sources */,
 				9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */,
 				9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */,
 				4C7F9A8D2F192E3A00DB73E7 /* NetworkManager.swift in Sources */,
 				1A2B3C4D5E6F7G8H9I0J1K2L /* DeviceManager.swift in Sources */,
 				5D8E2B9E3G293F4B00DC84F8 /* PlayerRegistrationView.swift in Sources */,
 				9EA4F6FC2E3920FD00E6B7D3 /* NetworkConfiguration.swift in Sources */,
+				9EA4F72D2E3CFC4600E6B7D3 /* TileColorScheme.swift in Sources */,
 				6E9F3C8F4H394G5C00ED95G9 /* OnlinePlayersView.swift in Sources */,
 				9EA4F6F92E3920FD00E6B7D3 /* NetworkModels.swift in Sources */,
 				7F1A4D9F5I495H6D00FE06H1 /* PhraseCreationView.swift in Sources */,
 				9EA4F7102E39210A00E6B7D3 /* PlayerService.swift in Sources */,
 				9EA4F7042E39210A00E6B7D3 /* PhraseService.swift in Sources */,
 				9EA4F6E62E39145300E6B7D3 /* HintButtonView.swift in Sources */,
+				9EA4F72C2E3CFC4600E6B7D3 /* BaseTile.swift in Sources */,
+				9EA4F7292E3CFC4600E6B7D3 /* ScoreTile.swift in Sources */,
 				9EA4F6E92E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */,
+				9EA4F7262E3CFC4600E6B7D3 /* IconTile.swift in Sources */,
 				8A2B5E1F6J596I7E00GF17I2 /* LobbyView.swift in Sources */,
 				8B3C7G3H8L708K9G00IG39K4 /* LegendsView.swift in Sources */,
+				9EA4F7252E3CFC4600E6B7D3 /* EmojiIconTile.swift in Sources */,
 				9EA4F70D2E39210A00E6B7D3 /* DifficultyAnalysisService.swift in Sources */,
 				9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */,
 				9EAA08502E192E3A00DB73E7 /* Anagram_GameApp.swift in Sources */,
+				9EA4F72B2E3CFC4600E6B7D3 /* LetterTile.swift in Sources */,
+				9EA4F72A2E3CFC4600E6B7D3 /* InformationTile.swift in Sources */,
 				E38DF1D553394454B962ABE1 /* Utils/ScoreCalculator.swift in Sources */,
 				9EA4F6F42E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
 				E936F87B725A494E9F604DCC /* Utils/DebugLogger.swift in Sources */,
