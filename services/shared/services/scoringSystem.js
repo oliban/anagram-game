@@ -4,8 +4,51 @@
  */
 
 const { pool } = require('../database/connection');
+const fs = require('fs');
+const path = require('path');
 
 class ScoringSystem {
+  
+  /**
+   * Get skill level and title based on total score
+   */
+  static getSkillLevel(totalScore) {
+    try {
+      // Load level configuration
+      const configPath = path.join(__dirname, '../config/level-config.json');
+      const levelConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      
+      // Find the highest level the player has achieved
+      let currentLevel = levelConfig.skillLevels[0]; // Default to level 0
+      
+      for (const level of levelConfig.skillLevels) {
+        if (totalScore >= level.pointsRequired) {
+          currentLevel = level;
+        } else {
+          break; // Stop when we reach a level the player hasn't achieved
+        }
+      }
+      
+      // Capitalize the first letter of the title
+      const capitalizedTitle = currentLevel.title.charAt(0).toUpperCase() + currentLevel.title.slice(1);
+      
+      return {
+        level: currentLevel.id,
+        title: capitalizedTitle,
+        pointsRequired: currentLevel.pointsRequired,
+        nextLevelPoints: levelConfig.skillLevels[currentLevel.id + 1]?.pointsRequired || null
+      };
+    } catch (error) {
+      console.error('❌ SCORING: Error getting skill level:', error);
+      // Return default level on error
+      return {
+        level: 0,
+        title: 'Non-existent',
+        pointsRequired: 0,
+        nextLevelPoints: 100
+      };
+    }
+  }
   
   /**
    * Update player score aggregations after phrase completion

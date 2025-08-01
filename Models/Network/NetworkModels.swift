@@ -91,6 +91,8 @@ public struct PlayerStats: Codable {
     let totalScore: Int
     let totalRank: Int
     let totalPhrases: Int
+    let skillTitle: String?
+    let skillLevel: Int?
 }
 
 public struct LeaderboardEntry: Codable {

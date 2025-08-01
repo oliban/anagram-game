@@ -20,12 +20,8 @@ struct LobbyView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Mission statement
-                    Text("Do you have what it takes to become a Legend?")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 8)
+                    // Title section
+                    titleSection
                     
                     // Header with welcome message
                     headerSection
@@ -54,16 +50,7 @@ struct LobbyView: View {
                 .frame(maxWidth: .infinity, minHeight: 0)
             }
             .navigationTitle("")
-            .navigationBarHidden(false)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Anagram Game")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .multilineTextAlignment(.center)
-                }
-            }
+            .navigationBarHidden(true)
             .refreshable {
                 await refreshData()
             }
@@ -94,15 +81,47 @@ struct LobbyView: View {
         }
     }
     
+    // MARK: - Title Section
+    private var titleSection: some View {
+        VStack(spacing: 12) {
+            // Main title
+            Text("Anagram Game")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            // Mission statement
+            Text("Do you have what it takes to become a Legend?")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top, 20)
+    }
+    
     // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 8) {
             if let playerName = gameModel.playerName {
                 let isFirstTime = UserDefaults.standard.bool(forKey: "isFirstLogin")
-                Text(isFirstTime ? "Welcome, \(playerName)!" : "Welcome back, \(playerName)!")
-                    .font(.title2)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                
+                // Use skill title if available, otherwise use default welcome message
+                if let skillTitle = playerStats?.skillTitle {
+                    Text("Welcome \(playerName) the \(skillTitle)!")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text(isFirstTime ? 
+                         "Welcome, \(playerName)!" : 
+                         "Welcome back, \(playerName)!")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                }
             }
             
             Text("Ready to solve some anagrams?")

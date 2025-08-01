@@ -325,9 +325,8 @@ class NetworkManager: ObservableObject {
         return try await leaderboardService.getPlayerRanking(playerId: playerId, in: leaderboardType)
     }
     
-    func getLegendPlayers() async throws -> [LegendPlayer] {
-        let response = try await leaderboardService.fetchLegendPlayers()
-        return response.players
+    func getLegendPlayers() async throws -> LegendPlayersResponse {
+        return try await leaderboardService.fetchLegendPlayers()
     }
     
     func getLeaderboard(period: String, limit: Int = 10) async throws -> [LeaderboardEntry] {
