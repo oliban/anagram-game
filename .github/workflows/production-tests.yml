@@ -1,0 +1,51 @@
+name: Production Tests
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    tags:
+      - 'v*'  # Only run on version tags
+
+jobs:
+  test-docker-builds:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test Docker builds
+      run: |
+        # Test that all Docker images build successfully
+        docker build -f services/game-server/Dockerfile -t test-game-server .
+        docker build -f services/web-dashboard/Dockerfile -t test-web-dashboard .
+        docker build -f services/link-generator/Dockerfile -t test-link-generator .
+        echo "✅ All Docker images built successfully"
+
+  test-ios:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+
+    - name: Build iOS app
+      run: |
+        xcodebuild -project "Anagram Game.xcodeproj" \
+          -scheme "Anagram Game" \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
+          build
+
+    - name: Run iOS tests
+      run: |
+        xcodebuild test \
+          -project "Anagram Game.xcodeproj" \
+          -scheme "Anagram Game" \
+          -destination 'platform=iOS Simulator,name=iPhone 15'

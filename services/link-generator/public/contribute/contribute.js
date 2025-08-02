@@ -64,29 +64,31 @@ class ContributionForm {
                     maxUses: response.link.maxUses,
                     remainingUses: response.link.remainingUses || (response.link.maxUses - response.link.currentUses),
                     expiresAt: response.link.expiresAt,
+                    
+                    // Enhanced player info
                     playerLevel: response.link.playerLevel,
+                    playerLevelId: response.link.playerLevelId,
                     playerScore: response.link.playerScore,
-                    legendThreshold: response.link.legendThreshold || 2000
+                    progression: response.link.progression,
+                    
+                    // Smart difficulty guidance
+                    optimalDifficulty: response.link.optimalDifficulty,
+                    levelConfig: response.link.levelConfig
                 };
                 
-                console.log('Real player data loaded:', this.linkData);
+                console.log('Enhanced player data loaded:', this.linkData);
                 this.displayContributionInfo();
                 this.showForm();
+                
+                // Initialize the scrambling preview with "Hello World"
+                this.updateScramblePreview();
             } else {
                 throw new Error('Invalid response format');
             }
         } catch (error) {
             console.error('Error loading contribution data:', error);
-            
-            // Show appropriate error message - NO FALLBACK
-            let errorMessage = 'Unable to load contribution link';
-            if (error.response?.status === 400) {
-                errorMessage = error.response.data?.error || 'Invalid or expired link';
-            } else if (error.response?.status === 404) {
-                errorMessage = 'Contribution link not found';
-            }
-            
-            this.showError(errorMessage);
+            this.showError(`Failed to load contribution data: ${error.message}`);
+            return;
         }
     }
 
@@ -257,10 +259,12 @@ class ContributionForm {
         const phrase = document.getElementById('phrase-input').value.trim();
         const previewElement = document.getElementById('scramble-preview');
         
-        if (phrase.length >= 10) {
+        if (phrase.length >= 3) {
+            // Use user's phrase once they start typing
             this.showScramblePreview(phrase);
         } else {
-            previewElement.style.display = 'none';
+            // Show default "Hello World" example
+            this.showScramblePreview("Hello World");
         }
     }
 
@@ -314,89 +318,99 @@ class ContributionForm {
         return result.join('');
     }
 
-    // Phrase quality analysis
+    // Phrase quality analysis using shared difficulty algorithm
     analyzePhraseQuality(phrase) {
         if (!phrase || phrase.length < 3) {
-            return { quality: 'poor', score: 0, feedback: 'Too short' };
+            return { 
+                quality: 'poor', 
+                score: 0, 
+                difficulty: 'Very Easy',
+                feedback: 'Too short - need at least 3 characters'
+            };
         }
 
-        const words = phrase.trim().split(/\s+/).filter(word => word.length > 0);
-        const totalLength = phrase.replace(/\s+/g, '').length;
-        const avgWordLength = totalLength / words.length;
+        // Get selected language
+        const language = document.getElementById('language-select-top')?.value || 'en';
         
-        let score = 0;
-        let feedback = [];
+        // Use the real difficulty algorithm
+        const difficultyScore = this.calculateDifficultyScore(phrase, language);
+        const difficultyLabel = this.getDifficultyLabel(difficultyScore);
         
-        // Length scoring (15-50 characters is ideal)
-        if (totalLength >= 15 && totalLength <= 50) {
-            score += 40;
-            feedback.push('Good length');
-        } else if (totalLength >= 10 && totalLength < 15) {
-            score += 20;
-            feedback.push('Could be longer');
-        } else if (totalLength > 50) {
-            score += 15;
-            feedback.push('Quite long');
-        } else {
-            feedback.push('Too short');
-        }
-        
-        // Word count scoring (2-5 words is ideal)
-        if (words.length >= 2 && words.length <= 5) {
-            score += 30;
-            feedback.push('Good word count');
-        } else if (words.length === 1) {
-            feedback.push('Single word - add more');
-        } else if (words.length > 5) {
-            score += 15;
-            feedback.push('Many words');
-        }
-        
-        // Complexity scoring (average word length)
-        if (avgWordLength >= 4 && avgWordLength <= 7) {
-            score += 20;
-            feedback.push('Good complexity');
-        } else if (avgWordLength < 4) {
-            score += 10;
-            feedback.push('Simple words');
-        } else {
-            score += 15;
-            feedback.push('Complex words');
-        }
-        
-        // Bonus for variety (different word lengths)
-        const wordLengths = words.map(w => w.length);
-        const uniqueLengths = [...new Set(wordLengths)];
-        if (uniqueLengths.length > 1) {
-            score += 10;
-            feedback.push('Good variety');
-        }
-        
-        // Determine quality level
+        // Map difficulty score to quality color
         let quality;
-        if (score >= 80) {
-            quality = 'excellent';
-        } else if (score >= 60) {
-            quality = 'good';
-        } else if (score >= 40) {
-            quality = 'okay';
+        if (difficultyScore >= 80) {
+            quality = 'excellent';  // Very Hard phrases
+        } else if (difficultyScore >= 60) {
+            quality = 'good';       // Hard phrases  
+        } else if (difficultyScore >= 40) {
+            quality = 'okay';       // Medium phrases
+        } else if (difficultyScore >= 20) {
+            quality = 'good';       // Easy phrases (good for beginners)
         } else {
-            quality = 'poor';
+            quality = 'poor';       // Very Easy phrases (too simple)
+        }
+        
+        // Generate feedback based on difficulty
+        let feedback = `${difficultyLabel} difficulty`;
+        if (difficultyScore < 20) {
+            feedback += ' - try adding more words or complexity';
+        } else if (difficultyScore > 80) {
+            feedback += ' - very challenging!';
         }
         
         return {
             quality,
-            score,
-            feedback: feedback.join(', '),
-            targetLevel: this.getTargetDifficultyLevel(score)
+            score: difficultyScore,
+            difficulty: difficultyLabel,
+            feedback: feedback
         };
     }
     
-    getTargetDifficultyLevel(score) {
-        if (score >= 80) return 'Expert/Master';
-        if (score >= 60) return 'Advanced/Expert';
-        if (score >= 40) return 'Intermediate';
-        return 'Beginner';
+    // Simplified version of the shared difficulty algorithm for client-side use
+    calculateDifficultyScore(phrase, language) {
+        const words = phrase.trim().split(/\s+/);
+        const wordCount = words.length;
+        
+        // Normalize text (remove non-letters, convert to lowercase)
+        const normalizedText = this.normalize(phrase, language);
+        const letterCount = normalizedText.length;
+        
+        if (letterCount === 0) return 1;
+        
+        // Simplified scoring based on the shared algorithm
+        const wordCountFactor = Math.pow(Math.max(0, wordCount - 1), 1.5) * 10.0;
+        const letterCountFactor = Math.pow(letterCount, 1.2) * 1.5;
+        
+        // Simple commonality factor (approximation)
+        const commonalityFactor = letterCount * 2.5;
+        
+        // Letter repetition factor
+        const uniqueLetters = new Set(normalizedText).size;
+        const repetitionRatio = (letterCount - uniqueLetters) / letterCount;
+        const repetitionFactor = repetitionRatio * 15.0;
+        
+        const rawScore = wordCountFactor + letterCountFactor + commonalityFactor + repetitionFactor;
+        return Math.round(Math.max(1, rawScore));
+    }
+    
+    normalize(phrase, language) {
+        if (!phrase) return '';
+        const text = phrase.toLowerCase();
+        
+        // Keep only letters based on language
+        if (language === 'sv') {
+            return text.replace(/[^a-zåäö]/g, '');
+        } else {
+            return text.replace(/[^a-z]/g, '');
+        }
+    }
+    
+    getDifficultyLabel(score) {
+        if (score <= 20) return 'Very Easy';
+        if (score <= 40) return 'Easy';
+        if (score <= 60) return 'Medium';
+        if (score <= 80) return 'Hard';
+        return 'Very Hard';
     }
     
     updatePhraseQualityIndicator(phrase) {
@@ -412,22 +426,38 @@ class ContributionForm {
         
         // Update quality indicator text
         if (qualityIndicator) {
-            const targetLevel = this.linkData?.playerLevel || 'Expert';
-            const isTargetMatch = analysis.targetLevel.includes(targetLevel);
+            const targetLevel = this.linkData?.playerLevel || 'Beginner';
+            const phraseDifficulty = analysis.difficulty;
+            
+            // Check if phrase difficulty matches player level approximately
+            const isGoodMatch = this.isDifficultyMatch(targetLevel, phraseDifficulty);
             
             qualityIndicator.innerHTML = `
                 <div class="quality-badge quality-${analysis.quality}">
                     ${this.getQualityIcon(analysis.quality)} ${analysis.quality.toUpperCase()}
                 </div>
                 <div class="quality-details">
-                    <div class="quality-feedback">${analysis.feedback}</div>
-                    <div class="target-match ${isTargetMatch ? 'match' : 'no-match'}">
-                        Target: ${targetLevel} | This phrase: ${analysis.targetLevel}
-                        ${isTargetMatch ? ' ✓ Perfect match!' : ' - Try adjusting complexity'}
+                    <div class="quality-feedback">${analysis.feedback} (Score: ${analysis.score})</div>
+                    <div class="target-match ${isGoodMatch ? 'match' : 'no-match'}">
+                        Player level: ${targetLevel} | Phrase: ${phraseDifficulty}
+                        ${isGoodMatch ? ' ✓ Good match!' : ' - Consider adjusting difficulty'}
                     </div>
                 </div>
             `;
         }
+    }
+    
+    isDifficultyMatch(playerLevel, phraseDifficulty) {
+        // Map player levels to phrase difficulties for good matches
+        const levelMatches = {
+            'Beginner': ['Very Easy', 'Easy'],
+            'Intermediate': ['Easy', 'Medium'],
+            'Advanced': ['Medium', 'Hard'],
+            'Expert': ['Hard', 'Very Hard'],
+            'Master': ['Hard', 'Very Hard']
+        };
+        
+        return levelMatches[playerLevel]?.includes(phraseDifficulty) || false;
     }
     
     getQualityIcon(quality) {

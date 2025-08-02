@@ -38,8 +38,9 @@ class ContributionLinkGenerator {
 
             const link = result.rows[0];
             
-            // Use link generator service URL for contribution links
-            const baseUrl = process.env.LINK_GENERATOR_URL || process.env.BASE_URL || 'http://localhost:3002';
+            // Use link generator URL for contribution links since that's where the form is hosted
+            // Default to the same IP used by iOS app for consistency  
+            const linkGeneratorUrl = process.env.LINK_GENERATOR_URL || 'http://192.168.1.133:3002';
             
             return {
                 id: link.id,
@@ -47,7 +48,7 @@ class ContributionLinkGenerator {
                 url: `/contribute/${link.token}`,
                 expiresAt: link.expires_at,
                 maxUses: link.max_uses,
-                shareableUrl: `${baseUrl}/contribute/${link.token}`
+                shareableUrl: `${linkGeneratorUrl}/contribute/${link.token}`
             };
         } catch (error) {
             console.error('Error creating contribution link:', error);
@@ -56,6 +57,8 @@ class ContributionLinkGenerator {
     }
 
     async validateToken(token) {
+        console.log(`🔍 VALIDATE: Checking token: ${token}`);
+        
         const query = `
             SELECT 
                 cl.id,
@@ -72,9 +75,12 @@ class ContributionLinkGenerator {
         `;
 
         try {
+            console.log(`🔍 VALIDATE: Executing query with token parameter`);
             const result = await pool.query(query, [token]);
+            console.log(`🔍 VALIDATE: Query returned ${result.rows.length} rows`);
             
             if (result.rows.length === 0) {
+                console.log(`❌ VALIDATE: No rows found for token ${token}`);
                 return { valid: false, reason: 'Token not found' };
             }
 

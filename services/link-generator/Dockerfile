@@ -17,8 +17,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application code
 COPY --chown=nodejs:nodejs link-generator/ ./
 
-# Copy shared modules
-COPY --chown=nodejs:nodejs shared/ ./shared/
+# Remove any existing shared symlink and copy shared modules from link-generator service
+RUN rm -f ./shared
+COPY --chown=nodejs:nodejs link-generator/shared/ ./shared/
 
 # Create necessary directories
 RUN mkdir -p logs && \
