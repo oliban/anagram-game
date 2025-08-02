@@ -57,6 +57,9 @@
 		9EA4F7102E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
 		9EA4F7112E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
 		9EA4F7122E39210A00E6B7D3 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */; };
+		A42EA53B2BA240D7897DA717 /* LinkGeneratorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512301A4E65B4A2CBCD30026 /* LinkGeneratorService.swift */; };
+		A42EA53C2BA240D7897DA718 /* LinkGeneratorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512301A4E65B4A2CBCD30026 /* LinkGeneratorService.swift */; };
+		A42EA53D2BA240D7897DA719 /* LinkGeneratorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512301A4E65B4A2CBCD30026 /* LinkGeneratorService.swift */; };
 		9EA4F7182E3CFA0E00E6B7D3 /* Tiles in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7172E3CFA0E00E6B7D3 /* Tiles */; };
 		9EA4F7192E3CFA0E00E6B7D3 /* Tiles in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7172E3CFA0E00E6B7D3 /* Tiles */; };
 		9EA4F71A2E3CFA0E00E6B7D3 /* Tiles in Resources */ = {isa = PBXBuildFile; fileRef = 9EA4F7172E3CFA0E00E6B7D3 /* Tiles */; };
@@ -127,6 +130,7 @@
 		9EA4F7012E39210A00E6B7D3 /* LeaderboardService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LeaderboardService.swift; path = services/Network/LeaderboardService.swift; sourceTree = "<group>"; };
 		9EA4F7022E39210A00E6B7D3 /* DifficultyAnalysisService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DifficultyAnalysisService.swift; path = services/Network/DifficultyAnalysisService.swift; sourceTree = "<group>"; };
 		9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PlayerService.swift; path = services/Network/PlayerService.swift; sourceTree = "<group>"; };
+		512301A4E65B4A2CBCD30026 /* LinkGeneratorService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LinkGeneratorService.swift; path = services/Network/LinkGeneratorService.swift; sourceTree = "<group>"; };
 		9EA4F7172E3CFA0E00E6B7D3 /* Tiles */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tiles; path = Views/Game/Tiles; sourceTree = "<group>"; };
 		9EA4F71B2E3CFC4600E6B7D3 /* EmojiIconTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EmojiIconTile.swift; path = Views/Game/Tiles/EmojiIconTile.swift; sourceTree = "<group>"; };
 		9EA4F71C2E3CFC4600E6B7D3 /* IconTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = IconTile.swift; path = Views/Game/Tiles/IconTile.swift; sourceTree = "<group>"; };
@@ -189,6 +193,7 @@
 				9EA4F7242E3CFC4600E6B7D3 /* ThemeInformationTile.swift */,
 				9EA4F7232E3CFC4600E6B7D3 /* TileColorScheme.swift */,
 				9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */,
+				512301A4E65B4A2CBCD30026 /* LinkGeneratorService.swift */,
 				9EA4F6F82E3920FC00E6B7D3 /* NetworkConfiguration.swift */,
 				9EA4F7172E3CFA0E00E6B7D3 /* Tiles */,
 				9EA4F6F72E3920FC00E6B7D3 /* NetworkModels.swift */,
@@ -464,6 +469,7 @@
 				9EA4F6F92E3920FD00E6B7D3 /* NetworkModels.swift in Sources */,
 				7F1A4D9F5I495H6D00FE06H1 /* PhraseCreationView.swift in Sources */,
 				9EA4F7102E39210A00E6B7D3 /* PlayerService.swift in Sources */,
+				A42EA53B2BA240D7897DA717 /* LinkGeneratorService.swift in Sources */,
 				9EA4F7042E39210A00E6B7D3 /* PhraseService.swift in Sources */,
 				9EA4F6E62E39145300E6B7D3 /* HintButtonView.swift in Sources */,
 				9EA4F72C2E3CFC4600E6B7D3 /* BaseTile.swift in Sources */,
@@ -501,6 +507,7 @@
 				9EA4F6E02E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */,
 				9EA4F6F52E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
 				9EA4F7112E39210A00E6B7D3 /* PlayerService.swift in Sources */,
+				A42EA53C2BA240D7897DA718 /* LinkGeneratorService.swift in Sources */,
 				9EA4F6EA2E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */,
 				9EA4F6FD2E3920FD00E6B7D3 /* NetworkConfiguration.swift in Sources */,
 				9EA4F6E72E39145300E6B7D3 /* HintButtonView.swift in Sources */,
@@ -524,6 +531,7 @@
 				9EA4F6E22E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */,
 				9EA4F6F62E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
 				9EA4F7122E39210A00E6B7D3 /* PlayerService.swift in Sources */,
+				A42EA53D2BA240D7897DA719 /* LinkGeneratorService.swift in Sources */,
 				9EA4F6EB2E39145300E6B7D3 /* UnifiedSkillLevelView.swift in Sources */,
 				9EA4F6FE2E3920FD00E6B7D3 /* NetworkConfiguration.swift in Sources */,
 				9EA4F6E82E39145300E6B7D3 /* HintButtonView.swift in Sources */,
