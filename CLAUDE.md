@@ -3,14 +3,23 @@
 ## Project Overview
 iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter tiles to form words from scrambled sentences.
 
+## 🚨 MANDATORY: iOS Simulator Debugging
+**File-Based Logging - ALWAYS USE**: `./Scripts/tail-logs.sh` (REQUIRED for all debugging)
+**Code Usage**: `DebugLogger.shared.ui/network/error/info/game("message")` - Add to ALL new functions
+**Categories**: 🎨 UI, 🌐 NETWORK, ℹ️ INFO, ❌ ERROR, 🎮 GAME
+
 ## 🚨 CORE WORKFLOW - ALWAYS FOLLOW
 1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
 2. **Plan**: Create detailed implementation plan, verify with me before coding
 3. **Implement**: Write production-quality Swift code following all best practices
-4. **Test**: Deploy with `build_and_test.sh` (includes server health checks), monitor logs, await my feedback
+4. **Test**: Deploy with `build_and_test.sh` (includes server health checks), **ALWAYS monitor file logs with `./Scripts/tail-logs.sh`**, await my feedback
 5. **Never commit without explicit approval**
 
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
+
+## DEPLOYMENT GUIDELINES
+- Always build new apps using the build script and wait for my approval so I can test the change before moving on and never ever commit anything I have not approved
+- **🚨 MANDATORY: Always start `./Scripts/tail-logs.sh` BEFORE building to monitor debug output**
 
 ## CODE QUALITY REQUIREMENTS
 - **Zero tolerance for bad patterns** - Stop and refactor immediately
@@ -18,6 +27,7 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - **Proper memory management** - Use `weak self` in closures
 - **SwiftUI best practices** - Correct `@State`, `@Binding`, `@ObservableObject` usage
 - **Delete old code** when replacing - no migration functions or versioned names
+- **NO FALLBACKS** - Never keep old code as fallback when rewriting functions
 - **Meaningful names** - `userIdentifier` not `id`
 - **Guard statements** for early returns and unwrapping
 
@@ -30,6 +40,7 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - ✅ Old code is deleted
 - ✅ Swift documentation on public interfaces
 - ✅ Handles errors gracefully
+- ✅ **Includes appropriate DebugLogger.shared logging statements**
 
 ## SWIFT-SPECIFIC GUIDELINES
 - **Async/await over callbacks**: `func fetchUser() async throws -> User`
@@ -168,6 +179,7 @@ node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
 - **Web Dashboard (3001)**: `/api/status`, `/api/monitoring/stats`
 - **Link Generator (3002)**: `/api/status`
 - **Admin Service (3003)**: `/api/status`, `/api/admin/phrases/batch-import`
+
 
 
 ### Common Debugging

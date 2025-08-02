@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 /// Centralized debug logging utility that handles all debug message sending
 /// Eliminates duplicate sendDebugToServer functions across GameModel and PhysicsGameView
@@ -13,7 +14,29 @@ class DebugLogger {
     
     // MARK: - Shared Instance
     static let shared = DebugLogger()
-    private init() {}
+    
+    // MARK: - File Logging
+    private let logURL: URL
+    private let dateFormatter: DateFormatter
+    private let maxFileSize: Int = 5 * 1024 * 1024 // 5MB
+    
+    private init() {
+        // Setup file logging
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        self.logURL = documentsPath.appendingPathComponent("anagram-debug.log")
+        
+        self.dateFormatter = DateFormatter()
+        self.dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        
+        // Print the log file path so we can find it
+        print("📂 DebugLogger: Log file at \(logURL.path)")
+        
+        // Create initial log entry
+        fileLog("🚀 DebugLogger initialized - Session started")
+        fileLog("📱 App bundle: \(Bundle.main.bundleIdentifier ?? "unknown")")
+        fileLog("📱 iOS Version: \(UIDevice.current.systemVersion)")
+        fileLog("📱 Device: \(UIDevice.current.model)")
+    }
     
     // MARK: - Debug Logging
     
@@ -83,5 +106,76 @@ class DebugLogger {
     func sendGameState(_ state: String, details: String = "") async {
         let message = details.isEmpty ? "GAME_STATE: \(state)" : "GAME_STATE: \(state) - \(details)"
         await sendToServer(message)
+    }
+    
+    // MARK: - File Logging Methods
+    
+    /// Logs a message to the file with timestamp
+    func fileLog(_ message: String, category: String = "General") {
+        let timestamp = dateFormatter.string(from: Date())
+        let logEntry = "[\(timestamp)] [\(category)] \(message)\n"
+        
+        // Also print to console for Xcode debugging
+        print("🗂️ \(logEntry.trimmingCharacters(in: .whitespacesAndNewlines))")
+        
+        // Write to file
+        writeToFile(logEntry)
+    }
+    
+    private func writeToFile(_ logEntry: String) {
+        guard let data = logEntry.data(using: .utf8) else { return }
+        
+        // Check if file exists
+        if FileManager.default.fileExists(atPath: logURL.path) {
+            // Check file size and rotate if needed
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: logURL.path),
+               let fileSize = attributes[.size] as? Int,
+               fileSize > maxFileSize {
+                rotateLogFile()
+            }
+            
+            // Append to existing file
+            if let fileHandle = try? FileHandle(forWritingTo: logURL) {
+                fileHandle.seekToEndOfFile()
+                fileHandle.write(data)
+                fileHandle.closeFile()
+            }
+        } else {
+            // Create new file
+            try? data.write(to: logURL)
+        }
+    }
+    
+    private func rotateLogFile() {
+        let oldLogURL = logURL.appendingPathExtension("old")
+        
+        // Remove old backup if it exists
+        try? FileManager.default.removeItem(at: oldLogURL)
+        
+        // Move current log to backup
+        try? FileManager.default.moveItem(at: logURL, to: oldLogURL)
+        
+        fileLog("📄 Log file rotated - Previous log saved as .old")
+    }
+    
+    // Convenience methods for different log levels
+    func ui(_ message: String) {
+        fileLog("🎨 \(message)", category: "UI")
+    }
+    
+    func network(_ message: String) {
+        fileLog("🌐 \(message)", category: "NETWORK")
+    }
+    
+    func info(_ message: String) {
+        fileLog("ℹ️ \(message)", category: "INFO")
+    }
+    
+    func error(_ message: String) {
+        fileLog("❌ \(message)", category: "ERROR")
+    }
+    
+    func game(_ message: String) {
+        fileLog("🎮 \(message)", category: "GAME")
     }
 }
