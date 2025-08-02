@@ -12,14 +12,15 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
 2. **Plan**: Create detailed implementation plan, verify with me before coding
 3. **Implement**: Write production-quality Swift code following all best practices
-4. **Test**: Deploy with `build_and_test.sh` (includes server health checks), **ALWAYS monitor file logs with `./Scripts/tail-logs.sh`**, await my feedback
-5. **Never commit without explicit approval**
+4. **Test**: Deploy with `build_and_test.sh` (includes server health checks), await my feedback
+5. **Commit when requested** - "commit and push" is explicit approval
 
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
 
 ## DEPLOYMENT GUIDELINES
-- Always build new apps using the build script and wait for my approval so I can test the change before moving on and never ever commit anything I have not approved
-- **🚨 MANDATORY: Always start `./Scripts/tail-logs.sh` BEFORE building to monitor debug output**
+- Always build new apps using the build script and wait for feedback before proceeding
+- When user says "commit and push", that constitutes explicit approval to commit
+- **🚨 LOG MONITORING: For debugging issues, use `./Scripts/tail-logs.sh` in a separate session. Do NOT block builds on log tailing.**
 
 ## CODE QUALITY REQUIREMENTS
 - **Zero tolerance for bad patterns** - Stop and refactor immediately

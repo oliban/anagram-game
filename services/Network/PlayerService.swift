@@ -233,29 +233,11 @@ class PlayerService: PlayerServiceDelegate {
     }
     
     func getOnlinePlayersCount() async throws -> Int {
-        guard let url = URL(string: "\(baseURL)/api/players/online") else {
-            throw NetworkError.invalidURL
-        }
+        // First fetch online players to get fresh data
+        await fetchOnlinePlayers()
         
-        do {
-            let (data, response) = try await urlSession.data(from: url)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                print("❌ ONLINE COUNT: Failed to get online players count. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
-                throw NetworkError.serverOffline
-            }
-            
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let players = json["players"] as? [[String: Any]] {
-                return players.count
-            }
-            
-            throw NetworkError.invalidResponse
-            
-        } catch {
-            print("❌ ONLINE COUNT: Error getting online players count: \(error.localizedDescription)")
-            throw NetworkError.connectionFailed
-        }
+        // Return count from already-fetched data instead of making duplicate API call
+        return onlinePlayers.count
     }
     
     // MARK: - Periodic Updates

@@ -58,18 +58,19 @@ struct LobbyView: View {
         .onAppear {
             print("🟢 LOBBY: LobbyView appeared!")
             DebugLogger.shared.ui("LobbyView appeared - initializing data")
-            Task {
-                await loadInitialData()
-            }
             
-            // Load custom phrases only once on appear - rely on real-time notifications for updates
-            // No periodic timer needed since WebSocket provides real-time updates
+            // Only load data if we have a player ID, otherwise wait for onChange
+            if gameModel.playerId != nil {
+                Task {
+                    await loadInitialData()
+                }
+            }
         }
         .onChange(of: gameModel.playerId) { oldValue, newValue in
             if newValue != nil && oldValue == nil {
-                // Player just logged in, refresh all data
-                print("🟢 LOBBY: Player logged in, refreshing data")
-                DebugLogger.shared.info("Player logged in, refreshing lobby data")
+                // Player just logged in, load data for first time
+                print("🟢 LOBBY: Player logged in, loading data")
+                DebugLogger.shared.info("Player logged in, loading lobby data")
                 Task {
                     // Small delay to ensure network manager is fully set up
                     try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds

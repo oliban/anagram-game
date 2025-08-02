@@ -47,9 +47,44 @@ class PhraseService: PhraseServiceDelegate {
             
             print("✅ PHRASE: Fetched phrase for player \(playerId)")
             return phrasePreview
+        } catch {
+            print("❌ PHRASE: Error fetching phrase: \(error)")
+            throw NetworkError.serverOffline
+        }
+    }
+    
+    func fetchPhrasesForPlayer(playerId: String, level: Int? = nil) async throws -> [CustomPhrase] {
+        // Build URL with optional level parameter
+        var urlString = "\(baseURL)/api/phrases/for/\(playerId)"
+        if let level = level {
+            urlString += "?level=\(level)"
+            print("🎯 PHRASE: Fetching phrases for player level \(level)")
+        }
+        
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ PHRASE: Failed to fetch phrases. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                throw NetworkError.serverOffline
+            }
+            
+            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let phrasesData = jsonResponse["phrases"] {
+                let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
+                let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
+                print("🔍 PHRASE: Successfully decoded \(phrases.count) phrases")
+                return phrases
+            }
+            
+            throw NetworkError.invalidResponse
             
         } catch {
-            print("❌ PHRASE: Error fetching phrase: \(error.localizedDescription)")
+            print("❌ PHRASE: Error fetching phrases: \(error.localizedDescription)")
             throw NetworkError.connectionFailed
         }
     }
