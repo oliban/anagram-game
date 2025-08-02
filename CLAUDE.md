@@ -97,18 +97,8 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 - Performance-critical paths → Add performance tests
 
 ## DEPLOYMENT SEQUENCE
-### Local Development
-1. **Start Services**: `docker-compose -f docker-compose.services.yml up -d`
-2. **Verify Health**: Check all service endpoints (3000, 3001, 3002, 3003)
-3. **Version**: Increment `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
-4. **Build iOS**: Clean build with local derived data (`-derivedDataPath ./build`)
-5. **Deploy**: Install and launch on both simulators
-6. **Verify**: Monitor Docker logs, check API calls, confirm connections
-
-### Production Deployment (AWS)
-**Detailed Guide**: See `docs/aws-production-server-management.md` for full AWS server management documentation.
-- **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate
-- **Quick Health Check**: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
+### Local: Start services → Verify health → Update version → Build iOS → Deploy → Monitor
+### AWS: Build linux/amd64 → Deploy → Health check (see `docs/aws-production-server-management.md`)
 
 ## ARCHITECTURE & ENVIRONMENT
 
@@ -132,52 +122,14 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 - Client-side scoring eliminates network calls during typing
 
 ## PERFORMANCE STANDARDS
-
-### iOS App Targets
-- **Launch time**: < 3 seconds cold start
-- **Memory usage**: < 100MB baseline, < 200MB peak
-- **Frame rate**: 60fps animations, no dropped frames
-- **Network**: API calls timeout after 10s, retry 3x with backoff
-- **Battery**: Background processing < 5% battery drain/hour
-
-### Backend Services
-- **API response**: < 200ms average, < 500ms p95
-- **Database queries**: < 50ms average, < 100ms complex queries
-- **Uptime**: 99.9% availability target
-- **Memory per service**: < 512MB under normal load
-- **Docker startup**: < 30 seconds per service
-
-### Monitoring Commands
-```bash
-# iOS performance check
-instruments -t "Time Profiler" -D trace.trace YourApp.app
-
-# Backend health check with timing
-curl -w "@curl-format.txt" http://localhost:3000/api/status
-```
+- **iOS**: Launch <3s, Memory <100MB baseline, 60fps animations, API timeout 10s
+- **Backend**: API <200ms avg, DB queries <50ms, 99.9% uptime, Memory <512MB/service
+- **Monitoring**: Use Instruments for iOS, `curl -w` for API timing
 
 ## SECURITY REQUIREMENTS
-
-### iOS Security
-- **Keychain**: Store all sensitive data (tokens, passwords) in Keychain
-- **Network**: HTTPS only, certificate pinning for production
-- **Input validation**: Sanitize all user inputs before processing
-
-### Backend Security
-- **Input validation**: Validate all request parameters and body
-- **SQL injection**: Use parameterized queries only
-- **Rate limiting**: 100 requests/minute per IP on public endpoints
-- **Secrets**: Environment variables only, never hardcoded
-- **CORS**: Restrict origins to known clients only
-
-### Security Checks
-```bash
-# Check for hardcoded secrets
-grep -r "password\|secret\|key" --include="*.swift" --include="*.js" .
-
-# Dependency vulnerability scan
-npm audit
-```
+- **iOS**: Keychain for sensitive data, HTTPS only, input validation, certificate pinning
+- **Backend**: Parameterized queries, rate limiting (100/min), env vars for secrets, CORS restrictions
+- **Checks**: `grep -r "password\|secret\|key"` for hardcoded secrets, `npm audit` for vulnerabilities
 
 ## KEY PRINCIPLES
 - **NO LEGACY** - Always remove old code when building replacements
@@ -203,18 +155,12 @@ npm audit
 # iOS Tests
 xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15'
 
-# Database (Microservices)
+# Database Access
 docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d anagram_game
 
-# API Documentation
-npm run docs  # Generate automated API docs at /api-docs endpoint
-
 # Phrase Generation & Import
-./server/scripts/generate-and-preview.sh "25-75:50" sv   # Generate Swedish phrases
-node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import  # Import
-
-# Shared Algorithm Testing
-node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.calculateScore({phrase: 'test phrase', language: 'en'}));"
+./server/scripts/generate-and-preview.sh "25-75:50" sv
+node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
 ```
 
 ### API Endpoints
@@ -224,17 +170,9 @@ node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.c
 - **Admin Service (3003)**: `/api/status`, `/api/admin/phrases/batch-import`
 
 
-### MCP Tools Available
-- **iOS Simulator Control**: Screenshot, UI inspection, tap/swipe gestures, text input
-- **IDE Integration**: Code diagnostics, error checking, code execution
-- Use these tools for troubleshooting UI issues, testing interactions, and debugging
-
 ### Common Debugging
-- **WebSocket issues**: Check server logs, verify NetworkManager.swift connections
-- **Build failures**: Clean derived data, check Info.plist versions, verify simulator UUIDs
-- **Database issues**: Test connection, verify schema, run server test suite
-- **AWS ECS Platform Issues**: Always use `docker build --platform linux/amd64` for ECS Fargate
-
-### Additional Resources
-- **Device-User Association**: See `docs/device-user-association-guide.md`
-- **AWS Production Management**: See `docs/aws-production-server-management.md`
+- **WebSocket**: Check server logs, verify NetworkManager.swift connections
+- **Build failures**: Clean derived data, check Info.plist versions
+- **AWS ECS**: Always use `docker build --platform linux/amd64`
+- **MCP Tools**: iOS Simulator control, IDE diagnostics available
+- **Docs**: `docs/device-user-association-guide.md`, `docs/aws-production-server-management.md`
