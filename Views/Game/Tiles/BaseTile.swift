@@ -31,6 +31,9 @@ class BaseTile: SKSpriteNode, RespawnableTile {
         super.init(texture: nil, color: .clear, size: size)
         setupTileGeometry(size: size, colorScheme: tileColorScheme)
         setupPhysicsBody(size: size)
+        
+        // Enable user interaction for dragging
+        isUserInteractionEnabled = true
     }
     
     private func setupTileGeometry(size: CGSize, colorScheme: TileColorScheme) {

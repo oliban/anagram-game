@@ -2417,17 +2417,79 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func dropCelebrationTiles() {
-        print("🎉 Dropping celebration emoji tiles!")
+        DebugLogger.shared.ui("🎉 Dropping celebration emoji tiles!")
         
-        // Celebration emojis including champagne bottle
-        let celebrationEmojis = ["🎉", "🎊", "✨", "🥳", "🍾", "🎆", "⭐", "💫"]
+        // Massive celebration emoji list (~250 emojis)
+        let allCelebrationEmojis = [
+            // Core celebration
+            "🎉", "🎊", "✨", "🥳", "🍾", "🎆", "⭐", "💫", "🎈", "🎁", "🎀", "🎯", "🎪", "🎭", "🎨", "🎵",
+            "🌟", "💥", "🔥", "⚡", "🌈", "💎", "👑", "🏆", "🥇", "🎖️", "🏅", "🎺", "🎷", "🎸", "🎻", "🎶",
+            
+            // Dancing & celebration people
+            "💃", "🕺", "🤩", "😍", "🤗", "😎", "🥰", "😘", "😋", "🤪", "🤤", "🥵", "🤯", "🥶", "😵‍💫", "🤠",
+            
+            // Hearts & love
+            "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💗", "💓", "💕", "💖", "💘", "💝", "💟",
+            "♥️", "💌", "💋", "💐", "🌹", "🌺", "🌸", "🌼", "🌻", "🌷", "🌿", "🍀", "🌴", "🌳", "🌲", "🌱",
+            
+            // Animals & magical creatures
+            "🦄", "🐉", "🦋", "🐝", "🦊", "🐱", "🐶", "🐰", "🐻", "🐼", "🐨", "🐵", "🦁", "🐯", "🐸", "🐙",
+            "🦚", "🦜", "🕊️", "🦅", "🦉", "🐠", "🐟", "🐬", "🐳", "🦈", "🐆", "🦓", "🦒", "🐘", "🦏", "🦛",
+            
+            // Food & drinks (celebratory)
+            "🍰", "🎂", "🧁", "🍭", "🍬", "🍫", "🍩", "🍪", "🍯", "🍓", "🍇", "🍊", "🍋", "🍌", "🍉", "🍑",
+            "🥂", "🍷", "🍸", "🍹", "🍺", "🥃", "☕", "🍵", "🧃", "🥤", "🧊", "🍦", "🍨", "🍧", "🥧", "🍮",
+            
+            // Music & performance
+            "🎼", "🎤", "🎧", "📻", "🎹", "🥁", "🪕", "🎪", "🎭", "🎨", "🖼️", "🎬", "📽️", "🎥", "📸", "🎮",
+            
+            // Sports & achievements
+            "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🏓", "🏸", "🏒", "🏑", "🥍", "🏹",
+            "🎿", "⛷️", "🏂", "🤿", "🏄‍♂️", "🏄‍♀️", "🏇", "🤸‍♂️", "🤸‍♀️", "⛹️‍♂️", "⛹️‍♀️", "🤾‍♂️", "🤾‍♀️", "🏋️‍♂️", "🏋️‍♀️", "🚴‍♂️",
+            
+            // Space & celestial
+            "🌙", "☀️", "⭐", "🌟", "💫", "✨", "☄️", "🌠", "🌌", "🪐", "🌍", "🌎", "🌏", "🌞", "🌛", "🌜",
+            "🌚", "🌝", "🌖", "🌗", "🌘", "🌑", "🌒", "🌓", "🌔", "🌕", "🪩", "🎆", "🎇", "🌋", "⚡", "🔥",
+            
+            // Gems & treasures
+            "💎", "👑", "💍", "📿", "💄", "👗", "👠", "🎩", "🧢", "👒", "🎀", "🎁", "🛍️", "💰", "💳", "💸",
+            
+            // Transportation (fun)
+            "🚀", "🛸", "✈️", "🎢", "🎡", "🎠", "🎪", "🎭", "🎨", "🎯", "🎲", "🃏", "🎰", "🎮", "🕹️", "🎱",
+            
+            // Weather & nature (positive)
+            "🌈", "☀️", "🌤️", "⛅", "🌦️", "🌧️", "⛈️", "🌩️", "❄️", "☃️", "⛄", "🌊", "💧", "💦", "🌸", "🌺",
+            
+            // Flags & symbols
+            "🏁", "🎌", "🏴‍☠️", "🏳️‍🌈", "🏳️‍⚧️", "🚩", "🎗️", "🎖️", "🏅", "🥇", "🥈", "🥉", "🏆", "🥮", "🥯", "🧿"
+        ]
         
-        for (index, emoji) in celebrationEmojis.enumerated() {
+        // Core celebration emojis that always drop
+        let coreEmojis = ["🎉", "🎊", "✨"]
+        
+        // Randomly select 1-3 additional emojis from the big list
+        let numberOfRandomEmojis = Int.random(in: 1...3)
+        let randomEmojis = Array(allCelebrationEmojis.filter { !coreEmojis.contains($0) }.shuffled().prefix(numberOfRandomEmojis))
+        
+        // Combine core + random emojis
+        let selectedEmojis = coreEmojis + randomEmojis
+        
+        DebugLogger.shared.ui("🎲 Dropping \(coreEmojis.count) core + \(numberOfRandomEmojis) random celebration emojis: \(selectedEmojis)")
+        
+        for (index, emoji) in selectedEmojis.enumerated() {
             // Create emoji tile with same size as regular tiles
             let baseTileSize: CGFloat = 40
             let tileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
                                 height: baseTileSize * PhysicsGameScene.componentScaleFactor)
             let emojiTile = EmojiIconTile(emoji: emoji, size: tileSize)
+            
+            // Mark special random emojis (not core celebration emojis) to persist across games
+            if !coreEmojis.contains(emoji) {
+                emojiTile.name = "special_random_celebration_emoji"
+                DebugLogger.shared.ui("🌟 Marked \(emoji) as special random emoji to persist across games")
+            } else {
+                emojiTile.name = "core_celebration_emoji"
+            }
             
             // Position at top of visible screen for testing
             let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
@@ -2621,19 +2683,26 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func cleanupCelebrationTiles() {
-        print("🧹 Cleaning up celebration tiles!")
+        DebugLogger.shared.ui("🧹 Cleaning up celebration tiles!")
         
-        // Remove celebration emoji tiles and awesome tile
+        // Only remove core celebration emoji tiles and awesome tile, keep special random ones
         children.forEach { node in
             if let emojiTile = node as? EmojiIconTile {
-                let fadeOut = SKAction.fadeOut(withDuration: 0.5)
-                let remove = SKAction.removeFromParent()
-                let cleanup = SKAction.sequence([fadeOut, remove])
-                emojiTile.run(cleanup)
-                
-                // Also remove from respawnable tiles array
-                if let tilesArray = allRespawnableTiles as? NSMutableArray {
-                    tilesArray.remove(emojiTile)
+                // Only remove core celebration emojis, keep special random ones
+                if emojiTile.name == "core_celebration_emoji" {
+                    DebugLogger.shared.ui("🗑️ Removing core celebration emoji: \(emojiTile.emoji)")
+                    let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+                    let remove = SKAction.removeFromParent()
+                    let cleanup = SKAction.sequence([fadeOut, remove])
+                    emojiTile.run(cleanup)
+                    
+                    // Also remove from respawnable tiles array
+                    if let tilesArray = allRespawnableTiles as? NSMutableArray {
+                        tilesArray.remove(emojiTile)
+                    }
+                } else if emojiTile.name == "special_random_celebration_emoji" {
+                    DebugLogger.shared.ui("🌟 Keeping special random celebration emoji: \(emojiTile.emoji)")
+                    // Keep the special random emoji - don't remove it
                 }
             }
             if let messageTile = node as? MessageTile {
