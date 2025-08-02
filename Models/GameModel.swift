@@ -649,10 +649,9 @@ class GameModel: ObservableObject {
         // Initialize level tracking after loading score
         initializeLevelTracking()
         
-        // Then refresh from server in background (to get latest)
-        Task {
-            await refreshTotalScoreFromServer()
-        }
+        // NOTE: Server refresh removed to avoid duplicate API calls during initialization
+        // LobbyView already loads comprehensive player stats via loadPlayerStats()
+        // refreshTotalScoreFromServer() is still called after game completion when needed
     }
     
     // Refresh total score from server to ensure accuracy

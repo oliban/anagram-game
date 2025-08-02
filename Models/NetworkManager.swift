@@ -185,46 +185,11 @@ class NetworkManager: ObservableObject {
             return []
         }
         
-        // Build URL with optional level parameter
-        var urlString = "\(AppConfig.baseURL)/api/phrases/for/\(currentPlayer.id)"
-        if let level = level {
-            urlString += "?level=\(level)"
-            print("🎯 PHRASE: Fetching phrases for player level \(level)")
-        }
-        
-        guard let url = URL(string: urlString) else {
-            print("❌ PHRASE: Invalid URL for fetching phrases")
-            return []
-        }
-        
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 10.0
-        let urlSession = URLSession(configuration: config)
-        
+        // Delegate to PhraseService instead of duplicating the logic
         do {
-            let (data, response) = try await urlSession.data(from: url)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                print("❌ PHRASE: Failed to fetch phrases. Status code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
-                return []
-            }
-            
-            if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let phrasesData = jsonResponse["phrases"] {
-                do {
-                    let jsonData = try JSONSerialization.data(withJSONObject: phrasesData)
-                    let phrases = try JSONDecoder().decode([CustomPhrase].self, from: jsonData)
-                    print("🔍 PHRASE: Successfully decoded \(phrases.count) phrases")
-                    return phrases
-                } catch {
-                    print("❌ PHRASE: JSON decoding failed: \(error)")
-                    return []
-                }
-            }
-            
-            return []
+            return try await phraseService.fetchPhrasesForPlayer(playerId: currentPlayer.id, level: level)
         } catch {
-            print("❌ PHRASE: Error fetching phrases: \(error)")
+            print("❌ PHRASE: Error fetching phrases via service: \(error)")
             return []
         }
     }
