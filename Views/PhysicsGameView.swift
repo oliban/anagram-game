@@ -141,6 +141,14 @@ struct PhysicsGameView: View {
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
+                            .onAppear {
+                                DebugLogger.shared.network("Connection status displayed: \(networkManager.connectionStatus.description)")
+                            }
+                            .onChange(of: networkManager.connectionStatus) { oldValue, newValue in
+                                let oldDesc = oldValue.description
+                                let newDesc = newValue.description
+                                DebugLogger.shared.network("Connection status changed: \(oldDesc) → \(newDesc)")
+                            }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)

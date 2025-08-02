@@ -57,6 +57,7 @@ struct LobbyView: View {
         }
         .onAppear {
             print("🟢 LOBBY: LobbyView appeared!")
+            DebugLogger.shared.ui("LobbyView appeared - initializing data")
             Task {
                 await loadInitialData()
             }
@@ -68,6 +69,7 @@ struct LobbyView: View {
             if newValue != nil && oldValue == nil {
                 // Player just logged in, refresh all data
                 print("🟢 LOBBY: Player logged in, refreshing data")
+                DebugLogger.shared.info("Player logged in, refreshing lobby data")
                 Task {
                     // Small delay to ensure network manager is fully set up
                     try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
@@ -568,6 +570,7 @@ struct LobbyView: View {
         do {
             let leaderboard = try await networkManager.getLeaderboard(period: selectedLeaderboardPeriod)
             print("✅ Leaderboard loaded with \(leaderboard.count) entries")
+        DebugLogger.shared.network("Leaderboard loaded with \(leaderboard.count) entries for period: \(selectedLeaderboardPeriod)")
             await MainActor.run {
                 self.leaderboardData = leaderboard
             }

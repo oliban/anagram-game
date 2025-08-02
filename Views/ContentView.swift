@@ -8,12 +8,16 @@
 import SwiftUI
 import SwiftData
 import Foundation
+import os.log
 
 
 struct ContentView: View {
     @StateObject private var networkManager = NetworkManager.shared
     @StateObject private var gameModel = GameModel()
     @State private var showingRegistration = false
+    
+    // Create os_log for this subsystem
+    private let logger = Logger(subsystem: "com.fredrik.anagramgame", category: "ContentView")
     
     var body: some View {
         LobbyView(gameModel: gameModel)
@@ -26,6 +30,8 @@ struct ContentView: View {
                 networkManager.gameModel = gameModel
                 
                 print("📱 ContentView appeared - checking for existing player or showing registration")
+                logger.info("📱 [OS_LOG] ContentView appeared - checking for existing player or showing registration")
+                DebugLogger.shared.ui("ContentView appeared - checking for existing player or showing registration")
                 
                 // First, fetch server configuration
                 Task {
@@ -96,6 +102,8 @@ struct ContentView: View {
             await MainActor.run {
                 if success {
                     print("✅ Auto-registered with stored name: \(playerName)")
+                    logger.info("✅ [OS_LOG] Auto-registered with stored name: \(playerName)")
+                    DebugLogger.shared.network("Auto-registered with stored name: \(playerName)")
                 } else {
                     print("❌ Failed to register with stored name - showing registration")
                     showingRegistration = true
