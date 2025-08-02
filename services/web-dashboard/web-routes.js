@@ -1,10 +1,16 @@
 const express = require('express');
 const path = require('path');
+const axios = require('axios');
 // Link generator is now a separate service - use HTTP calls instead
 const { pool } = require('./shared/database/connection');
 const DatabasePlayer = require('./shared/database/models/DatabasePlayer');
 const DatabasePhrase = require('./shared/database/models/DatabasePhrase');
+const levelConfig = require('./shared/config/level-config.json');
 // Removed unused imports after admin functionality moved to dedicated service
+
+// Service URLs - use localhost when running outside Docker, Docker hostnames when inside
+const GAME_SERVER_URL = process.env.GAME_SERVER_URL || 'http://localhost:3000';
+const LINK_GENERATOR_URL = process.env.LINK_GENERATOR_URL || 'http://localhost:3002';
 
 // Admin routes moved to dedicated Admin Service (port 3003)
 
@@ -22,7 +28,7 @@ router.get('/monitoring', (req, res) => {
 });
 
 // Get monitoring stats
-router.get('/api/monitoring/stats', async (req, res) => {
+router.get('/monitoring/stats', async (req, res) => {
     try {
         const stats = await getMonitoringStats();
         res.json(stats);
@@ -35,7 +41,7 @@ router.get('/api/monitoring/stats', async (req, res) => {
 // CONTRIBUTION SYSTEM ROUTES
 
 // Generate contribution link
-router.post('/api/contribution/request', async (req, res) => {
+router.post('/contribution/request', async (req, res) => {
     try {
         const { playerId, expirationHours = 48, maxUses = 3, customMessage } = req.body;
         
@@ -64,29 +70,67 @@ router.post('/api/contribution/request', async (req, res) => {
     }
 });
 
-// Get contribution link details
-router.get('/api/contribution/:token', async (req, res) => {
+// Helper function to get player level from score
+function getPlayerLevel(totalScore) {
+    let level = levelConfig.skillLevels[0];
+    
+    for (const skillLevel of levelConfig.skillLevels) {
+        if (totalScore >= skillLevel.pointsRequired) {
+            level = skillLevel;
+        } else {
+            break;
+        }
+    }
+    
+    return level;
+}
+
+// Get contribution link details with real player data
+router.get('/contribution/:token', async (req, res) => {
     try {
         const { token } = req.params;
         
-        const validation = await linkGenerator.validateToken(token);
+        // Make HTTP call to link-generator service to validate token
+        const linkGenResponse = await axios.get(`${LINK_GENERATOR_URL}/api/validate/${token}`);
+        const validation = linkGenResponse.data;
         
         if (!validation.valid) {
             return res.status(400).json({ error: validation.reason });
         }
 
+        const link = validation.link;
+        
+        // Get player score data from database
+        const scoreQuery = `
+            SELECT * FROM get_player_score_summary($1)
+        `;
+        const scoreResult = await pool.query(scoreQuery, [link.requestingPlayerId]);
+        const scoreData = scoreResult.rows[0];
+        
+        // Calculate player level
+        const totalScore = scoreData ? scoreData.total_score : 0;
+        const playerLevel = getPlayerLevel(totalScore);
+        
+        // Return enhanced link data with player level and score information
         res.json({
             success: true,
-            link: validation.link
+            link: {
+                ...link,
+                playerLevel: playerLevel.title,
+                playerScore: totalScore,
+                legendThreshold: 2000, // From the level system
+                phrasesCompleted: scoreData ? scoreData.total_phrases : 0
+            }
         });
     } catch (error) {
         console.error('Error validating contribution token:', error);
+        // Fallback to simple validation if the enhanced approach fails
         res.status(500).json({ error: 'Failed to validate contribution link' });
     }
 });
 
 // Submit phrase via contribution link
-router.post('/api/contribution/:token/submit', async (req, res) => {
+router.post('/contribution/:token/submit', async (req, res) => {
     try {
         const { token } = req.params;
         const { phrase, clue, language = 'en', contributorName } = req.body;
@@ -174,7 +218,7 @@ router.get('/contribute/:token', (req, res) => {
 });
 
 // Get player's contribution links
-router.get('/api/contribution/links/:playerId', async (req, res) => {
+router.get('/contribution/links/:playerId', async (req, res) => {
     try {
         const { playerId } = req.params;
         const { activeOnly = true } = req.query;
@@ -192,7 +236,7 @@ router.get('/api/contribution/links/:playerId', async (req, res) => {
 });
 
 // Deactivate contribution link
-router.delete('/api/contribution/links/:linkId', async (req, res) => {
+router.delete('/contribution/links/:linkId', async (req, res) => {
     try {
         const { linkId } = req.params;
         const { playerId } = req.body;
@@ -214,7 +258,7 @@ router.delete('/api/contribution/links/:linkId', async (req, res) => {
 });
 
 // Get contribution stats
-router.get('/api/contribution/stats', async (req, res) => {
+router.get('/contribution/stats', async (req, res) => {
     try {
         const stats = await linkGenerator.getContributionStats();
         res.json(stats);

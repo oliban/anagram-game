@@ -3,9 +3,11 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const { testConnection, shutdown: shutdownDb } = require('./shared/database/connection');
+const path = require('path');
+const { testConnection, shutdown: shutdownDb, pool } = require('./shared/database/connection');
 const ContributionLinkGenerator = require('./link-generator');
 const RouteAnalytics = require('./shared/services/routeAnalytics');
+const levelConfig = require('./shared/config/level-config.json');
 
 const app = express();
 
@@ -16,6 +18,7 @@ const linkGenerator = new ContributionLinkGenerator();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());
@@ -25,7 +28,8 @@ app.get('/api/status', (req, res) => {
   res.json({ 
     status: 'healthy', 
     service: 'link-generator',
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    debug: 'validateToken method has debug logging v2'
   });
 });
 
@@ -87,13 +91,64 @@ app.get('/api/links/validate/:token', async (req, res) => {
   }
 });
 
+// Import route modules
+const contributionRoutesFactory = require('./routes/contributions');
+
+// Function to get route dependencies
+const getRouteDependencies = () => {
+  return {
+    linkGenerator,
+    pool,
+    levelConfig,
+    routeAnalytics
+  };
+};
+
+// Initialize and use route modules
+const initializeRoutes = () => {
+  console.log('🔧 ROUTES: Initializing contribution routes...');
+  const deps = getRouteDependencies();
+  const contributionRoutes = contributionRoutesFactory(deps);
+  app.use(contributionRoutes);
+  console.log('✅ ROUTES: Contribution routes initialized');
+};
+
+// Validate contribution token with detailed info (simple endpoint for internal use)
+app.get('/api/validate/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    console.log(`🔍 SERVER: /api/validate/${token} endpoint hit`);
+    const validation = await linkGenerator.validateToken(token);
+    console.log(`🔍 SERVER: Validation result:`, validation);
+    res.json(validation);
+  } catch (error) {
+    console.error('❌ SERVER: Contribution token validation error:', error);
+    res.status(500).json({ 
+      valid: false, 
+      reason: 'Internal server error',
+      error: error.message 
+    });
+  }
+});
+
 const PORT = process.env.LINK_GENERATOR_PORT || 3002;
 
 // Initialize database and start server
 async function startServer() {
   try {
+    console.log('🚀 SERVER: Starting server...');
     await testConnection();
     console.log('✅ Database connected successfully');
+    
+    // Initialize routes after database connection
+    console.log('🔧 SERVER: About to initialize routes...');
+    try {
+      initializeRoutes();
+      console.log('✅ Routes initialized');
+    } catch (routeError) {
+      console.error('❌ ROUTES: Error initializing routes:', routeError);
+      throw routeError;
+    }
     
     app.listen(PORT, () => {
       console.log(`🔗 Link Generator Service running on port ${PORT}`);

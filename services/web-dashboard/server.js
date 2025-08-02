@@ -16,6 +16,7 @@ const routeAnalytics = new RouteAnalytics('web-dashboard');
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/web', express.static(path.join(__dirname, 'public')));
 
 // Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());
@@ -29,7 +30,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Web dashboard routes - ENABLED for microservices separation
+// Web dashboard routes
 app.use('/api', require('./web-routes'));
 
 // Serve dashboard pages
@@ -38,6 +39,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/contribute', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contribute', 'index.html'));
+});
+
+// Handle contribution links with tokens
+app.get('/contribute/:token', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'contribute', 'index.html'));
 });
 

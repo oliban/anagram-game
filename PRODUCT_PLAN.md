@@ -88,10 +88,6 @@ Migrate the existing in-memory server (PlayerStore + PhraseStore) to use the new
     - [x] Filtering by difficulty
     - [x] **Testing**: 20/20 tests passing (100% coverage)
 
-  - [ ] **NEW: `POST /api/phrases/:phraseId/approve`** (Admin)
-    - [ ] Approve community-submitted global phrases
-    - [ ] Requires admin authentication (future feature)
-
 - [x] **4.3 Offline Mode Support** ✅ COMPLETE
   - [x] **NEW: `GET /api/phrases/download/:playerId`**
     - [x] Download batch of phrases for offline play while online
