@@ -3,7 +3,7 @@ import Foundation
 
 struct LobbyView: View {
     @ObservedObject var gameModel: GameModel
-    @State private var selectedLeaderboardPeriod: String = "daily"
+    @State private var selectedLeaderboardPeriod: String = "alltime"
     @State private var showingGame = false
     @State private var leaderboardData: [LeaderboardEntry] = []
     @State private var playerStats: PlayerStats?
@@ -63,6 +63,17 @@ struct LobbyView: View {
             
             // Load custom phrases only once on appear - rely on real-time notifications for updates
             // No periodic timer needed since WebSocket provides real-time updates
+        }
+        .onChange(of: gameModel.playerId) { oldValue, newValue in
+            if newValue != nil && oldValue == nil {
+                // Player just logged in, refresh all data
+                print("🟢 LOBBY: Player logged in, refreshing data")
+                Task {
+                    // Small delay to ensure network manager is fully set up
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                    await loadInitialData()
+                }
+            }
         }
         .onDisappear {
             refreshTimer?.invalidate()
@@ -229,7 +240,7 @@ struct LobbyView: View {
             Picker("Period", selection: $selectedLeaderboardPeriod) {
                 Text("Daily").tag("daily")
                 Text("Weekly").tag("weekly")
-                Text("All Time").tag("total")
+                Text("All Time").tag("alltime")
             }
             .pickerStyle(.segmented)
             .onChange(of: selectedLeaderboardPeriod) { _, _ in
@@ -494,16 +505,25 @@ struct LobbyView: View {
     
     // MARK: - Data Loading Functions
     private func loadInitialData() async {
+        print("🔄 LOBBY: Starting loadInitialData")
         isLoadingData = true
+        
+        // Check if network manager is available
+        guard gameModel.networkManager != nil else {
+            print("❌ LOBBY: Cannot load data - networkManager is nil")
+            isLoadingData = false
+            return
+        }
         
         // Load critical data first (stats and leaderboard)
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await loadPlayerStats() }
-            group.addTask { await loadLeaderboard() }
-            group.addTask { await loadOnlinePlayersCount() }
+            group.addTask { await self.loadPlayerStats() }
+            group.addTask { await self.loadLeaderboard() }
+            group.addTask { await self.loadOnlinePlayersCount() }
         }
         
         isLoadingData = false
+        print("✅ LOBBY: Finished loadInitialData")
         
         // Load phrases after critical data is loaded to avoid interference
         await loadCustomPhrases()
@@ -538,15 +558,21 @@ struct LobbyView: View {
     }
     
     private func loadLeaderboard() async {
-        guard let networkManager = gameModel.networkManager else { return }
+        guard let networkManager = gameModel.networkManager else { 
+            print("❌ loadLeaderboard: gameModel.networkManager is nil")
+            return 
+        }
+        
+        print("📊 Loading leaderboard for period: \(selectedLeaderboardPeriod)")
         
         do {
             let leaderboard = try await networkManager.getLeaderboard(period: selectedLeaderboardPeriod)
+            print("✅ Leaderboard loaded with \(leaderboard.count) entries")
             await MainActor.run {
                 self.leaderboardData = leaderboard
             }
         } catch {
-            print("Failed to load leaderboard: \(error)")
+            print("❌ Failed to load leaderboard: \(error)")
         }
     }
     

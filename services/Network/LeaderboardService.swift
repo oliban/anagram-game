@@ -35,7 +35,7 @@ class LeaderboardService {
     }
     
     func fetchAllTimeLeaderboard() async throws -> [LeaderboardEntry] {
-        return try await fetchLeaderboard(type: "alltime")
+        return try await fetchLeaderboard(type: "total")
     }
     
     private func fetchLeaderboard(type: String) async throws -> [LeaderboardEntry] {
@@ -77,7 +77,7 @@ class LeaderboardService {
                         self.dailyLeaderboard = entries
                     case "weekly":
                         self.weeklyLeaderboard = entries
-                    case "alltime":
+                    case "total":
                         self.allTimeLeaderboard = entries
                     default:
                         break
