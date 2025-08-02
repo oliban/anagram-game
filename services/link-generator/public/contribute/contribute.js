@@ -32,6 +32,13 @@ class ContributionForm {
         const contributorName = document.getElementById('contributor-name');
         const previewBtn = document.getElementById('preview-btn');
         const submitBtn = document.getElementById('submit-btn');
+        
+        // Flag button handling
+        const flagButtons = document.querySelectorAll('.flag-button');
+        
+        flagButtons.forEach(button => {
+            button.addEventListener('click', (e) => this.handleLanguageSelect(e));
+        });
 
         form.addEventListener('submit', (e) => this.handleSubmit(e));
         
@@ -73,15 +80,22 @@ class ContributionForm {
                     
                     // Smart difficulty guidance
                     optimalDifficulty: response.link.optimalDifficulty,
-                    levelConfig: response.link.levelConfig
+                    levelConfig: response.link.levelConfig,
+                    
+                    // Validation status
+                    validation: response.validation
                 };
                 
                 console.log('Enhanced player data loaded:', this.linkData);
-                this.displayContributionInfo();
-                this.showForm();
+                const isExpired = this.displayContributionInfo();
                 
-                // Initialize the scrambling preview with "Hello World"
-                this.updateScramblePreview();
+                if (!isExpired) {
+                    this.updateSubmitButtonText();
+                    this.showForm();
+                    
+                    // Initialize the scrambling preview with "Hello World"
+                    this.updateScramblePreview();
+                }
             } else {
                 throw new Error('Invalid response format');
             }
@@ -113,26 +127,38 @@ class ContributionForm {
 
         headerSubtitle.textContent = `Create a phrase for ${this.linkData.requestingPlayerName}`;
 
-        // Check if token is expired
+        // Check if token is expired or deactivated
         const isExpired = now > expiresAt;
+        const isDeactivated = this.linkData.validation && !this.linkData.validation.valid && this.linkData.validation.reason === 'Link has been deactivated';
         
-        if (isExpired) {
-            // Show expiration warning only if expired
-            const timeExpired = now - expiresAt;
-            const hoursExpired = Math.floor(timeExpired / (1000 * 60 * 60));
-            
-            headerSubtitle.textContent = `This contribution link has expired`;
-            infoElement.innerHTML = `
-                <div class="expiration-warning">
-                    <strong>⚠️ This link has expired!</strong> 
-                    This link expired ${hoursExpired > 0 ? hoursExpired + ' hours' : 'recently'} ago and can no longer be used.
-                </div>
-            `;
-            return;
+        if (isExpired || isDeactivated) {
+            if (isDeactivated) {
+                headerSubtitle.textContent = `This contribution link has been deactivated`;
+                infoElement.innerHTML = `
+                    <div class="expiration-warning">
+                        <strong>⚠️ This link has been deactivated!</strong> 
+                        This contribution link is no longer active and can no longer be used.
+                    </div>
+                `;
+            } else {
+                // Show expiration warning
+                const timeExpired = now - expiresAt;
+                const hoursExpired = Math.floor(timeExpired / (1000 * 60 * 60));
+                
+                headerSubtitle.textContent = `This contribution link has expired`;
+                infoElement.innerHTML = `
+                    <div class="expiration-warning">
+                        <strong>⚠️ This link has expired!</strong> 
+                        This link expired ${hoursExpired > 0 ? hoursExpired + ' hours' : 'recently'} ago and can no longer be used.
+                    </div>
+                `;
+            }
+            return true; // Return true to indicate unavailable
         }
 
-        const pointsToLegend = this.linkData.legendThreshold - this.linkData.playerScore;
-        const isNearLegend = pointsToLegend <= 500;
+        // Calculate points to next level instead of legend
+        const progression = this.linkData.progression;
+        const pointsToNextLevel = progression.isMaxLevel ? 0 : progression.pointsNeeded;
         
         infoElement.innerHTML = `
             <div class="player-info">
@@ -142,9 +168,9 @@ class ContributionForm {
                 <div class="player-details">
                     <h3>${this.linkData.requestingPlayerName}</h3>
                     <p><strong>Level:</strong> ${this.linkData.playerLevel} (${this.linkData.playerScore} points)</p>
-                    ${isNearLegend ? 
-                        `<p class="legend-progress">🏆 Only ${pointsToLegend} points away from <strong>Legend</strong> status!</p>` :
-                        `<p class="legend-info">🏆 Needs ${pointsToLegend} more points to become a <strong>Legend</strong></p>`
+                    ${progression.isMaxLevel ? 
+                        `<p class="max-level-info">🏆 ${this.linkData.requestingPlayerName} has reached the maximum level!</p>` :
+                        `<p class="next-level-info">📈 ${pointsToNextLevel} points needed for <strong>${progression.nextLevel.title.charAt(0).toUpperCase() + progression.nextLevel.title.slice(1).toLowerCase()}</strong> level</p>`
                     }
                 </div>
             </div>
@@ -154,6 +180,7 @@ class ContributionForm {
             </div>
         `;
         // Removed expiration warning - only show if actually expired
+        return false; // Return false to indicate not expired
     }
 
     showForm() {
@@ -255,6 +282,29 @@ class ContributionForm {
         this.showScramblePreview(phrase);
     }
 
+    updateSubmitButtonText() {
+        const submitBtn = document.querySelector('#submit-btn .btn-text');
+        if (submitBtn && this.linkData) {
+            submitBtn.textContent = `Send phrase to ${this.linkData.requestingPlayerName}`;
+        }
+    }
+
+    handleLanguageSelect(e) {
+        e.preventDefault();
+        const selectedButton = e.currentTarget;
+        const language = selectedButton.dataset.language;
+        
+        // Update active state
+        document.querySelectorAll('.flag-button').forEach(btn => btn.classList.remove('active'));
+        selectedButton.classList.add('active');
+        
+        // Update hidden input
+        document.getElementById('language-select-top').value = language;
+        
+        // Trigger phrase analysis update
+        this.updateScramblePreview();
+    }
+
     updateScramblePreview() {
         const phrase = document.getElementById('phrase-input').value.trim();
         const previewElement = document.getElementById('scramble-preview');
@@ -336,26 +386,25 @@ class ContributionForm {
         const difficultyScore = this.calculateDifficultyScore(phrase, language);
         const difficultyLabel = this.getDifficultyLabel(difficultyScore);
         
-        // Map difficulty score to quality color
-        let quality;
-        if (difficultyScore >= 80) {
-            quality = 'excellent';  // Very Hard phrases
-        } else if (difficultyScore >= 60) {
-            quality = 'good';       // Hard phrases  
-        } else if (difficultyScore >= 40) {
-            quality = 'okay';       // Medium phrases
-        } else if (difficultyScore >= 20) {
-            quality = 'good';       // Easy phrases (good for beginners)
-        } else {
-            quality = 'poor';       // Very Easy phrases (too simple)
-        }
+        // Map difficulty score to quality color with player level consideration
+        let quality, feedback;
+        const playerMaxDifficulty = this.linkData?.optimalDifficulty?.playerMaxDifficulty || 100;
         
-        // Generate feedback based on difficulty
-        let feedback = `${difficultyLabel} difficulty`;
-        if (difficultyScore < 20) {
-            feedback += ' - try adding more words or complexity';
-        } else if (difficultyScore > 80) {
-            feedback += ' - very challenging!';
+        if (difficultyScore > playerMaxDifficulty * 1.2) {
+            quality = 'poor';       // Way too hard - red
+            feedback = `${difficultyLabel} difficulty - too challenging for ${this.linkData?.requestingPlayerName || 'this player'}`;
+        } else if (difficultyScore > playerMaxDifficulty) {
+            quality = 'warning';    // Slightly too hard - yellow
+            feedback = `${difficultyLabel} difficulty - might be too challenging`;
+        } else if (difficultyScore >= playerMaxDifficulty * 0.6) {
+            quality = 'excellent';  // Perfect match - green
+            feedback = `${difficultyLabel} difficulty - perfect for ${this.linkData?.requestingPlayerName || 'this player'}!`;
+        } else if (difficultyScore >= 20) {
+            quality = 'good';       // Acceptable but easy
+            feedback = `${difficultyLabel} difficulty - good but might be easy`;
+        } else {
+            quality = 'poor';       // Too simple - red
+            feedback = `${difficultyLabel} difficulty - try adding more complexity`;
         }
         
         return {
@@ -524,14 +573,7 @@ class ContributionForm {
         
         playerName.textContent = this.linkData.requestingPlayerName;
         
-        const remainingUses = response.remainingUses || 0;
         let summaryText = 'Your phrase has been added to their game queue!';
-        
-        if (remainingUses > 0) {
-            summaryText += ` This link can be used ${remainingUses} more time${remainingUses !== 1 ? 's' : ''}.`;
-        } else {
-            summaryText += ' This link has now been used up.';
-        }
         
         summary.textContent = summaryText;
         

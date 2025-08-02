@@ -46,18 +46,21 @@ module.exports = (dependencies) => {
         });
       }
 
-      if (!senderId) {
-        return res.status(400).json({
-          error: 'Sender ID is required'
-        });
-      }
-
-      // Validate sender exists
-      const sender = await DatabasePlayer.getPlayerById(senderId);
-      if (!sender) {
-        return res.status(404).json({
-          error: 'Sender player not found'
-        });
+      // Handle external contributions (null senderId)
+      let sender = null;
+      if (senderId) {
+        sender = await DatabasePlayer.getPlayerById(senderId);
+        if (!sender) {
+          return res.status(404).json({
+            error: 'Sender player not found'
+          });
+        }
+      } else {
+        // External contribution - create a virtual sender
+        sender = {
+          id: null,
+          name: req.body.contributorName || 'Anonymous Contributor'
+        };
       }
 
       // Handle both single targetId and multiple targetIds
@@ -75,7 +78,7 @@ module.exports = (dependencies) => {
               error: `Target player ${tid} not found`
             });
           }
-          if (target.id === senderId) {
+          if (senderId && target.id === senderId) {
             return res.status(400).json({
               error: 'Cannot target yourself'
             });

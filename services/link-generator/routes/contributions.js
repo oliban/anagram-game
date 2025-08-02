@@ -49,7 +49,7 @@ module.exports = (dependencies) => {
       min: minRecommended,
       max: maxRecommended,
       playerMaxDifficulty: maxDifficulty,
-      levelTitle: playerLevel.title
+      levelTitle: playerLevel.title.charAt(0).toUpperCase() + playerLevel.title.slice(1).toLowerCase()
     };
   }
 
@@ -68,10 +68,16 @@ module.exports = (dependencies) => {
       
       if (!validation.valid) {
         console.log(`❌ CONTRIB: Token validation failed: ${validation.reason}`);
-        return res.status(400).json({ 
-          success: false, 
-          error: validation.reason 
-        });
+        
+        // For expired or deactivated tokens, still return link data so client can show proper message
+        if ((validation.reason === 'Link has expired' || validation.reason === 'Link has been deactivated') && validation.link) {
+          // Continue with expired/deactivated link data so client can show appropriate message
+        } else {
+          return res.status(400).json({ 
+            success: false, 
+            error: validation.reason 
+          });
+        }
       }
 
       const link = validation.link;
@@ -100,7 +106,7 @@ module.exports = (dependencies) => {
       if (nextLevelInfo.isMaxLevel) {
         progressionInfo = {
           isMaxLevel: true,
-          message: `${link.requestingPlayerName} has reached the highest level: ${playerLevel.title}!`
+          message: `${link.requestingPlayerName} has reached the highest level: ${playerLevel.title.charAt(0).toUpperCase() + playerLevel.title.slice(1).toLowerCase()}!`
         };
       } else {
         const pointsNeeded = nextLevelInfo.nextLevel.pointsRequired - totalScore;
@@ -116,10 +122,14 @@ module.exports = (dependencies) => {
       // Return enhanced link data with complete player info
       res.json({
         success: true,
+        validation: {
+          valid: validation.valid,
+          reason: validation.reason || null
+        },
         link: {
           ...link,
           // Player info
-          playerLevel: playerLevel.title,
+          playerLevel: playerLevel.title.charAt(0).toUpperCase() + playerLevel.title.slice(1).toLowerCase(),  // Proper title case
           playerLevelId: playerLevel.id,
           playerScore: totalScore,
           
@@ -209,25 +219,41 @@ module.exports = (dependencies) => {
         });
       }
 
-      // Create phrase in database
-      const DatabasePhrase = require('../shared/database/models/DatabasePhrase');
-      const phraseData = {
+      // Create phrase via game server API to trigger WebSocket notifications
+      const axios = require('axios');
+      
+      const phraseCreationData = {
         content: trimmedPhrase,
         hint: clue.trim(),
         theme: theme && theme.trim() ? theme.trim() : null,
         language: language,
-        createdByPlayerId: null, // External contribution
-        targetPlayerId: validation.link.requestingPlayerId,
-        source: 'external',
-        contributionLinkId: validation.link.id
+        senderId: null, // External contribution - no sender
+        targetId: validation.link.requestingPlayerId,
+        phraseType: 'contribution',
+        contributorName: contributorName || 'Anonymous'
       };
 
-      const createdPhrase = await DatabasePhrase.create(phraseData);
-      
-      if (!createdPhrase) {
+      let createdPhrase;
+      try {
+        const gameServerResponse = await axios.post('http://game-server:3000/api/phrases/create', phraseCreationData, {
+          timeout: 5000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!gameServerResponse.data.success) {
+          throw new Error(gameServerResponse.data.error || 'Failed to create phrase');
+        }
+
+        createdPhrase = gameServerResponse.data.phrase;
+        console.log(`✅ CONTRIB: Phrase created via game server with notification sent`);
+        
+      } catch (gameServerError) {
+        console.error('❌ CONTRIB: Error calling game server:', gameServerError.message);
         return res.status(500).json({ 
           success: false, 
-          error: 'Failed to create phrase' 
+          error: 'Failed to create phrase and send notification' 
         });
       }
 

@@ -13,8 +13,8 @@ class ValidationHelpers {
             errors.push('Phrase must be at least 3 characters long');
         }
         
-        if (trimmed.length > 200) {
-            errors.push('Phrase must be less than 200 characters');
+        if (trimmed.length > 50) {
+            errors.push('Phrase must be less than 50 characters');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-',.!?]+$/.test(trimmed)) {
@@ -22,13 +22,26 @@ class ValidationHelpers {
         }
         
         // Use same word count logic as PhraseCreationView.swift
-        const wordCount = trimmed.split(/\s+/).filter(word => word.length > 0).length;
+        const words = trimmed.split(/\s+/).filter(word => word.length > 0);
+        const wordCount = words.length;
+        
         if (wordCount < 2) {
             errors.push('Phrase must contain at least 2 words');
         }
         
-        if (wordCount > 6) {
-            errors.push('Phrase must contain no more than 6 words');
+        if (wordCount > 4) {
+            errors.push('Phrase must contain no more than 4 words');
+        }
+        
+        // Check each word length (max 7 letters per word)
+        const longWords = words.filter(word => {
+            // Remove punctuation and count only letters
+            const letters = word.replace(/[^a-zA-ZåäöÅÄÖ]/g, '');
+            return letters.length > 7;
+        });
+        
+        if (longWords.length > 0) {
+            errors.push('Each word must be 7 letters or less');
         }
         
         return errors;

@@ -120,7 +120,7 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 **Services:**
 - 🎮 **Game Server** (port 3000): Core multiplayer API + WebSocket
 - 📊 **Web Dashboard** (port 3001): Monitoring interface
-- 🔗 **Link Generator** (port 3002): Contribution link service
+- 🔗 **Link Generator** (port 3002): Contribution link service + phrase creation web interface
 - 🔧 **Admin Service** (port 3003): Content management & batch operations
 - 🗄️ **PostgreSQL** (port 5432): Shared database
 
@@ -176,9 +176,9 @@ node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
 ```
 
 ### API Endpoints
-- **Game Server (3000)**: `/api/status`, `/api/players`, `/api/phrases/for/:playerId`
+- **Game Server (3000)**: `/api/status`, `/api/players`, `/api/phrases/for/:playerId`, `/api/phrases/create`
 - **Web Dashboard (3001)**: `/api/status`, `/api/monitoring/stats`
-- **Link Generator (3002)**: `/api/status`
+- **Link Generator (3002)**: `/api/status`, `/contribute/:token`, `/api/contribution/:token`
 - **Admin Service (3003)**: `/api/status`, `/api/admin/phrases/batch-import`
 
 
