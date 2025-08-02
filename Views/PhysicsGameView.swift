@@ -1828,9 +1828,12 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         quakeState = .none
         
         // Reset bookshelf position and rotation in case quake was active
-        bookshelf.removeAllActions()
-        bookshelf.position = bookshelfOriginalPosition
-        bookshelf.zRotation = 0
+        // BUT don't interfere if bookshelf drop animation is in progress
+        if !bookshelf.hasActions() || bookshelf.physicsBody == nil {
+            bookshelf.removeAllActions()
+            bookshelf.position = bookshelfOriginalPosition
+            bookshelf.zRotation = 0
+        }
         
         // Create new tiles with current game model data (don't call startNewGame again)
         createTiles()
@@ -2423,73 +2426,124 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func animateEntireBookshelfDrop() {
-        print("📚 Animating entire bookshelf drop with preserved shelf positions!")
-        
-        // Move the entire bookshelf (including all shelves) way above screen
-        // while preserving their relative positions
-        
-        // 1. Move the main bookshelf container
-        let originalBookshelfY = bookshelf.position.y
-        bookshelf.position = CGPoint(x: bookshelf.position.x, y: size.height + 300)
-        
-        // 2. Move all individual shelves while maintaining their relative positions
-        var shelfDropActions: [SKAction] = []
-        
-        for shelf in shelves {
-            let originalPosition = shelfOriginalPositions[shelf] ?? shelf.position
-            shelf.position = CGPoint(x: shelf.position.x, y: originalPosition.y + size.height + 300)
-            
-            // Create drop animation for each shelf
-            let dropToOriginal = SKAction.moveTo(y: originalPosition.y, duration: 1.5)
-            dropToOriginal.timingMode = SKActionTimingMode.easeOut
-            shelfDropActions.append(dropToOriginal)
-        }
-        
-        // 3. Animate bookshelf container drop
-        let bookshelfDrop = SKAction.moveTo(y: originalBookshelfY, duration: 1.5)
-        bookshelfDrop.timingMode = SKActionTimingMode.easeOut
-        bookshelf.run(bookshelfDrop)
-        
-        // 4. Animate all shelves dropping to their original positions simultaneously
-        for (index, shelf) in shelves.enumerated() {
-            shelf.run(shelfDropActions[index])
-        }
-        
-        print("📚 Entire bookshelf dropping animation started!")
+        // Use the new physics-based intact bookshelf animation with rotation
+        animateShelvesToFloor()
     }
     
     private func animateShelvesToFloor() {
-        print("📚 IMMEDIATELY dropping all shelves to the floor!")
-        print("📚 Total shelves count: \(shelves.count)")
+        // Look for the bookshelf node - try different possible names
+        var mainBookshelf: SKNode?
         
-        // Get floor position (bottom of screen)
-        let floorY = CGFloat(60)  // Just above the bottom of the screen
-        
-        // Animate all shelves falling to the floor immediately
-        for (index, shelf) in shelves.enumerated() {
-            let currentY = shelf.position.y
-            
-            print("📚 Shelf \(index): current position Y=\(currentY), floor Y=\(floorY)")
-            
-            // Always animate all shelves regardless of current position
-            print("📚 Animating shelf \(index) from Y:\(currentY) to floor Y:\(floorY)")
-            
-            // Create falling animation
-            let fallAction = SKAction.moveTo(y: floorY, duration: 1.5)
-            fallAction.timingMode = SKActionTimingMode.easeIn  // Accelerate as it falls
-            
-            // Add some rotation for dramatic effect
-            let rotateAmount = CGFloat.random(in: -0.2...0.2)
-            let rotateAction = SKAction.rotate(byAngle: rotateAmount, duration: 1.5)
-            
-            // Run both animations together
-            let combinedAction = SKAction.group([fallAction, rotateAction])
-            shelf.run(combinedAction)
-            
-            print("📚 Started animation for shelf \(index)")
+        // Try common bookshelf names
+        let possibleNames = ["bookshelf", "Bookshelf", "bookShelf", "shelf"]
+        for name in possibleNames {
+            if let found = childNode(withName: name) {
+                mainBookshelf = found
+                break
+            }
         }
         
-        print("📚 Finished setting up all shelf animations")
+        // If no named bookshelf found, look for the node that contains shelves
+        if mainBookshelf == nil {
+            if !shelves.isEmpty, let firstShelf = shelves.first, let parent = firstShelf.parent {
+                mainBookshelf = parent
+            }
+        }
+        
+        // If still nothing, look for a node with many children (likely the bookshelf container)
+        if mainBookshelf == nil {
+            mainBookshelf = children.first { node in
+                node.children.count >= 4  // Bookshelf should have multiple parts
+            }
+        }
+        
+        if let bookshelf = mainBookshelf {
+            animateCompleteBookshelf(bookshelf)
+        } else {
+            // Fallback to shelf-only animation
+            animateShelvesOnly()
+        }
+    }
+    
+    private func animateShelvesOnly() {
+        guard !shelves.isEmpty else { return }
+        
+        // Random angle
+        let maxAngle = CGFloat.pi / 6  // 30 degrees
+        let fallAngle = Bool.random() ? 
+            CGFloat.random(in: 0...maxAngle) :
+            CGFloat.random(in: -maxAngle...0)
+        
+        // Apply same rotation and physics to all shelves
+        for shelf in shelves {
+            shelf.zRotation = fallAngle
+            shelf.physicsBody?.angularVelocity = fallAngle * 0.5
+            
+            let pushDirection: CGFloat = fallAngle > 0 ? 1 : -1
+            shelf.physicsBody?.velocity = CGVector(dx: pushDirection * 30, dy: -100)
+        }
+    }
+    
+    private func animateCompleteBookshelf(_ bookshelf: SKNode) {
+        // Random fall angle: 0-30 degrees left or right
+        let maxAngle = CGFloat.pi / 6  // 30 degrees
+        let fallAngle = Bool.random() ? 
+            CGFloat.random(in: 0...maxAngle) :     // Right tilt
+            CGFloat.random(in: -maxAngle...0)      // Left tilt
+        
+        // Store original position (this is the "floor" level)
+        let originalPosition = bookshelf.position
+        let floorY = originalPosition.y  // Hit floor at original level
+        
+        // Step 1: Fade out quickly
+        let fadeOut = SKAction.fadeOut(withDuration: 0.3)
+        
+        bookshelf.run(fadeOut) {
+            // Step 2: Move to sky and set rotation
+            bookshelf.position = CGPoint(x: originalPosition.x, y: self.size.height + 300)
+            bookshelf.zRotation = fallAngle  // Set rotation BEFORE falling
+            bookshelf.alpha = 1.0  // Make visible again
+            
+            // Step 3: Fall straight down to floor level (SKAction)
+            let fallToFloor = SKAction.move(to: CGPoint(x: originalPosition.x, y: floorY), duration: 1.2)
+            fallToFloor.timingMode = .easeIn
+            
+            bookshelf.run(fallToFloor) {
+                // Step 4: Enable physics for realistic heavy bookshelf behavior
+                let bookshelfSize = CGSize(width: 300, height: 400)
+                bookshelf.physicsBody = SKPhysicsBody(rectangleOf: bookshelfSize)
+                bookshelf.physicsBody?.isDynamic = true
+                bookshelf.physicsBody?.affectedByGravity = true
+                
+                // Use wall category to avoid conflicts with existing physics
+                bookshelf.physicsBody?.categoryBitMask = PhysicsCategories.wall
+                bookshelf.physicsBody?.collisionBitMask = PhysicsCategories.floor
+                bookshelf.physicsBody?.contactTestBitMask = 0
+                
+                // Bookshelf physics properties
+                bookshelf.physicsBody?.mass = 10.0
+                bookshelf.physicsBody?.restitution = 0.3
+                bookshelf.physicsBody?.friction = 0.8
+                bookshelf.physicsBody?.angularDamping = 0.2
+                bookshelf.physicsBody?.linearDamping = 0.2
+                
+                // Impact velocity for bounce effect
+                let impactSpeed: CGFloat = 150
+                let sideImpact = fallAngle * 50
+                let impactVelocity = CGVector(dx: sideImpact, dy: -impactSpeed)
+                bookshelf.physicsBody?.velocity = impactVelocity
+                bookshelf.physicsBody?.angularVelocity = fallAngle * 1.5
+                
+                // Remove physics after settling to restore normal game physics
+                let settleAction = SKAction.sequence([
+                    SKAction.wait(forDuration: 3.0),
+                    SKAction.run {
+                        bookshelf.physicsBody = nil
+                    }
+                ])
+                bookshelf.run(settleAction, withKey: "settle")
+            }
+        }
     }
     
     private func cleanupCelebrationTiles() {
