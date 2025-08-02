@@ -565,6 +565,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     private var shelfOriginalPositions: [SKNode: CGPoint] = [:]
     private var physicsBodyOriginalPositions: [SKSpriteNode: CGPoint] = [:]
     private var isBookshelfJolting: Bool = false
+    private var hasBookshelfAnimated: Bool = false
     private var floor: SKNode!
     var tiles: [LetterTile] = []
     private var scoreTile: ScoreTile?
@@ -1419,6 +1420,11 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func joltBookshelf() {
+        // Don't jolt bookshelf if it has already been animated (dropped)
+        if hasBookshelfAnimated || bookshelf.hasActions() || bookshelf.physicsBody != nil {
+            return
+        }
+        
         // Stop any existing jolt animation to prevent accumulation
         bookshelf.removeAction(forKey: "shelfJolt")
         
@@ -1459,12 +1465,16 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         let sequenceAction = SKAction.sequence([delayAction, updateAction])
         self.run(sequenceAction)
         
-        print("📚 BOOKSHELF: Applied jolt animation with position reset")
     }
     
     private func forcePhysicsBodySync() {
-        // Reset bookshelf to original position first
-        bookshelf.position = bookshelfOriginalPosition
+        // Don't reset bookshelf if it's in animation or physics mode
+        if !bookshelf.hasActions() && bookshelf.physicsBody == nil {
+            // Reset bookshelf to original position first
+            bookshelf.position = bookshelfOriginalPosition
+            // Reset the animation flag for new game
+            hasBookshelfAnimated = false
+        }
         
         // Reset all shelf positions to their original positions
         for shelf in shelves {
@@ -2426,6 +2436,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func animateEntireBookshelfDrop() {
+        // Mark that bookshelf animation has started
+        hasBookshelfAnimated = true
+        
         // Use the new physics-based intact bookshelf animation with rotation
         animateShelvesToFloor()
     }
