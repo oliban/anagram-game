@@ -55,57 +55,31 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - ✅ CORRECT: Use Docker exec to run commands inside containers
 - ✅ CORRECT: Test from iOS simulators which connect via host network
 
-### Build Script Usage (NEW)
-**Enhanced workflow with automatic server health checking:**
-
+### Build Script Usage
 ```bash
 # Recommended: Enhanced build with server health checks
 ./build_and_test.sh local              # Local development with health checks
 ./build_and_test.sh aws                # AWS production with health checks
 ./build_and_test.sh local --clean      # Clean build with health checks
 
-# Direct build (legacy) - no server health checks
+# Direct build (no server health checks)
 ./build_multi_sim.sh local             # Local development only
 ./build_multi_sim.sh aws               # AWS production only
-./build_multi_sim.sh local --clean     # Force clean build
 ```
-
-**Enhanced Workflow**: Pre-build server health checks, auto-start services, AWS status validation, post-build verification.  
-**Detailed Guide**: See `docs/aws-production-server-management.md` for full AWS server management documentation.
 
 ### Microservices Architecture (Local Development)
-**All servers run as Docker containers with separate services:**
-
-**Start all services for testing:**
+**Docker Services Management:**
 ```bash
+# Start/stop all services
 docker-compose -f docker-compose.services.yml up -d
-```
-
-**Check service status:**
-```bash
-# View all running containers
-docker-compose -f docker-compose.services.yml ps
-
-# Test health endpoints (from host machine - for iOS simulator access)
-# Note: These work from host machine if ports are properly mapped in docker-compose.yml
-# For debugging inside containers, use docker exec commands instead
-```
-
-**Monitor logs:**
-```bash
-# All services
-docker-compose -f docker-compose.services.yml logs -f
-
-# Specific service
-docker-compose -f docker-compose.services.yml logs -f game-server
-docker-compose -f docker-compose.services.yml logs -f web-dashboard
-docker-compose -f docker-compose.services.yml logs -f link-generator
-docker-compose -f docker-compose.services.yml logs -f admin-service
-```
-
-**Stop services:**
-```bash
 docker-compose -f docker-compose.services.yml down
+
+# View logs
+docker-compose -f docker-compose.services.yml logs -f
+docker-compose -f docker-compose.services.yml logs -f [service-name]
+
+# Health checks (inside containers)
+docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http://localhost:[port]/api/status
 ```
 
 **Testing Strategy**:
@@ -114,7 +88,7 @@ docker-compose -f docker-compose.services.yml down
 - Performance-critical paths → Add performance tests
 
 ## DEPLOYMENT SEQUENCE
-### Local Development (NEW)
+### Local Development
 1. **Start Services**: `docker-compose -f docker-compose.services.yml up -d`
 2. **Verify Health**: Check all service endpoints (3000, 3001, 3002, 3003)
 3. **Version**: Increment `CFBundleVersion` and `CFBundleShortVersionString` in Info.plist
@@ -123,21 +97,13 @@ docker-compose -f docker-compose.services.yml down
 6. **Verify**: Monitor Docker logs, check API calls, confirm connections
 
 ### Production Deployment (AWS)
-**For AWS production server management, see `docs/aws-production-server-management.md`**
-
-1. **Infrastructure**: Use AWS CDK for ECS Fargate + Aurora Serverless v2
-2. **Secrets**: Configure AWS Secrets Manager for environment variables  
-3. **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate
-4. **Deploy**: GitHub Actions CI/CD pipeline to AWS
-5. **Monitor**: CloudWatch logs and health checks
-
-**Quick Health Check**: 
-- From external: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
-- From container: `docker-compose -f docker-compose.services.yml exec game-server wget -q -O - http://localhost:3000/api/status`
+**See `docs/aws-production-server-management.md` for details**
+- **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate
+- **Quick Health Check**: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
 
 ## ARCHITECTURE & ENVIRONMENT
 
-### Microservices Architecture (NEW)
+### Microservices Architecture
 **Client-Server**: iOS SwiftUI + SpriteKit ↔ Docker Services ↔ Shared PostgreSQL
 
 **Services:**
@@ -153,10 +119,8 @@ docker-compose -f docker-compose.services.yml down
 
 ### Shared Algorithm Architecture
 **Configuration-Based Scoring**: Both iOS and server read from `shared/difficulty-algorithm-config.json`
-- **Server**: `shared/difficulty-algorithm.js` imports JSON config
-- **iOS**: `SharedDifficultyConfig` struct in `NetworkManager.swift` reads same JSON
-- **Benefits**: Single source of truth, no code duplication, easy maintenance
-- **Performance**: Client-side scoring eliminates network calls during typing
+- Single source of truth, no code duplication
+- Client-side scoring eliminates network calls during typing
 
 ## KEY PRINCIPLES
 - **Clarity over cleverness** - Simple, obvious solutions preferred
@@ -177,122 +141,30 @@ docker-compose -f docker-compose.services.yml down
 ## REFERENCE COMMANDS
 
 ### Development
-
-#### Microservices (NEW - Primary Method)
 ```bash
-# Start all services (game-server, web-dashboard, link-generator, admin-service, postgres)
-docker-compose -f docker-compose.services.yml up -d
-
-# Stop all services
-docker-compose -f docker-compose.services.yml down
-
-# View logs (all services)
-docker-compose -f docker-compose.services.yml logs -f
-
-# View specific service logs
-docker-compose -f docker-compose.services.yml logs -f game-server
-
-# Rebuild services after code changes
-docker-compose -f docker-compose.services.yml build
-docker-compose -f docker-compose.services.yml up -d
-
-# Check service health (from inside containers)
-docker-compose -f docker-compose.services.yml exec game-server wget -q -O - http://localhost:3000/api/status
-docker-compose -f docker-compose.services.yml exec web-dashboard wget -q -O - http://localhost:3001/api/status
-docker-compose -f docker-compose.services.yml exec link-generator wget -q -O - http://localhost:3002/api/status
-docker-compose -f docker-compose.services.yml exec admin-service wget -q -O - http://localhost:3003/api/status
-```
-
-#### Legacy Single Server (Deprecated)
-```bash
-# DEPRECATED - Use microservices above instead
-./server/manage-server.sh start    # Start server
-./server/manage-server.sh stop     # Stop server safely
-./server/manage-server.sh restart  # Restart server
-./server/manage-server.sh status   # Check server status
-./server/manage-server.sh logs     # View recent logs
-tail -f server/server_output.log   # Live logs
-```
-
 # iOS Tests
 xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15'
 
 # Database (Microservices)
-# Database runs in Docker container, accessible at localhost:5432
-psql -h localhost -p 5432 -U postgres -d anagram_game
 docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d anagram_game
-
-# Database (Legacy)
-node -e "require('./server/database/connection').testConnection()"
-psql -d anagram_game -f server/database/schema.sql
 
 # API Documentation
 npm run docs  # Generate automated API docs at /api-docs endpoint
 
-# Phrase Generation (Streamlined Admin Service Integration)
-# Interactive workflow - generates phrases with Swedish language consistency
-./server/scripts/generate-and-preview.sh "1-50:15"      # 15 English phrases (easy)
-./server/scripts/generate-and-preview.sh "1-50:15" sv   # 15 Swedish phrases (easy)
-./server/scripts/generate-and-preview.sh "25-75:50" sv  # 50 Swedish phrases (easy-medium)
-./server/scripts/generate-and-preview.sh "101-150:20"   # 20 English phrases (hard)
-
-# Direct import using Admin Service API (port 3003)
-node server/scripts/phrase-importer.js --input data/phrases-file.json --import
-
-# Generated files use format: phrases-{lang}-{range}-{count}-{timestamp}.json
-# Example: phrases-sv-25-75-50-2025-08-01T09-02-00.json
-# Import reports: import-report-{timestamp}.json (automatically saved, ignored by git)
+# Phrase Generation & Import
+./server/scripts/generate-and-preview.sh "25-75:50" sv   # Generate Swedish phrases
+node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import  # Import
 
 # Shared Algorithm Testing
 node -e "const alg = require('./shared/difficulty-algorithm'); console.log(alg.calculateScore({phrase: 'test phrase', language: 'en'}));"
 ```
 
 ### API Endpoints
+- **Game Server (3000)**: `/api/status`, `/api/players`, `/api/phrases/for/:playerId`
+- **Web Dashboard (3001)**: `/api/status`, `/api/monitoring/stats`
+- **Link Generator (3002)**: `/api/status`
+- **Admin Service (3003)**: `/api/status`, `/api/admin/phrases/batch-import`
 
-#### Game Server (3000)
-- `GET /api/status` - Server health check
-- `POST /api/players` - Player registration (returns UUID)
-- `GET /api/players/online` - Online player list
-- `GET /api/phrases/for/:playerId` - Get targeted phrases
-- `POST /api/phrases/create` - Create new phrase
-
-#### Web Dashboard (3001)
-- `GET /api/status` - Service health check
-- `GET /api/monitoring/stats` - System monitoring statistics
-- `POST /api/contribution/request` - Generate contribution link
-
-#### Link Generator (3002)
-- `GET /api/status` - Service health check
-- (Contribution link management endpoints)
-
-#### Admin Service (3003) - Content Management & Phrase Import
-- `GET /api/status` - Service health check  
-- `POST /api/admin/phrases/batch-import` - **PRIMARY** phrase import endpoint (auto-approved)
-
-**Key Features:**
-- ✅ **Auto-approval**: All imported phrases automatically set to `is_approved = true`
-- ✅ **Health checks**: Pre-import verification of service availability
-- ✅ **Enhanced reporting**: Detailed success/failure breakdown with difficulty distribution
-- ✅ **Language consistency**: Enforced Swedish phrase + Swedish clue matching
-
-**Admin Batch Import Example:**
-```bash
-# From inside container:
-docker-compose -f docker-compose.services.yml exec admin-service wget -O - \
-  --post-data='{
-phrases": [{"content": "test phrase", "hint": "Creative Swedish clue", "language": "sv"}], "adminId": "admin-user"}' \
-  --header="Content-Type: application/json" \
-  http://localhost:3003/api/admin/phrases/batch-import
-```
-
-**Streamlined Import Workflow:**
-```bash
-# 1. Generate phrases (interactive)
-./server/scripts/generate-and-preview.sh "25-75:50" sv
-
-# 2. Import via Admin Service (with health checks + reporting)
-node server/scripts/phrase-importer.js --input data/phrases-sv-25-75-50-timestamp.json --import
-```
 
 ### MCP Tools Available
 - **iOS Simulator Control**: Screenshot, UI inspection, tap/swipe gestures, text input
@@ -303,14 +175,8 @@ node server/scripts/phrase-importer.js --input data/phrases-sv-25-75-50-timestam
 - **WebSocket issues**: Check server logs, verify NetworkManager.swift connections
 - **Build failures**: Clean derived data, check Info.plist versions, verify simulator UUIDs
 - **Database issues**: Test connection, verify schema, run server test suite
-- **iOS Simulator issues**: Use MCP iOS Simulator tools for UI inspection, screenshots, and interaction testing
-- **AWS ECS Platform Issues**: 
-  - **Error**: `image Manifest does not contain descriptor matching platform 'linux/amd64'`
-  - **Cause**: Docker image built for ARM architecture (Apple Silicon) instead of x86_64
-  - **Solution**: Always use `docker build --platform linux/amd64` for ECS Fargate deployments
-  - **Prevention**: Add platform flag to all Docker build commands in deployment scripts
+- **AWS ECS Platform Issues**: Always use `docker build --platform linux/amd64` for ECS Fargate
 
-### Device-User Association for Testing
-When testing device-based authentication, you may need to associate existing users with specific simulators. See detailed guide: `docs/device-user-association-guide.md`
-
-**Quick Summary**: Use debug logging to capture device IDs during registration attempts, then update the database to associate users with their intended devices.
+### Additional Resources
+- **Device-User Association**: See `docs/device-user-association-guide.md`
+- **AWS Production Management**: See `docs/aws-production-server-management.md`
