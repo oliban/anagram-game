@@ -15,6 +15,9 @@ class EmojiIconTile: IconTile {
         self.emoji = emoji
         super.init(size: size)
         setupEmojiDisplay(emoji)
+        
+        // Enable user interaction specifically for emoji tiles (needed for dragging)
+        isUserInteractionEnabled = true
     }
     
     private func setupEmojiDisplay(_ emoji: String) {
