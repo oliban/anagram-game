@@ -126,6 +126,35 @@ struct PhysicsGameView: View {
                     
                     Spacer() // Push bottom controls down
                     
+                    // Connection indicator overlay - always visible
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(connectionStatusColor)
+                            .frame(width: 10, height: 10)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .animation(.easeInOut(duration: 0.3), value: networkManager.connectionStatus)
+                        
+                        Text(networkManager.connectionStatus.description)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(connectionStatusBackgroundColor)
+                            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .padding(.bottom, 8)
+                    
                     // REAL-TIME METRICS DISPLAY - conditional on performance monitoring
                     if isPerformanceMonitoringEnabled {
                         VStack(spacing: 4) {
@@ -533,6 +562,30 @@ struct PhysicsGameView: View {
         
         // Start metrics timer for real-time display
         startMetricsTimer()
+    }
+    
+    private var connectionStatusColor: Color {
+        switch networkManager.connectionStatus {
+        case .disconnected:
+            return .red
+        case .connecting:
+            return .yellow
+        case .connected:
+            return .green
+        case .error:
+            return .red
+        }
+    }
+    
+    private var connectionStatusBackgroundColor: Color {
+        switch networkManager.connectionStatus {
+        case .disconnected, .error:
+            return Color.red.opacity(0.9)
+        case .connecting:
+            return Color.orange.opacity(0.9)
+        case .connected:
+            return Color.green.opacity(0.9)
+        }
     }
 }
 

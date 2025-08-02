@@ -163,12 +163,15 @@ DECLARE
 BEGIN
     -- Set default period start based on period type
     IF period_start_param IS NULL THEN
-        CASE score_period_param
-            WHEN 'daily' THEN target_period_start := CURRENT_DATE;
-            WHEN 'weekly' THEN target_period_start := DATE_TRUNC('week', CURRENT_DATE);
-            WHEN 'total' THEN target_period_start := '1970-01-01';
-            ELSE RAISE EXCEPTION 'Invalid score period: %', score_period_param;
-        END CASE;
+        IF score_period_param = 'daily' THEN
+            target_period_start := CURRENT_DATE;
+        ELSIF score_period_param = 'weekly' THEN
+            target_period_start := DATE_TRUNC('week', CURRENT_DATE);
+        ELSIF score_period_param = 'total' THEN
+            target_period_start := '1970-01-01';
+        ELSE
+            RAISE EXCEPTION 'Invalid score period: %', score_period_param;
+        END IF;
     ELSE
         target_period_start := period_start_param;
     END IF;
