@@ -31,6 +31,15 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - ✅ Swift documentation on public interfaces
 - ✅ Handles errors gracefully
 
+## SWIFT-SPECIFIC GUIDELINES
+- **Async/await over callbacks**: `func fetchUser() async throws -> User`
+- **@Observable over ObservableObject**: Use Swift 5.9+ observation framework
+- **Capture lists required**: `{ [weak self] in self?.method() }` prevents retain cycles
+- **Task lifecycle**: Use `.task { await loadData() }` for auto-cancellation
+- **View composition**: Extract complex views into smaller components
+- **State ownership**: Keep @State private, pass down as @Binding
+- **Environment over singletons**: Use @Environment for shared state
+
 ## EFFICIENT RESEARCH PROTOCOL
 **Code Map First**: Always start with `code_map.swift` for all research
 - Check freshness: `head -n 1 code_map.swift` (regenerate if > 1 hour old)
@@ -97,7 +106,7 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 6. **Verify**: Monitor Docker logs, check API calls, confirm connections
 
 ### Production Deployment (AWS)
-**See `docs/aws-production-server-management.md` for details**
+**Detailed Guide**: See `docs/aws-production-server-management.md` for full AWS server management documentation.
 - **Docker Build**: **CRITICAL** - Always build for linux/amd64 platform for ECS Fargate
 - **Quick Health Check**: `curl -v http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com/api/status`
 
@@ -122,7 +131,56 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 - Single source of truth, no code duplication
 - Client-side scoring eliminates network calls during typing
 
+## PERFORMANCE STANDARDS
+
+### iOS App Targets
+- **Launch time**: < 3 seconds cold start
+- **Memory usage**: < 100MB baseline, < 200MB peak
+- **Frame rate**: 60fps animations, no dropped frames
+- **Network**: API calls timeout after 10s, retry 3x with backoff
+- **Battery**: Background processing < 5% battery drain/hour
+
+### Backend Services
+- **API response**: < 200ms average, < 500ms p95
+- **Database queries**: < 50ms average, < 100ms complex queries
+- **Uptime**: 99.9% availability target
+- **Memory per service**: < 512MB under normal load
+- **Docker startup**: < 30 seconds per service
+
+### Monitoring Commands
+```bash
+# iOS performance check
+instruments -t "Time Profiler" -D trace.trace YourApp.app
+
+# Backend health check with timing
+curl -w "@curl-format.txt" http://localhost:3000/api/status
+```
+
+## SECURITY REQUIREMENTS
+
+### iOS Security
+- **Keychain**: Store all sensitive data (tokens, passwords) in Keychain
+- **Network**: HTTPS only, certificate pinning for production
+- **Input validation**: Sanitize all user inputs before processing
+
+### Backend Security
+- **Input validation**: Validate all request parameters and body
+- **SQL injection**: Use parameterized queries only
+- **Rate limiting**: 100 requests/minute per IP on public endpoints
+- **Secrets**: Environment variables only, never hardcoded
+- **CORS**: Restrict origins to known clients only
+
+### Security Checks
+```bash
+# Check for hardcoded secrets
+grep -r "password\|secret\|key" --include="*.swift" --include="*.js" .
+
+# Dependency vulnerability scan
+npm audit
+```
+
 ## KEY PRINCIPLES
+- **NO LEGACY** - Always remove old code when building replacements
 - **Clarity over cleverness** - Simple, obvious solutions preferred
 - **Production quality only** - No shortcuts, no TODOs in final code
 - **Feature branch** - No backwards compatibility needed
