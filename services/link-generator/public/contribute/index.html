@@ -10,16 +10,7 @@
 <body>
     <div class="container">
         <header class="header">
-            <div class="header-top">
-                <h1>🎯 Contribute a Phrase</h1>
-                <div class="language-selector">
-                    <label for="language-select-top" class="language-label">Language:</label>
-                    <select id="language-select-top" class="language-select">
-                        <option value="en">🇺🇸 English</option>
-                        <option value="sv">🇸🇪 Svenska</option>
-                    </select>
-                </div>
-            </div>
+            <h1>🎯 Contribute a Phrase</h1>
             <p id="header-subtitle">Help create a challenging anagram for your friend!</p>
         </header>
 
@@ -32,6 +23,22 @@
             </div>
 
             <form id="contribution-form" class="contribution-form" style="display: none;">
+                <!-- Language Selection with Big Flags -->
+                <div class="form-group">
+                    <label class="form-label">Choose Language:</label>
+                    <div class="language-flags">
+                        <button type="button" class="flag-button active" data-language="en">
+                            <span class="flag">🇺🇸</span>
+                            <span class="language-name">English</span>
+                        </button>
+                        <button type="button" class="flag-button" data-language="sv">
+                            <span class="flag">🇸🇪</span>
+                            <span class="language-name">Svenska</span>
+                        </button>
+                    </div>
+                    <input type="hidden" id="language-select-top" value="en">
+                </div>
+
                 <div class="form-group">
                     <label for="phrase-input" class="form-label">
                         Phrase or Sentence *
@@ -40,21 +47,21 @@
                     <textarea 
                         id="phrase-input" 
                         class="form-input form-textarea" 
-                        placeholder="e.g., The quick brown fox jumps over the lazy dog"
-                        maxlength="200"
+                        placeholder="e.g., Hello World"
+                        maxlength="50"
                         required
                     ></textarea>
+                    <div class="error-message" id="phrase-input-error"></div>
                     <div class="scramble-preview" id="scramble-preview" style="display: none;">
                         <div class="preview-label">Preview: How it will appear scrambled</div>
                         <div class="scrambled-text" id="scrambled-text"></div>
                     </div>
                     <div class="character-count">
-                        <span id="char-count">0</span> / 200 characters
+                        <span id="char-count">0</span> / 50 characters
                     </div>
                     <div class="quality-indicator" id="quality-indicator">
                         <div class="quality-badge quality-poor">❓ Start typing to see quality feedback</div>
                     </div>
-                    <div class="error-message" id="phrase-input-error"></div>
                 </div>
 
                 <div class="form-group">
@@ -80,7 +87,7 @@
 
                 <div class="form-group">
                     <label for="clue-input" class="form-label">
-                        Hint or Clue *
+                        Clue *
                         <span class="help-text">Provide a helpful hint to make it more fun to solve (required)</span>
                     </label>
                     <input 
@@ -158,9 +165,9 @@
                         <h4>Your Phrase Gets Scrambled</h4>
                         <p>The letters of your phrase are mixed up randomly, creating a challenging puzzle</p>
                         <div class="example-scramble">
-                            <div class="original">"The quick brown fox"</div>
+                            <div class="original">"Hello World"</div>
                             <div class="arrow">↓</div>
-                            <div class="scrambled">"hTe kciuq nworb xof"</div>
+                            <div class="scrambled">"dlroW olleH"</div>
                         </div>
                     </div>
                 </div>

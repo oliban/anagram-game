@@ -87,11 +87,37 @@ class ContributionLinkGenerator {
             const link = result.rows[0];
             
             if (!link.is_active) {
-                return { valid: false, reason: 'Link has been deactivated' };
+                return { 
+                    valid: false, 
+                    reason: 'Link has been deactivated',
+                    link: {
+                        id: link.id,
+                        token: link.token,
+                        requestingPlayerId: link.requesting_player_id,
+                        requestingPlayerName: link.requesting_player_name,
+                        expiresAt: link.expires_at,
+                        maxUses: link.max_uses,
+                        currentUses: link.current_uses,
+                        remainingUses: link.max_uses - link.current_uses
+                    }
+                };
             }
 
             if (new Date() > new Date(link.expires_at)) {
-                return { valid: false, reason: 'Link has expired' };
+                return { 
+                    valid: false, 
+                    reason: 'Link has expired',
+                    link: {
+                        id: link.id,
+                        token: link.token,
+                        requestingPlayerId: link.requesting_player_id,
+                        requestingPlayerName: link.requesting_player_name,
+                        expiresAt: link.expires_at,
+                        maxUses: link.max_uses,
+                        currentUses: link.current_uses,
+                        remainingUses: link.max_uses - link.current_uses
+                    }
+                };
             }
 
             if (link.current_uses >= link.max_uses) {
