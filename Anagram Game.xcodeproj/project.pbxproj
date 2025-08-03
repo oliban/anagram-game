@@ -17,12 +17,6 @@
 		8B3C7G3H8L708K9G00IG39K4 /* LegendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3C7G3G8L708K9G00IG39K4 /* LegendsView.swift */; };
 		9B3C6F2G7K607J8F00HG28J3 /* HintButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */; };
 		9E4790752E27ED6A0078A247 /* difficulty-algorithm-config.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E4790742E27ED6A0078A247 /* difficulty-algorithm-config.json */; };
-		9E592EAA2E3F568300E5C99C /* EmojiCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EA82E3F568300E5C99C /* EmojiCollectionView.swift */; };
-		9E592EAB2E3F568300E5C99C /* EmojiCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EA82E3F568300E5C99C /* EmojiCollectionView.swift */; };
-		9E592EAC2E3F568300E5C99C /* EmojiCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EA82E3F568300E5C99C /* EmojiCollectionView.swift */; };
-		9E592EAD2E3F568300E5C99C /* EmojiCollectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EA92E3F568300E5C99C /* EmojiCollectionService.swift */; };
-		9E592EAE2E3F568300E5C99C /* EmojiCollectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EA92E3F568300E5C99C /* EmojiCollectionService.swift */; };
-		9E592EAF2E3F568300E5C99C /* EmojiCollectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EA92E3F568300E5C99C /* EmojiCollectionService.swift */; };
 		9E592EB12E3F576B00E5C99C /* EmojiCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EB02E3F576B00E5C99C /* EmojiCollection.swift */; };
 		9E592EB22E3F576B00E5C99C /* EmojiCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EB02E3F576B00E5C99C /* EmojiCollection.swift */; };
 		9E592EB32E3F576B00E5C99C /* EmojiCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E592EB02E3F576B00E5C99C /* EmojiCollection.swift */; };
@@ -128,8 +122,6 @@
 		94EBAB24713A4FAC9669C23C /* Utils/DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils/DebugLogger.swift; sourceTree = "<group>"; };
 		9B3C6F2F7K607J8F00HG28J3 /* HintButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintButton.swift; sourceTree = "<group>"; };
 		9E4790742E27ED6A0078A247 /* difficulty-algorithm-config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = "difficulty-algorithm-config.json"; path = "shared/difficulty-algorithm-config.json"; sourceTree = "<group>"; };
-		9E592EA82E3F568300E5C99C /* EmojiCollectionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EmojiCollectionView.swift; path = Views/EmojiCollectionView.swift; sourceTree = "<group>"; };
-		9E592EA92E3F568300E5C99C /* EmojiCollectionService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EmojiCollectionService.swift; path = services/EmojiCollectionService.swift; sourceTree = "<group>"; };
 		9E592EB02E3F576B00E5C99C /* EmojiCollection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EmojiCollection.swift; path = Models/EmojiCollection.swift; sourceTree = "<group>"; };
 		9EA4F6E32E39145300E6B7D3 /* HintButtonView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HintButtonView.swift; path = Views/Game/UI/HintButtonView.swift; sourceTree = "<group>"; };
 		9EA4F6E42E39145300E6B7D3 /* UnifiedSkillLevelView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = UnifiedSkillLevelView.swift; path = Views/Game/UI/UnifiedSkillLevelView.swift; sourceTree = "<group>"; };
@@ -203,8 +195,6 @@
 			isa = PBXGroup;
 			children = (
 				9E592EB02E3F576B00E5C99C /* EmojiCollection.swift */,
-				9E592EA92E3F568300E5C99C /* EmojiCollectionService.swift */,
-				9E592EA82E3F568300E5C99C /* EmojiCollectionView.swift */,
 				9EA4F7242E3CFC4600E6B7D3 /* ThemeInformationTile.swift */,
 				9EA4F7232E3CFC4600E6B7D3 /* TileColorScheme.swift */,
 				9EA4F7032E39210A00E6B7D3 /* PlayerService.swift */,
@@ -467,12 +457,10 @@
 				9EA4F6EC2E39145300E6B7D3 /* SpriteKitView.swift in Sources */,
 				9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */,
 				9EA4F72E2E3CFC4600E6B7D3 /* ThemeInformationTile.swift in Sources */,
-				9E592EAA2E3F568300E5C99C /* EmojiCollectionView.swift in Sources */,
 				9EA4F6F12E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
 				9EA4F7072E39210A00E6B7D3 /* ConnectionService.swift in Sources */,
 				3BA7B15656154076991F8DAE /* PhysicsGameView.swift in Sources */,
 				9EA4F7272E3CFC4600E6B7D3 /* MessageTile.swift in Sources */,
-				9E592EAD2E3F568300E5C99C /* EmojiCollectionService.swift in Sources */,
 				9EA4F70A2E39210A00E6B7D3 /* LeaderboardService.swift in Sources */,
 				9EA4F7282E3CFC4600E6B7D3 /* LanguageTile.swift in Sources */,
 				9EAA08542E192E3A00DB73E7 /* Item.swift in Sources */,
@@ -521,8 +509,6 @@
 				9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */,
 				9EA4F6F22E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
 				9EA4F6DF2E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */,
-				9E592EAB2E3F568300E5C99C /* EmojiCollectionView.swift in Sources */,
-				9E592EAE2E3F568300E5C99C /* EmojiCollectionService.swift in Sources */,
 				9EA4F7052E39210A00E6B7D3 /* PhraseService.swift in Sources */,
 				9EA4F6E02E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */,
 				9EA4F6F52E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,
@@ -548,8 +534,6 @@
 				9EAA086F2E192E3B00DB73E7 /* Anagram_GameUITests.swift in Sources */,
 				9EA4F6F32E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
 				9EA4F6E12E390BE300E6B7D3 /* Utils/ScoreCalculator.swift in Sources */,
-				9E592EAC2E3F568300E5C99C /* EmojiCollectionView.swift in Sources */,
-				9E592EAF2E3F568300E5C99C /* EmojiCollectionService.swift in Sources */,
 				9EA4F7062E39210A00E6B7D3 /* PhraseService.swift in Sources */,
 				9EA4F6E22E390BE300E6B7D3 /* Utils/DebugLogger.swift in Sources */,
 				9EA4F6F62E39146300E6B7D3 /* Color+SkillLevel.swift in Sources */,

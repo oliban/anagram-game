@@ -93,6 +93,7 @@ public struct PlayerStats: Codable {
     let totalPhrases: Int
     let skillTitle: String?
     let skillLevel: Int?
+    let rarestEmojis: [PlayerRareEmoji]?
 }
 
 public struct LeaderboardEntry: Codable {
@@ -109,6 +110,15 @@ public struct LegendPlayer: Codable, Identifiable {
     public let skillLevel: Int
     public let skillTitle: String
     public let phrasesCompleted: Int
+    public let rarestEmojis: [PlayerRareEmoji]?
+}
+
+public struct PlayerRareEmoji: Codable {
+    public let emojiCharacter: String
+    public let name: String
+    public let rarityTier: String
+    public let dropRate: Double
+    public let isFirstGlobalDiscovery: Bool
 }
 
 struct LegendPlayersResponse: Codable {

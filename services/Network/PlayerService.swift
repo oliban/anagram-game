@@ -208,6 +208,30 @@ class PlayerService: PlayerServiceDelegate {
                 let skillTitle = scoresData["skillTitle"] as? String
                 let skillLevel = scoresData["skillLevel"] as? Int
                 
+                // Parse rarest emojis if present
+                let rarestEmojis: [PlayerRareEmoji]?
+                if let emojisArray = json["rarestEmojis"] as? [[String: Any]] {
+                    rarestEmojis = emojisArray.compactMap { emojiDict in
+                        guard let emojiCharacter = emojiDict["emojiCharacter"] as? String,
+                              let name = emojiDict["name"] as? String,
+                              let rarityTier = emojiDict["rarityTier"] as? String,
+                              let dropRate = emojiDict["dropRate"] as? Double else {
+                            return nil
+                        }
+                        let isFirstGlobalDiscovery = emojiDict["isFirstGlobalDiscovery"] as? Bool ?? false
+                        
+                        return PlayerRareEmoji(
+                            emojiCharacter: emojiCharacter,
+                            name: name,
+                            rarityTier: rarityTier,
+                            dropRate: dropRate,
+                            isFirstGlobalDiscovery: isFirstGlobalDiscovery
+                        )
+                    }
+                } else {
+                    rarestEmojis = nil
+                }
+                
                 let stats = PlayerStats(
                     dailyScore: dailyScore,
                     dailyRank: dailyRank,
@@ -217,7 +241,8 @@ class PlayerService: PlayerServiceDelegate {
                     totalRank: totalRank,
                     totalPhrases: totalPhrases,
                     skillTitle: skillTitle,
-                    skillLevel: skillLevel
+                    skillLevel: skillLevel,
+                    rarestEmojis: rarestEmojis
                 )
                 
                 print("📊 STATS: Retrieved stats for player \(playerId)")
