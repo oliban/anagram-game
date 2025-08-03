@@ -42,7 +42,9 @@ class InformationTile: BaseTile {
     // Unified initializer for all information tile types
     init(type: InformationTileType, content: String, size: CGSize = CGSize(width: 80, height: 60)) {
         self.tileType = type
-        super.init(size: size)
+        // Ensure size doesn't exceed 400px width
+        let constrainedSize = CGSize(width: min(size.width, 400.0), height: size.height)
+        super.init(size: constrainedSize)
         setupInformationPhysics()
         setupContent(content)
     }
@@ -50,7 +52,9 @@ class InformationTile: BaseTile {
     // Legacy initializer for backwards compatibility
     override init(size: CGSize = CGSize(width: 80, height: 60)) {
         self.tileType = .message
-        super.init(size: size)
+        // Ensure size doesn't exceed 400px width
+        let constrainedSize = CGSize(width: min(size.width, 400.0), height: size.height)
+        super.init(size: constrainedSize)
         setupInformationPhysics()
     }
     
