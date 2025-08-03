@@ -2417,104 +2417,199 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func dropCelebrationTiles() {
-        DebugLogger.shared.ui("🎉 Dropping celebration emoji tiles!")
+        DebugLogger.shared.ui("🎉 Starting celebration with phrase emojis!")
+        print("🎉 DEBUG: dropCelebrationTiles() called!")
         
-        // Massive celebration emoji list (~250 emojis)
-        let allCelebrationEmojis = [
-            // Core celebration
-            "🎉", "🎊", "✨", "🥳", "🍾", "🎆", "⭐", "💫", "🎈", "🎁", "🎀", "🎯", "🎪", "🎭", "🎨", "🎵",
-            "🌟", "💥", "🔥", "⚡", "🌈", "💎", "👑", "🏆", "🥇", "🎖️", "🏅", "🎺", "🎷", "🎸", "🎻", "🎶",
-            
-            // Dancing & celebration people
-            "💃", "🕺", "🤩", "😍", "🤗", "😎", "🥰", "😘", "😋", "🤪", "🤤", "🥵", "🤯", "🥶", "😵‍💫", "🤠",
-            
-            // Hearts & love
-            "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💗", "💓", "💕", "💖", "💘", "💝", "💟",
-            "♥️", "💌", "💋", "💐", "🌹", "🌺", "🌸", "🌼", "🌻", "🌷", "🌿", "🍀", "🌴", "🌳", "🌲", "🌱",
-            
-            // Animals & magical creatures
-            "🦄", "🐉", "🦋", "🐝", "🦊", "🐱", "🐶", "🐰", "🐻", "🐼", "🐨", "🐵", "🦁", "🐯", "🐸", "🐙",
-            "🦚", "🦜", "🕊️", "🦅", "🦉", "🐠", "🐟", "🐬", "🐳", "🦈", "🐆", "🦓", "🦒", "🐘", "🦏", "🦛",
-            
-            // Food & drinks (celebratory)
-            "🍰", "🎂", "🧁", "🍭", "🍬", "🍫", "🍩", "🍪", "🍯", "🍓", "🍇", "🍊", "🍋", "🍌", "🍉", "🍑",
-            "🥂", "🍷", "🍸", "🍹", "🍺", "🥃", "☕", "🍵", "🧃", "🥤", "🧊", "🍦", "🍨", "🍧", "🥧", "🍮",
-            
-            // Music & performance
-            "🎼", "🎤", "🎧", "📻", "🎹", "🥁", "🪕", "🎪", "🎭", "🎨", "🖼️", "🎬", "📽️", "🎥", "📸", "🎮",
-            
-            // Sports & achievements
-            "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🏓", "🏸", "🏒", "🏑", "🥍", "🏹",
-            "🎿", "⛷️", "🏂", "🤿", "🏄‍♂️", "🏄‍♀️", "🏇", "🤸‍♂️", "🤸‍♀️", "⛹️‍♂️", "⛹️‍♀️", "🤾‍♂️", "🤾‍♀️", "🏋️‍♂️", "🏋️‍♀️", "🚴‍♂️",
-            
-            // Space & celestial
-            "🌙", "☀️", "⭐", "🌟", "💫", "✨", "☄️", "🌠", "🌌", "🪐", "🌍", "🌎", "🌏", "🌞", "🌛", "🌜",
-            "🌚", "🌝", "🌖", "🌗", "🌘", "🌑", "🌒", "🌓", "🌔", "🌕", "🪩", "🎆", "🎇", "🌋", "⚡", "🔥",
-            
-            // Gems & treasures
-            "💎", "👑", "💍", "📿", "💄", "👗", "👠", "🎩", "🧢", "👒", "🎀", "🎁", "🛍️", "💰", "💳", "💸",
-            
-            // Transportation (fun)
-            "🚀", "🛸", "✈️", "🎢", "🎡", "🎠", "🎪", "🎭", "🎨", "🎯", "🎲", "🃏", "🎰", "🎮", "🕹️", "🎱",
-            
-            // Weather & nature (positive)
-            "🌈", "☀️", "🌤️", "⛅", "🌦️", "🌧️", "⛈️", "🌩️", "❄️", "☃️", "⛄", "🌊", "💧", "💦", "🌸", "🌺",
-            
-            // Flags & symbols
-            "🏁", "🎌", "🏴‍☠️", "🏳️‍🌈", "🏳️‍⚧️", "🚩", "🎗️", "🎖️", "🏅", "🥇", "🥈", "🥉", "🏆", "🥮", "🥯", "🧿"
-        ]
+        // Get celebration emojis from the current phrase
+        guard let currentPhrase = gameModel.currentCustomPhrase else {
+            DebugLogger.shared.error("❌ No current phrase available for emoji drop")
+            print("❌ DEBUG: No current phrase - falling back to basic emojis")
+            displayFallbackEmojis()
+            return
+        }
         
-        // Core celebration emojis that always drop
-        let coreEmojis = ["🎉", "🎊", "✨"]
+        let celebrationEmojis = currentPhrase.celebrationEmojis
         
-        // Randomly select 1-3 additional emojis from the big list
-        let numberOfRandomEmojis = Int.random(in: 1...3)
-        let randomEmojis = Array(allCelebrationEmojis.filter { !coreEmojis.contains($0) }.shuffled().prefix(numberOfRandomEmojis))
+        if celebrationEmojis.isEmpty {
+            DebugLogger.shared.ui("⚠️ No celebration emojis in phrase - falling back to basic emojis")
+            print("⚠️ DEBUG: No celebration emojis in phrase")
+            displayFallbackEmojis()
+            return
+        }
         
-        // Combine core + random emojis
-        let selectedEmojis = coreEmojis + randomEmojis
+        DebugLogger.shared.ui("🎲 Using \(celebrationEmojis.count) celebration emojis from phrase: \(celebrationEmojis.map(\.emojiCharacter).joined(separator: ", "))")
+        print("🎲 DEBUG: Using \(celebrationEmojis.count) celebration emojis from phrase: \(celebrationEmojis.map(\.emojiCharacter).joined(separator: ", "))")
         
-        DebugLogger.shared.ui("🎲 Dropping \(coreEmojis.count) core + \(numberOfRandomEmojis) random celebration emojis: \(selectedEmojis)")
+        // Display the phrase's celebration emojis directly
+        displayPhraseCelebrationEmojis(emojis: celebrationEmojis)
+    }
+    
+    private func displayPhraseCelebrationEmojis(emojis: [EmojiCatalogItem]) {
+        DebugLogger.shared.ui("🎲 Displaying \(emojis.count) phrase celebration emojis")
         
-        for (index, emoji) in selectedEmojis.enumerated() {
-            // Create emoji tile with same size as regular tiles
-            let baseTileSize: CGFloat = 40
-            let tileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
-                                height: baseTileSize * PhysicsGameScene.componentScaleFactor)
-            let emojiTile = EmojiIconTile(emoji: emoji, size: tileSize)
+        // Create and drop emoji tiles for each celebration emoji
+        for (index, emojiData) in emojis.enumerated() {
+            let isNewDiscovery = false // Will be determined during phrase completion on server
+            createAndDropEmojiTile(
+                emoji: emojiData.emojiCharacter,
+                index: index,
+                isNewDiscovery: isNewDiscovery,
+                rarity: emojiData.rarity
+            )
+        }
+    }
+    
+    private func displayDroppedEmojis(dropResult: EmojiDropResult) {
+        DebugLogger.shared.ui("🎲 Displaying \(dropResult.droppedEmojis.count) dropped emojis")
+        
+        let emojisToDisplay = dropResult.droppedEmojis.map { $0.emojiCharacter }
+        
+        for (index, emoji) in emojisToDisplay.enumerated() {
+            createAndDropEmojiTile(
+                emoji: emoji, 
+                index: index, 
+                isNewDiscovery: dropResult.newDiscoveries.contains { $0.emojiCharacter == emoji },
+                rarity: dropResult.droppedEmojis.first { $0.emojiCharacter == emoji }?.rarity
+            )
+        }
+        
+        // Show points earned notification
+        if dropResult.pointsEarned > 0 {
+            showPointsEarnedNotification(points: dropResult.pointsEarned)
+        }
+        
+        // Log new discoveries
+        if !dropResult.newDiscoveries.isEmpty {
+            let newEmojiNames = dropResult.newDiscoveries.map { "\($0.emojiCharacter) (\($0.rarity.displayName))" }
+            DebugLogger.shared.game("🆕 New emoji discoveries: \(newEmojiNames)")
+        }
+    }
+    
+    private func createAndDropEmojiTile(emoji: String, index: Int, isNewDiscovery: Bool, rarity: EmojiRarity?) {
+        // Create emoji tile with same size as regular tiles
+        let baseTileSize: CGFloat = 40
+        let tileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
+                            height: baseTileSize * PhysicsGameScene.componentScaleFactor)
+        let emojiTile = EmojiIconTile(emoji: emoji, rarity: rarity, size: tileSize)
+        
+        // Mark tiles based on rarity and discovery status
+        if isNewDiscovery {
+            emojiTile.name = "new_discovery_emoji"
+            DebugLogger.shared.ui("🌟 NEW DISCOVERY: \(emoji) (\(rarity?.displayName ?? "unknown") rarity)")
             
-            // Mark special random emojis (not core celebration emojis) to persist across games
-            if !coreEmojis.contains(emoji) {
-                emojiTile.name = "special_random_celebration_emoji"
-                DebugLogger.shared.ui("🌟 Marked \(emoji) as special random emoji to persist across games")
-            } else {
-                emojiTile.name = "core_celebration_emoji"
+            // Add visual effect for new discoveries
+            addNewDiscoveryEffect(to: emojiTile, rarity: rarity)
+        } else if rarity?.triggersGlobalDrop == true {
+            emojiTile.name = "rare_collectable_emoji"
+        } else {
+            emojiTile.name = "collectable_emoji"
+        }
+        
+        // Position at top of visible screen
+        let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
+        let startY = size.height - 50
+        emojiTile.position = CGPoint(x: randomX, y: startY)
+        emojiTile.zPosition = 100
+        
+        addChild(emojiTile)
+        
+        // Add to tiles array for cleanup
+        (allRespawnableTiles as? NSMutableArray)?.add(emojiTile)
+        
+        let delay = SKAction.wait(forDuration: Double(index) * 0.2)
+        let giveInitialVelocity = SKAction.run {
+            emojiTile.physicsBody?.velocity = CGVector(dx: 0, dy: -200)
+            emojiTile.physicsBody?.applyImpulse(CGVector(dx: 0, dy: -100))
+        }
+        let dropAction = SKAction.sequence([delay, giveInitialVelocity])
+        emojiTile.run(dropAction)
+    }
+    
+    private func addNewDiscoveryEffect(to emojiTile: EmojiIconTile, rarity: EmojiRarity?) {
+        // Add sparkle effect for new discoveries
+        let sparkleEffect = SKAction.sequence([
+            SKAction.scale(to: 1.2, duration: 0.3),
+            SKAction.scale(to: 1.0, duration: 0.3)
+        ])
+        
+        // Add glow effect based on rarity
+        if let rarity = rarity {
+            let glowColor: UIColor
+            switch rarity {
+            case .legendary:
+                glowColor = UIColor.systemYellow
+            case .mythic:
+                glowColor = UIColor.systemPurple
+            case .epic:
+                glowColor = UIColor.systemBlue
+            case .rare:
+                glowColor = UIColor.systemRed
+            case .uncommon:
+                glowColor = UIColor.systemOrange
+            case .common:
+                glowColor = UIColor.systemGray
             }
             
-            // Position at top of visible screen for testing
-            let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
-            let startY = size.height - 50  // Start at top of visible screen
-            emojiTile.position = CGPoint(x: randomX, y: startY)
-            emojiTile.zPosition = 100
-            
-            print("🎉 Created \(emoji) tile at position (\(randomX), \(startY)), screen height: \(size.height)")
-            print("🎉 Tile physics body: \(String(describing: emojiTile.physicsBody))")
-            
-            addChild(emojiTile)
-            
-            // Add to tiles array so it can be cleaned up later
-            (allRespawnableTiles as? NSMutableArray)?.add(emojiTile)
-            
-            // Stagger the drops with debugging
-            let delay = SKAction.wait(forDuration: Double(index) * 0.2)
-            let giveInitialVelocity = SKAction.run {
-                print("🎉 Giving velocity to \(emoji) tile. Physics body: \(String(describing: emojiTile.physicsBody))")
-                // Give a strong downward velocity
-                emojiTile.physicsBody?.velocity = CGVector(dx: 0, dy: -200)
-                emojiTile.physicsBody?.applyImpulse(CGVector(dx: 0, dy: -100))
-            }
-            let dropAction = SKAction.sequence([delay, giveInitialVelocity])
-            emojiTile.run(dropAction)
+            // TODO: Add actual glow effect when SpriteKit supports it
+            emojiTile.run(SKAction.repeatForever(sparkleEffect))
+        }
+    }
+    
+    private func showPointsEarnedNotification(points: Int) {
+        // Create points notification label
+        let pointsLabel = SKLabelNode(text: "+\(points) pts")
+        pointsLabel.fontName = "AvenirNext-Bold"
+        pointsLabel.fontSize = 24
+        pointsLabel.fontColor = UIColor.systemYellow
+        pointsLabel.position = CGPoint(x: size.width / 2, y: size.height - 100)
+        pointsLabel.zPosition = 200
+        
+        addChild(pointsLabel)
+        
+        // Animate points notification
+        let moveUp = SKAction.moveBy(x: 0, y: 50, duration: 1.0)
+        let fadeOut = SKAction.fadeOut(withDuration: 1.0)
+        let remove = SKAction.removeFromParent()
+        let pointsSequence = SKAction.sequence([
+            SKAction.group([moveUp, fadeOut]),
+            remove
+        ])
+        
+        pointsLabel.run(pointsSequence)
+    }
+    
+    private func showGlobalDropAnnouncement(message: String) {
+        // Create global drop announcement
+        let announcementLabel = SKLabelNode(text: message)
+        announcementLabel.fontName = "AvenirNext-Bold"
+        announcementLabel.fontSize = 20
+        announcementLabel.fontColor = UIColor.systemGreen
+        announcementLabel.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        announcementLabel.zPosition = 300
+        
+        addChild(announcementLabel)
+        
+        // Animate announcement
+        let scaleIn = SKAction.scale(to: 1.0, duration: 0.5)
+        announcementLabel.setScale(0.1)
+        let wait = SKAction.wait(forDuration: 3.0)
+        let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+        let remove = SKAction.removeFromParent()
+        let announcementSequence = SKAction.sequence([scaleIn, wait, fadeOut, remove])
+        
+        announcementLabel.run(announcementSequence)
+        
+        DebugLogger.shared.game("🌍 Global drop announcement: \(message)")
+    }
+    
+    private func displayFallbackEmojis() {
+        // Fallback to basic celebration emojis if API fails
+        let fallbackEmojis = ["🎉", "🎊", "✨"]
+        print("🎉 DEBUG: Displaying \(fallbackEmojis.count) fallback emojis: \(fallbackEmojis)")
+        
+        for (index, emoji) in fallbackEmojis.enumerated() {
+            createAndDropEmojiTile(emoji: emoji, index: index, isNewDiscovery: false, rarity: .common)
+            print("🎉 DEBUG: Created fallback emoji tile: \(emoji) at index \(index)")
         }
     }
     
@@ -2685,24 +2780,27 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     private func cleanupCelebrationTiles() {
         DebugLogger.shared.ui("🧹 Cleaning up celebration tiles!")
         
-        // Only remove core celebration emoji tiles and awesome tile, keep special random ones
+        // Remove common emoji tiles but keep rare collectibles
         children.forEach { node in
             if let emojiTile = node as? EmojiIconTile {
-                // Only remove core celebration emojis, keep special random ones
-                if emojiTile.name == "core_celebration_emoji" {
-                    DebugLogger.shared.ui("🗑️ Removing core celebration emoji: \(emojiTile.emoji)")
+                // Handle different types of emoji tiles
+                if emojiTile.name == "collectable_emoji" || emojiTile.name == "rare_collectable_emoji" || emojiTile.name == "new_discovery_emoji" {
+                    DebugLogger.shared.ui("🌟 Keeping collectible emoji to persist between games: \(emojiTile.emoji)")
+                    // Keep ALL collectible emojis from new system - they persist between games
+                } else if emojiTile.name == "core_celebration_emoji" {
+                    // Legacy cleanup for old system
+                    DebugLogger.shared.ui("🗑️ Removing legacy celebration emoji: \(emojiTile.emoji)")
                     let fadeOut = SKAction.fadeOut(withDuration: 0.5)
                     let remove = SKAction.removeFromParent()
                     let cleanup = SKAction.sequence([fadeOut, remove])
                     emojiTile.run(cleanup)
                     
-                    // Also remove from respawnable tiles array
                     if let tilesArray = allRespawnableTiles as? NSMutableArray {
                         tilesArray.remove(emojiTile)
                     }
                 } else if emojiTile.name == "special_random_celebration_emoji" {
-                    DebugLogger.shared.ui("🌟 Keeping special random celebration emoji: \(emojiTile.emoji)")
-                    // Keep the special random emoji - don't remove it
+                    DebugLogger.shared.ui("🌟 Keeping legacy special emoji: \(emojiTile.emoji)")
+                    // Keep legacy special emojis for backwards compatibility
                 }
             }
             if let messageTile = node as? MessageTile {

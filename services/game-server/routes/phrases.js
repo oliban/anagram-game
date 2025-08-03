@@ -2,6 +2,67 @@ const express = require('express');
 const path = require('path');
 const router = express.Router();
 
+// Helper function to get weighted random emojis with proper rarity distribution
+async function getRandomEmojisForPhrase(client, numberOfDrops = Math.floor(Math.random() * 2) + 1) {
+    // Get all active emojis with their drop rates
+    const emojisResult = await client.query(`
+        SELECT * FROM emoji_catalog 
+        WHERE is_active = true 
+        ORDER BY id
+    `);
+    
+    const allEmojis = emojisResult.rows;
+    const droppedEmojis = [];
+    
+    // Calculate total weight for proper weighted random selection
+    const totalWeight = allEmojis.reduce((sum, emoji) => sum + parseFloat(emoji.drop_rate_percentage), 0);
+    
+    // Create a Set to track already selected emojis (avoid duplicates in same drop)
+    const selectedEmojiIds = new Set();
+    
+    for (let i = 0; i < numberOfDrops; i++) {
+        let attempts = 0;
+        let selectedEmoji = null;
+        
+        // Try up to 10 times to get a unique emoji (avoid duplicates)
+        while (attempts < 10) {
+            // Generate random number between 0 and totalWeight
+            const randomValue = Math.random() * totalWeight;
+            
+            // Find the emoji using proper weighted selection
+            let cumulativeWeight = 0;
+            
+            for (const emoji of allEmojis) {
+                cumulativeWeight += parseFloat(emoji.drop_rate_percentage);
+                if (randomValue <= cumulativeWeight) {
+                    // Check if we already selected this emoji
+                    if (numberOfDrops > 1 && selectedEmojiIds.has(emoji.id)) {
+                        attempts++;
+                        break; // Try again
+                    }
+                    selectedEmoji = emoji;
+                    selectedEmojiIds.add(emoji.id);
+                    break;
+                }
+            }
+            
+            if (selectedEmoji) break;
+        }
+        
+        // Fallback to first unselected emoji if no selection made
+        if (!selectedEmoji) {
+            selectedEmoji = allEmojis.find(e => !selectedEmojiIds.has(e.id)) || allEmojis[0];
+            console.warn('⚠️ EMOJI: Fallback selection used after 10 attempts');
+        }
+        
+        droppedEmojis.push(selectedEmoji);
+        
+        console.log(`🎲 EMOJI SELECTION: Random ${randomValue.toFixed(3)} / ${totalWeight.toFixed(3)} -> ${selectedEmoji.emoji_character} (${selectedEmoji.rarity_tier}, ${selectedEmoji.drop_rate_percentage}%)`);
+    }
+    
+    return droppedEmojis;
+}
+
 // Phrase routes - CRUD operations, approval, consumption, and analysis
 
 module.exports = (dependencies) => {
@@ -290,31 +351,54 @@ module.exports = (dependencies) => {
       const { calculateScore } = require('../shared/services/difficultyScorer');
       
       // Convert ALL phrases to CustomPhrase format that iOS NetworkManager expects
-      const customPhrasesFormat = phrases.map(phrase => {
-        const phraseInfo = phrase.getPublicInfo();
-        
-        // Calculate base score for each phrase
-        const baseScore = calculateScore({ 
-          phrase: phraseInfo.content, 
-          language: phraseInfo.language || 'en' 
-        });
-        
-        console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${phraseInfo.hint || ''}", theme: "${phraseInfo.theme || 'null'}"`);
-        
-        return {
-          id: phraseInfo.id,
-          content: phraseInfo.content,
-          senderId: phraseInfo.senderId || '',
-          targetId: phraseInfo.targetId || null,
-          createdAt: new Date().toISOString(),
-          isConsumed: false,
-          senderName: phraseInfo.senderName || 'Server',
-          language: phraseInfo.language || 'en',
-          clue: phraseInfo.hint || '', // Map hint to clue field
-          theme: phraseInfo.theme || null, // Add theme support for iOS app
-          difficultyLevel: phraseInfo.difficultyLevel || baseScore
-        };
-      });
+      // Use Promise.all to generate emojis for each phrase in parallel
+      const client = await pool.connect();
+      let customPhrasesFormat;
+      try {
+        customPhrasesFormat = await Promise.all(phrases.map(async phrase => {
+          const phraseInfo = phrase.getPublicInfo();
+          
+          // Calculate base score for each phrase
+          const baseScore = calculateScore({ 
+            phrase: phraseInfo.content, 
+            language: phraseInfo.language || 'en' 
+          });
+          
+          // Generate 1-2 random emojis for this phrase
+          const phraseEmojis = await getRandomEmojisForPhrase(client);
+          
+          console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${phraseInfo.hint || ''}", theme: "${phraseInfo.theme || 'null'}"`);
+          console.log(`🎲 EMOJI: Generated ${phraseEmojis.length} emojis for phrase "${phraseInfo.content}": ${phraseEmojis.map(e => e.emoji_character).join(', ')}`);
+          
+          return {
+            id: phraseInfo.id,
+            content: phraseInfo.content,
+            senderId: phraseInfo.senderId || '',
+            targetId: phraseInfo.targetId || null,
+            createdAt: new Date().toISOString(),
+            isConsumed: false,
+            senderName: phraseInfo.senderName || 'Server',
+            language: phraseInfo.language || 'en',
+            clue: phraseInfo.hint || '', // Map hint to clue field
+            theme: phraseInfo.theme || null, // Add theme support for iOS app
+            difficultyLevel: phraseInfo.difficultyLevel || baseScore,
+            // Add emoji data for each phrase
+            celebrationEmojis: phraseEmojis.map(emoji => ({
+              id: emoji.id,
+              emoji_character: emoji.emoji_character,
+              name: emoji.name,
+              rarity_tier: emoji.rarity_tier,
+              drop_rate_percentage: parseFloat(emoji.drop_rate_percentage),
+              points_reward: emoji.points_reward,
+              unicode_version: emoji.unicode_version,
+              is_active: emoji.is_active,
+              created_at: emoji.created_at
+            }))
+          };
+        }));
+      } finally {
+        client.release();
+      }
       
       console.log(`🚀 ROUTE: First formatted phrase theme:`, customPhrasesFormat[0]?.theme);
       
@@ -356,7 +440,7 @@ module.exports = (dependencies) => {
       }
       
       const { phraseId } = req.params;
-      const { playerId, hintsUsed, completionTime } = req.body;
+      const { playerId, hintsUsed, completionTime, celebrationEmojis } = req.body;
       
       // Validate required fields
       if (!playerId) {
@@ -424,6 +508,90 @@ module.exports = (dependencies) => {
         // Don't fail the request if stats recording fails
       }
       
+      // Process celebration emoji collection
+      let emojiCollectionResult = {
+        collectedEmojis: [],
+        newDiscoveries: [],
+        pointsEarned: 0,
+        triggeredGlobalDrop: false,
+        globalDropMessage: null
+      };
+      
+      if (celebrationEmojis && Array.isArray(celebrationEmojis) && celebrationEmojis.length > 0) {
+        console.log(`🎲 EMOJI: Processing ${celebrationEmojis.length} celebration emojis for phrase completion`);
+        
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          // Process each celebration emoji for collection
+          for (const emojiData of celebrationEmojis) {
+            // Check if player already has this emoji
+            const existingCollection = await client.query(
+              'SELECT id FROM player_emoji_collections WHERE player_id = $1 AND emoji_id = $2',
+              [playerId, emojiData.id]
+            );
+            
+            emojiCollectionResult.collectedEmojis.push(emojiData);
+            
+            // If it's a new discovery for this player
+            if (existingCollection.rows.length === 0) {
+              // Check if this is the first global discovery
+              const globalDiscovery = await client.query(
+                'SELECT id FROM emoji_global_discoveries WHERE emoji_id = $1',
+                [emojiData.id]
+              );
+              
+              const isFirstGlobalDiscovery = globalDiscovery.rows.length === 0;
+              
+              // Add to player's collection
+              await client.query(
+                'INSERT INTO player_emoji_collections (player_id, emoji_id, is_first_global_discovery) VALUES ($1, $2, $3)',
+                [playerId, emojiData.id, isFirstGlobalDiscovery]
+              );
+              
+              // If first global discovery, add to global discoveries
+              if (isFirstGlobalDiscovery) {
+                await client.query(
+                  'INSERT INTO emoji_global_discoveries (emoji_id, first_discoverer_id) VALUES ($1, $2)',
+                  [emojiData.id, playerId]
+                );
+                
+                // Check if this triggers global drops (Epic or rarer: <= 5%)
+                if (emojiData.drop_rate_percentage <= 5.0) {
+                  emojiCollectionResult.triggeredGlobalDrop = true;
+                  emojiCollectionResult.globalDropMessage = `🌟 ${player.name} discovered ${emojiData.emoji_character} (${emojiData.rarity_tier})! Everyone gets bonus drops!`;
+                }
+              }
+              
+              // Add points for the discovery
+              emojiCollectionResult.pointsEarned += emojiData.points_reward;
+              emojiCollectionResult.newDiscoveries.push(emojiData);
+              
+              console.log(`🆕 NEW DISCOVERY: ${emojiData.emoji_character} (${emojiData.rarity_tier}) for player ${playerId}`);
+            }
+          }
+          
+          // Update player's total emoji points if any points were earned
+          if (emojiCollectionResult.pointsEarned > 0) {
+            await client.query(
+              'UPDATE players SET total_emoji_points = COALESCE(total_emoji_points, 0) + $1 WHERE id = $2',
+              [emojiCollectionResult.pointsEarned, playerId]
+            );
+          }
+          
+          await client.query('COMMIT');
+          console.log(`✨ Emoji collection complete - ${emojiCollectionResult.pointsEarned} points earned, ${emojiCollectionResult.newDiscoveries.length} new discoveries`);
+          
+        } catch (emojiError) {
+          await client.query('ROLLBACK');
+          console.error('❌ Error processing emoji collection:', emojiError);
+          // Don't fail the phrase completion if emoji collection fails
+        } finally {
+          client.release();
+        }
+      }
+      
       const completionResult = {
         success: true,
         completion: {
@@ -431,6 +599,7 @@ module.exports = (dependencies) => {
           hintsUsed: hintsUsed,
           completionTime: completionTime
         },
+        emojiCollection: emojiCollectionResult,
         timestamp: new Date().toISOString()
       };
       

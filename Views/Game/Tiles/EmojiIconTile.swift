@@ -10,9 +10,19 @@ import SpriteKit
 
 class EmojiIconTile: IconTile {
     let emoji: String
+    private let rarity: EmojiRarity?
     
-    init(emoji: String, size: CGSize = CGSize(width: 60, height: 60)) {
+    // Override tileColorScheme to use rarity-based colors
+    override var tileColorScheme: TileColorScheme {
+        if let rarity = rarity {
+            return TileColorScheme.from(rarity: rarity)
+        }
+        return .common // Default to common if no rarity specified
+    }
+    
+    init(emoji: String, rarity: EmojiRarity? = nil, size: CGSize = CGSize(width: 60, height: 60)) {
         self.emoji = emoji
+        self.rarity = rarity
         super.init(size: size)
         setupEmojiDisplay(emoji)
         
@@ -54,6 +64,7 @@ class EmojiIconTile: IconTile {
     
     required init?(coder aDecoder: NSCoder) {
         self.emoji = "" // Default empty emoji for decoding
+        self.rarity = nil // Default to no rarity for decoding
         super.init(coder: aDecoder)
     }
 }

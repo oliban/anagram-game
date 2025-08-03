@@ -495,7 +495,11 @@ class GameModel: ObservableObject {
             print("🔍 SERVER_COMPLETION: Attempting to complete phraseId: '\(phraseId)' with \(hintsUsed) hints")
             Task {
                 let networkManager = NetworkManager.shared
-                if let result = await networkManager.completePhrase(phraseId: phraseId, hintsUsed: hintsUsed) {
+                // Get celebration emojis from current phrase
+                let celebrationEmojis = currentCustomPhrase?.celebrationEmojis ?? []
+                print("🎲 COMPLETION: Sending \(celebrationEmojis.count) celebration emojis with phrase completion")
+                
+                if let result = await networkManager.completePhrase(phraseId: phraseId, hintsUsed: hintsUsed, celebrationEmojis: celebrationEmojis) {
                     if result.success {
                         print("✅ SERVER COMPLETION: Success! Server score: \(result.completion.finalScore), client: \(currentScore)")
                         
