@@ -268,6 +268,40 @@ class NetworkManager: ObservableObject {
         return try await phraseService.completePhraseOnServer(phraseId: phraseId, playerId: playerId, hintsUsed: hintsUsed, completionTime: completionTime)
     }
     
+    func skipPhrase(phraseId: String) async -> Bool {
+        guard let currentPlayer = currentPlayer else {
+            print("❌ PHRASE: No current player to skip phrase")
+            return false
+        }
+        
+        let urlString = "\(AppConfig.baseURL)/api/phrases/\(phraseId)/skip"
+        guard let url = URL(string: urlString) else {
+            print("❌ PHRASE: Invalid skip URL")
+            return false
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let body = ["playerId": currentPlayer.id]
+            request.httpBody = try JSONEncoder().encode(body)
+            
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                let success = httpResponse.statusCode == 200
+                print("\(success ? "✅" : "❌") PHRASE: Skip phrase response: \(httpResponse.statusCode)")
+                return success
+            }
+            return false
+        } catch {
+            print("❌ PHRASE: Failed to skip phrase: \(error)")
+            return false
+        }
+    }
+    
     // MARK: - Leaderboard Management
     
     func fetchDailyLeaderboard() async throws -> [LeaderboardEntry] {

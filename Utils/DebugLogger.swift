@@ -21,9 +21,11 @@ class DebugLogger {
     private let maxFileSize: Int = 5 * 1024 * 1024 // 5MB
     
     private init() {
-        // Setup file logging
+        // Setup file logging - use shared location visible in Simulator
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        self.logURL = documentsPath.appendingPathComponent("anagram-debug.log")
+        // Include device name in filename to distinguish logs from different simulators
+        let deviceName = UIDevice.current.name.replacingOccurrences(of: " ", with: "-")
+        self.logURL = documentsPath.appendingPathComponent("anagram-debug-\(deviceName).log")
         
         self.dateFormatter = DateFormatter()
         self.dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"

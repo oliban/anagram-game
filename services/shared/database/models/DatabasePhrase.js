@@ -253,7 +253,7 @@ class DatabasePhrase {
           AND pp.is_delivered = false
           AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
         ORDER BY p.created_at ASC
-        LIMIT 10
+        LIMIT 25
       `, [playerId]);
 
       let phrases = targetedResult.rows.map(row => {
@@ -308,7 +308,7 @@ class DatabasePhrase {
             AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
             ${globalDifficultyFilter}
           ORDER BY RANDOM()
-          LIMIT 10
+          LIMIT 25
         `, globalParams);
 
         phrases = globalResult.rows.map(row => {
