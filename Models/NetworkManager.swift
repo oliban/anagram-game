@@ -175,8 +175,8 @@ class NetworkManager: ObservableObject {
         return try await phraseService.fetchPhraseForPlayer(playerId: playerId)
     }
     
-    func createCustomPhrase(content: String, playerId: String, targetId: String?, hint: String = "", language: String = "en") async throws -> CustomPhrase {
-        return try await phraseService.createCustomPhrase(content: content, playerId: playerId, targetId: targetId, hint: hint, language: language)
+    func createCustomPhrase(content: String, playerId: String, targetId: String?, hint: String = "", isGlobal: Bool = false, language: String = "en") async throws -> CustomPhrase {
+        return try await phraseService.createCustomPhrase(content: content, playerId: playerId, targetId: targetId, hint: hint, isGlobal: isGlobal, language: language)
     }
     
     func fetchPhrasesForCurrentPlayer(level: Int? = nil) async -> [CustomPhrase] {
@@ -223,8 +223,8 @@ class NetworkManager: ObservableObject {
         }
         
         // For enhanced phrases, we'll create them as custom phrases
-        // If it's global, targetId is nil; if targeted, use first targetId
-        let targetId = isGlobal ? nil : targetIds.first
+        // Support both global AND targeted - use first targetId regardless of global flag
+        let targetId = targetIds.first
         
         do {
             _ = try await phraseService.createCustomPhrase(
@@ -232,6 +232,7 @@ class NetworkManager: ObservableObject {
                 playerId: currentPlayer.id,
                 targetId: targetId,
                 hint: hint,
+                isGlobal: isGlobal,
                 language: language
             )
             print("✅ ENHANCED PHRASE: Successfully created enhanced phrase")
@@ -392,25 +393,249 @@ class NetworkManager: ObservableObject {
     static func analyzeDifficultyClientSide(phrase: String, language: String = "en") -> DifficultyAnalysis {
         print("🔍 CLIENT DIFFICULTY: Analyzing '\(phrase)' with language '\(language)'")
         
-        // Simple scoring based on length and complexity
-        let words = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
+        // Load the shared configuration and use the proper algorithm
+        if let config = SharedDifficultyConfig.load() {
+            print("✅ CLIENT DIFFICULTY: Using shared algorithm from config")
+            return config.calculateDifficulty(phrase: phrase, language: language)
+        } else {
+            print("❌ CLIENT DIFFICULTY: Failed to load shared config, using fallback algorithm")
+            
+            // Fallback algorithm if config loading fails
+            let words = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+                .components(separatedBy: .whitespacesAndNewlines)
+                .filter { !$0.isEmpty }
+            
+            let letterCount = phrase.replacingOccurrences(of: " ", with: "").count
+            
+            // Simple scoring based on length and complexity
+            let baseScore = Double(letterCount * 5 + words.count * 10)
+            let finalScore = min(max(baseScore, 1.0), 100.0)
+            
+            print("⚠️ CLIENT DIFFICULTY: Calculated score \(finalScore) for '\(phrase)' (\(language)) - FALLBACK ALGORITHM")
+            
+            return DifficultyAnalysis(
+                phrase: phrase,
+                language: language,
+                score: finalScore,
+                difficulty: finalScore > 50 ? "Medium" : "Easy",
+                timestamp: ISO8601DateFormatter().string(from: Date())
+            )
+        }
+    }
+}
+
+// MARK: - Shared Configuration Reader
+
+private struct SharedDifficultyConfig: Codable {
+    let version: String
+    let lastUpdated: String
+    let languages: Languages
+    let letterFrequencies: [String: [String: Double]]
+    let maxFrequencies: [String: Double]
+    let difficultyThresholds: DifficultyThresholds
+    let difficultyLabels: DifficultyLabels
+    let algorithmParameters: AlgorithmParameters
+    let textNormalization: [String: TextNormalization]
+    let languageDetection: LanguageDetection
+    
+    struct Languages: Codable {
+        let english: String
+        let swedish: String
+    }
+    
+    struct DifficultyThresholds: Codable {
+        let veryEasy: Double
+        let easy: Double
+        let medium: Double
+        let hard: Double
+    }
+    
+    struct DifficultyLabels: Codable {
+        let veryEasy: String
+        let easy: String
+        let medium: String
+        let hard: String
+        let veryHard: String
+    }
+    
+    struct AlgorithmParameters: Codable {
+        let wordCount: WordCountParams
+        let letterCount: LetterCountParams
+        let commonality: CommonalityParams
+        let letterRepetition: LetterRepetitionParams
+        let minimumScore: Double
         
-        let letterCount = phrase.replacingOccurrences(of: " ", with: "").count
+        struct WordCountParams: Codable {
+            let exponent: Double
+            let multiplier: Double
+        }
         
-        // Simple scoring based on length and complexity
-        let baseScore = Double(letterCount * 5 + words.count * 10)
-        let finalScore = min(max(baseScore, 1.0), 100.0)
+        struct LetterCountParams: Codable {
+            let exponent: Double
+            let multiplier: Double
+        }
         
-        print("⚠️ CLIENT DIFFICULTY: Calculated score \(finalScore) for '\(phrase)' (\(language)) - CLIENT ALGORITHM")
+        struct CommonalityParams: Codable {
+            let multiplier: Double
+            let shortPhraseThreshold: Int
+            let shortPhraseDampening: Double
+        }
+        
+        struct LetterRepetitionParams: Codable {
+            let multiplier: Double
+            let description: String
+        }
+    }
+    
+    struct TextNormalization: Codable {
+        let regex: String
+        let description: String
+    }
+    
+    struct LanguageDetection: Codable {
+        let swedishCharacters: String
+        let defaultLanguage: String
+    }
+    
+    static func load() -> SharedDifficultyConfig? {
+        print("🔍 CONFIG: Attempting to load difficulty-algorithm-config.json from bundle")
+        
+        guard let path = Bundle.main.path(forResource: "difficulty-algorithm-config", ofType: "json") else {
+            print("❌ CONFIG: Could not find difficulty-algorithm-config.json in app bundle")
+            print("🔍 CONFIG: Bundle path: \(Bundle.main.bundlePath)")
+            return nil
+        }
+        
+        print("✅ CONFIG: Found config file at path: \(path)")
+        
+        guard let data = NSData(contentsOfFile: path) as Data? else {
+            print("❌ CONFIG: Could not read data from config file")
+            return nil
+        }
+        
+        print("✅ CONFIG: Successfully read \(data.count) bytes from config file")
+        
+        do {
+            let config = try JSONDecoder().decode(SharedDifficultyConfig.self, from: data)
+            print("✅ CONFIG: Successfully decoded shared difficulty config version \(config.version)")
+            return config
+        } catch {
+            print("❌ CONFIG: Failed to decode shared config: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("🔍 CONFIG: File contents (first 200 chars): \(String(jsonString.prefix(200)))")
+            }
+            return nil
+        }
+    }
+    
+    func calculateDifficulty(phrase: String, language: String) -> DifficultyAnalysis {
+        guard !phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return DifficultyAnalysis(
+                phrase: phrase,
+                language: language,
+                score: algorithmParameters.minimumScore,
+                difficulty: difficultyLabels.veryEasy,
+                timestamp: ISO8601DateFormatter().string(from: Date())
+            )
+        }
+        
+        let normalizedText = normalize(phrase: phrase, language: language)
+        let wordCount = countWords(phrase)
+        let letterCount = normalizedText.count
+        
+        guard letterCount > 0 else {
+            return DifficultyAnalysis(
+                phrase: phrase,
+                language: language,
+                score: algorithmParameters.minimumScore,
+                difficulty: difficultyLabels.veryEasy,
+                timestamp: ISO8601DateFormatter().string(from: Date())
+            )
+        }
+        
+        let score = calculateScore(
+            normalizedText: normalizedText,
+            wordCount: wordCount,
+            letterCount: letterCount,
+            language: language
+        )
         
         return DifficultyAnalysis(
             phrase: phrase,
             language: language,
-            score: finalScore,
-            difficulty: finalScore > 50 ? "Medium" : "Easy",
+            score: score,
+            difficulty: getDifficultyLabel(for: score),
             timestamp: ISO8601DateFormatter().string(from: Date())
         )
+    }
+    
+    private func normalize(phrase: String, language: String) -> String {
+        guard !phrase.isEmpty else { return "" }
+        
+        let text = phrase.lowercased()
+        let normalization = textNormalization[language] ?? textNormalization[languages.english]!
+        
+        return text.replacingOccurrences(of: normalization.regex, with: "", options: .regularExpression)
+    }
+    
+    private func countWords(_ phrase: String) -> Int {
+        return phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .count
+    }
+    
+    private func calculateScore(normalizedText: String, wordCount: Int, letterCount: Int, language: String) -> Double {
+        let frequencies = letterFrequencies[language] ?? letterFrequencies[languages.english]!
+        let maxFrequency = maxFrequencies[language] ?? maxFrequencies[languages.english]!
+        
+        // 1. Word Count Factor
+        let wordCountFactor = pow(
+            Double(max(0, wordCount - 1)),
+            algorithmParameters.wordCount.exponent
+        ) * algorithmParameters.wordCount.multiplier
+        
+        // 2. Letter Count Factor
+        let letterCountFactor = pow(
+            Double(letterCount),
+            algorithmParameters.letterCount.exponent
+        ) * algorithmParameters.letterCount.multiplier
+        
+        // 3. Letter Commonality Factor
+        var totalFrequency = 0.0
+        for char in normalizedText {
+            totalFrequency += frequencies[String(char)] ?? 0.0
+        }
+        let averageFrequency = totalFrequency / Double(letterCount)
+        var commonalityFactor = (averageFrequency / maxFrequency) * algorithmParameters.commonality.multiplier
+        
+        // Dampen commonality for very short phrases
+        if letterCount <= algorithmParameters.commonality.shortPhraseThreshold {
+            commonalityFactor *= algorithmParameters.commonality.shortPhraseDampening
+        }
+        
+        // 4. Letter Repetition Factor
+        let uniqueLetters = Set(normalizedText).count
+        let repetitionRatio = Double(letterCount - uniqueLetters) / Double(letterCount)
+        let repetitionFactor = repetitionRatio * algorithmParameters.letterRepetition.multiplier
+        
+        // Combine factors and clamp the score
+        let rawScore = wordCountFactor + letterCountFactor + commonalityFactor + repetitionFactor
+        return round(max(algorithmParameters.minimumScore, rawScore))
+    }
+    
+    private func getDifficultyLabel(for score: Double) -> String {
+        switch score {
+        case ...difficultyThresholds.veryEasy:
+            return difficultyLabels.veryEasy
+        case ...difficultyThresholds.easy:
+            return difficultyLabels.easy
+        case ...difficultyThresholds.medium:
+            return difficultyLabels.medium
+        case ...difficultyThresholds.hard:
+            return difficultyLabels.hard
+        default:
+            return difficultyLabels.veryHard
+        }
     }
 }
