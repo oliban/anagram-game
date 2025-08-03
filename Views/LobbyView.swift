@@ -249,13 +249,13 @@ struct LobbyView: View {
             HStack {
                 Image(systemName: "sparkles")
                     .foregroundColor(.yellow)
-                Text("Your Rarest Finds")
+                Text("Your Emoji Collection")
                     .font(.headline)
                     .fontWeight(.semibold)
                 Spacer()
             }
             
-            Text("Your \(emojis.count) rarest emoji discoveries")
+            Text("Your \(emojis.count) collected emojis (rarest first)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
