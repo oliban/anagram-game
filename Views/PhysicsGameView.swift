@@ -2526,32 +2526,48 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func addNewDiscoveryEffect(to emojiTile: EmojiIconTile, rarity: EmojiRarity?) {
-        // Add sparkle effect for new discoveries
-        let sparkleEffect = SKAction.sequence([
-            SKAction.scale(to: 1.2, duration: 0.3),
-            SKAction.scale(to: 1.0, duration: 0.3)
-        ])
-        
-        // Add glow effect based on rarity
+        // Add sparkle effect for rare emojis
         if let rarity = rarity {
-            let glowColor: UIColor
+            // Only add sparkle effect for Epic or rarer (5% drop rate or lower)
+            let shouldSparkle: Bool
+            let sparkleIntensity: (scale: CGFloat, duration: TimeInterval, alpha: CGFloat)
+            
             switch rarity {
             case .legendary:
-                glowColor = UIColor.systemYellow
+                shouldSparkle = true
+                sparkleIntensity = (scale: 1.4, duration: 0.4, alpha: 0.3)
             case .mythic:
-                glowColor = UIColor.systemPurple
+                shouldSparkle = true
+                sparkleIntensity = (scale: 1.3, duration: 0.5, alpha: 0.25)
             case .epic:
-                glowColor = UIColor.systemBlue
-            case .rare:
-                glowColor = UIColor.systemRed
-            case .uncommon:
-                glowColor = UIColor.systemOrange
-            case .common:
-                glowColor = UIColor.systemGray
+                shouldSparkle = true
+                sparkleIntensity = (scale: 1.2, duration: 0.6, alpha: 0.2)
+            case .rare, .uncommon, .common:
+                shouldSparkle = false
+                sparkleIntensity = (scale: 1.0, duration: 1.0, alpha: 0.0)
             }
             
-            // TODO: Add actual glow effect when SpriteKit supports it
-            emojiTile.run(SKAction.repeatForever(sparkleEffect))
+            if shouldSparkle {
+                // Create pulsing glow effect
+                let glowEffect = SKAction.sequence([
+                    SKAction.group([
+                        SKAction.scale(to: sparkleIntensity.scale, duration: sparkleIntensity.duration),
+                        SKAction.fadeAlpha(to: 1.0 - sparkleIntensity.alpha, duration: sparkleIntensity.duration)
+                    ]),
+                    SKAction.group([
+                        SKAction.scale(to: 1.0, duration: sparkleIntensity.duration),
+                        SKAction.fadeAlpha(to: 1.0, duration: sparkleIntensity.duration)
+                    ])
+                ])
+                
+                // Run the sparkle effect for a limited time (10 seconds) then fade out
+                let sparkleSequence = SKAction.sequence([
+                    SKAction.repeat(glowEffect, count: Int(10.0 / (sparkleIntensity.duration * 2))),
+                    SKAction.fadeAlpha(to: 1.0, duration: 0.5)
+                ])
+                
+                emojiTile.run(sparkleSequence)
+            }
         }
     }
     
