@@ -190,10 +190,11 @@ class MonitoringDashboard {
 
         console.log('📊 Feed children count after add:', feed.children.length);
 
-        if (this.isAutoScrolling && isNew) {
-            console.log('📜 Auto-scrolling to new item');
-            activityElement.scrollIntoView({ behavior: 'smooth' });
-        }
+        // Removed auto-scroll behavior to prevent jumping when checking for new activity
+        // if (this.isAutoScrolling && isNew) {
+        //     console.log('📜 Auto-scrolling to new item');
+        //     activityElement.scrollIntoView({ behavior: 'smooth' });
+        // }
 
         console.log('🔍 Applying filters...');
         this.applyFilters();
@@ -260,10 +261,34 @@ class MonitoringDashboard {
 
         phrasesList.innerHTML = phrases.map(phrase => `
             <div class="phrase-item">
-                <div class="phrase-content">"${phrase.content}"</div>
-                <div class="phrase-info">
-                    <span class="phrase-difficulty ${phrase.difficulty}">${phrase.difficulty}</span>
-                    <span class="phrase-time">${this.formatTime(phrase.createdAt)}</span>
+                <div class="phrase-header">
+                    <div class="phrase-content">"${phrase.content}"</div>
+                    <div class="phrase-meta">
+                        <span class="phrase-language">${phrase.language.toUpperCase()}</span>
+                        <span class="phrase-difficulty ${phrase.difficultyCategory}">
+                            ${phrase.difficultyCategory} (${phrase.difficultyScore})
+                        </span>
+                        <span class="phrase-time">${this.formatTime(phrase.createdAt)}</span>
+                    </div>
+                </div>
+                <div class="phrase-details">
+                    <div class="phrase-hint">
+                        <strong>Clue:</strong> ${phrase.hint || 'No clue provided'}
+                    </div>
+                    <div class="phrase-info-row">
+                        <span class="phrase-creator">
+                            <strong>Creator:</strong> ${phrase.creatorName}
+                        </span>
+                        <span class="phrase-method">
+                            <strong>Method:</strong> ${phrase.creationMethod}
+                        </span>
+                        <span class="phrase-status">
+                            ${phrase.isGlobal ? 
+                                (phrase.isApproved ? '<span class="status-global-approved">✅ Global Pool</span>' : '<span class="status-global-pending">⏳ Pending Approval</span>') 
+                                : '<span class="status-targeted">🎯 Targeted</span>'
+                            }
+                        </span>
+                    </div>
                 </div>
             </div>
         `).join('');
@@ -309,7 +334,7 @@ class MonitoringDashboard {
     }
     
     updateLanguageInventory(languageInventory) {
-        // Update language inventory for each language
+        // Update language inventory for each language using compact layout
         ['en', 'sv'].forEach(lang => {
             const data = languageInventory[lang] || { veryEasy: 0, easy: 0, medium: 0, hard: 0, veryHard: 0, total: 0 };
             
@@ -324,7 +349,7 @@ class MonitoringDashboard {
             document.getElementById(`lang-${lang}-veryHard`).textContent = data.veryHard;
             
             // Update card status based on total
-            const card = document.getElementById(`lang-${lang}`);
+            const card = document.getElementById(`lang-${lang}-compact`);
             card.classList.remove('critical', 'low', 'good');
             
             if (data.total === 0) {

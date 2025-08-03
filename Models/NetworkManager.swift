@@ -175,8 +175,8 @@ class NetworkManager: ObservableObject {
         return try await phraseService.fetchPhraseForPlayer(playerId: playerId)
     }
     
-    func createCustomPhrase(content: String, playerId: String, targetId: String?, language: String = "en") async throws -> CustomPhrase {
-        return try await phraseService.createCustomPhrase(content: content, playerId: playerId, targetId: targetId, language: language)
+    func createCustomPhrase(content: String, playerId: String, targetId: String?, hint: String = "", language: String = "en") async throws -> CustomPhrase {
+        return try await phraseService.createCustomPhrase(content: content, playerId: playerId, targetId: targetId, hint: hint, language: language)
     }
     
     func fetchPhrasesForCurrentPlayer(level: Int? = nil) async -> [CustomPhrase] {
@@ -205,6 +205,7 @@ class NetworkManager: ObservableObject {
                 content: content,
                 playerId: currentPlayer.id,
                 targetId: nil, // Global phrase
+                hint: "", // No hint for global phrases created through this method
                 language: language
             )
             print("✅ GLOBAL PHRASE: Successfully created global phrase")
@@ -230,6 +231,7 @@ class NetworkManager: ObservableObject {
                 content: content,
                 playerId: currentPlayer.id,
                 targetId: targetId,
+                hint: hint,
                 language: language
             )
             print("✅ ENHANCED PHRASE: Successfully created enhanced phrase")

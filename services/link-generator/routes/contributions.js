@@ -227,23 +227,19 @@ module.exports = (dependencies) => {
         });
       }
 
-      // Create phrase via game server API to trigger WebSocket notifications
+      // Create phrase via game server's contribution endpoint to properly handle contributor names
       const axios = require('axios');
       
-      const phraseCreationData = {
-        content: trimmedPhrase,
-        hint: clue.trim(),
-        theme: theme && theme.trim() ? theme.trim() : null,
+      const contributionData = {
+        phrase: trimmedPhrase,
+        clue: clue.trim(),
         language: language,
-        senderId: null, // External contribution - no sender
-        targetId: validation.link.requestingPlayerId,
-        phraseType: 'custom',
         contributorName: contributorName || 'Anonymous'
       };
 
       let createdPhrase;
       try {
-        const gameServerResponse = await axios.post('http://game-server:3000/api/phrases/create', phraseCreationData, {
+        const gameServerResponse = await axios.post(`http://game-server:3000/api/contribution/${token}/submit`, contributionData, {
           timeout: 5000,
           headers: {
             'Content-Type': 'application/json'

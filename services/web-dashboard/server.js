@@ -210,16 +210,33 @@ async function getRecentPhrases() {
             SELECT 
                 p.id,
                 p.content,
+                p.hint,
                 p.language,
+                p.difficulty_level,
                 p.created_at,
+                p.is_global,
+                p.is_approved,
+                p.source,
+                p.created_by_player_id,
+                p.contributor_name,
+                pl.name as creator_name,
                 CASE 
                     WHEN p.difficulty_level <= 20 THEN 'very-easy'
                     WHEN p.difficulty_level <= 40 THEN 'easy'
                     WHEN p.difficulty_level <= 60 THEN 'medium'
                     WHEN p.difficulty_level <= 80 THEN 'hard'
                     ELSE 'very-hard'
-                END as difficulty
+                END as difficulty_category,
+                CASE 
+                    WHEN p.source = 'web' THEN 'contribution-link'
+                    WHEN p.source = 'external' THEN 'contribution-link'
+                    WHEN p.source = 'admin' THEN 'admin-panel'
+                    WHEN p.source = 'app' THEN 'mobile-app'
+                    WHEN p.source IS NULL THEN 'legacy-data'
+                    ELSE p.source
+                END as creation_method
             FROM phrases p
+            LEFT JOIN players pl ON p.created_by_player_id = pl.id
             WHERE p.created_at > NOW() - INTERVAL '24 hours'
             ORDER BY p.created_at DESC
             LIMIT 10
@@ -230,9 +247,15 @@ async function getRecentPhrases() {
         return result.rows.map(row => ({
             id: row.id,
             content: row.content,
+            hint: row.hint,
             language: row.language,
-            difficulty: row.difficulty,
-            createdAt: row.created_at
+            difficultyScore: row.difficulty_level,
+            difficultyCategory: row.difficulty_category,
+            createdAt: row.created_at,
+            isGlobal: row.is_global,
+            isApproved: row.is_approved,
+            creatorName: row.contributor_name || row.creator_name || 'Unknown',
+            creationMethod: row.creation_method
         }));
         
     } catch (error) {

@@ -89,7 +89,7 @@ class PhraseService: PhraseServiceDelegate {
         }
     }
     
-    func createCustomPhrase(content: String, playerId: String, targetId: String?, language: String = "en") async throws -> CustomPhrase {
+    func createCustomPhrase(content: String, playerId: String, targetId: String?, hint: String = "", language: String = "en") async throws -> CustomPhrase {
         guard let url = URL(string: "\(baseURL)/api/phrases/create") else {
             throw NetworkError.invalidURL
         }
@@ -98,6 +98,7 @@ class PhraseService: PhraseServiceDelegate {
             "content": content,
             "senderId": playerId,
             "targetId": targetId as Any,
+            "hint": hint,
             "language": language
         ]
         

@@ -121,6 +121,12 @@
     background: #f8fafc;
 }
 
+/* Expanded recent phrases card styling */
+.recent-phrases-expanded {
+    max-height: 400px; /* Increased height to show ~3 phrases without scrolling */
+    min-height: 300px; /* Minimum height to ensure consistent card size */
+}
+
 .player-item {
     display: flex;
     align-items: center;
@@ -433,7 +439,7 @@
 /* Responsive adjustments */
 @media (max-width: 1024px) {
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Single column on smaller screens */
     }
     
     .filter-controls {
@@ -619,4 +625,228 @@
 
 .language-card.good .language-number {
     color: #388e3c;
+}
+
+/* Inventory Sections */
+.inventory-section {
+    margin-bottom: 24px;
+}
+
+.inventory-section:last-child {
+    margin-bottom: 0;
+}
+
+.inventory-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+/* Compact Language Inventory */
+.language-inventory-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.language-compact-item {
+    padding: 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.language-compact-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.language-compact-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.language-compact-header .language-flag {
+    font-size: 16px;
+}
+
+.language-compact-header .language-name {
+    font-weight: 600;
+    color: #374151;
+    flex: 1;
+}
+
+.language-total-compact {
+    font-weight: 700;
+    font-size: 18px;
+    color: #1f2937;
+    padding: 4px 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.language-breakdown-compact {
+    display: flex;
+    gap: 4px;
+    justify-content: space-between;
+}
+
+.breakdown-compact {
+    flex: 1;
+    text-align: center;
+    padding: 4px 2px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f9fafb;
+    border-radius: 3px;
+    color: #6b7280;
+    min-width: 24px;
+}
+
+/* Color coding for language status */
+.language-compact-item.critical .language-total-compact {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.language-compact-item.low .language-total-compact {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.language-compact-item.good .language-total-compact {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+/* Enhanced Phrase Display */
+.phrase-item {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
+
+.phrase-header {
+    margin-bottom: 10px;
+}
+
+.phrase-content {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.phrase-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.phrase-language {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.phrase-difficulty {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.phrase-difficulty.very-easy {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.phrase-difficulty.easy {
+    background: #f1f8e9;
+    color: #558b2f;
+}
+
+.phrase-difficulty.medium {
+    background: #fff8e1;
+    color: #f57c00;
+}
+
+.phrase-difficulty.hard {
+    background: #fce4ec;
+    color: #c2185b;
+}
+
+.phrase-difficulty.very-hard {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.phrase-time {
+    background: #f5f5f5;
+    color: #666;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.phrase-details {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 10px;
+}
+
+.phrase-hint {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.phrase-info-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+
+.phrase-creator,
+.phrase-method {
+    color: #555;
+}
+
+.status-global-approved {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-global-pending {
+    background: #fff8e1;
+    color: #f57c00;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-targeted {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
 }
