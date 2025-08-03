@@ -250,7 +250,7 @@ module.exports = (dependencies) => {
         const skillLevel = skillInfo.level;
         const skillTitle = skillInfo.title;
         
-        // Get player's 8 rarest emojis for legends display
+        // Get player's 5 rarest emojis for legends display
         const rarestEmojisQuery = `
           SELECT 
             ec.emoji_character,
@@ -262,7 +262,7 @@ module.exports = (dependencies) => {
           JOIN emoji_catalog ec ON pec.emoji_id = ec.id
           WHERE pec.player_id = $1
           ORDER BY ec.drop_rate_percentage ASC
-          LIMIT 8
+          LIMIT 5
         `;
         
         const emojiResult = await pool.query(rarestEmojisQuery, [row.id]);

@@ -270,12 +270,6 @@ struct LobbyView: View {
                         Text(emoji.emojiCharacter)
                             .font(.title3)
                         
-                        if emoji.isFirstGlobalDiscovery {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 6))
-                                .foregroundColor(.yellow)
-                        }
-                        
                         // Rarity indicator dot
                         Circle()
                             .fill(rarityColor(for: emoji.rarityTier))
