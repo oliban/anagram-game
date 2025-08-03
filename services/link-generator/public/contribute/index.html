@@ -42,13 +42,13 @@
                 <div class="form-group">
                     <label for="phrase-input" class="form-label">
                         Phrase or Sentence *
-                        <span class="help-text">Enter a phrase, sentence, or quote that will be scrambled into an anagram puzzle</span>
+                        <span class="help-text">2-4 words, max 7 letters per word (e.g., "Hello World")</span>
                     </label>
                     <textarea 
                         id="phrase-input" 
                         class="form-input form-textarea" 
                         placeholder="e.g., Hello World"
-                        maxlength="50"
+                        maxlength="35"
                         required
                     ></textarea>
                     <div class="error-message" id="phrase-input-error"></div>
@@ -57,7 +57,7 @@
                         <div class="scrambled-text" id="scrambled-text"></div>
                     </div>
                     <div class="character-count">
-                        <span id="char-count">0</span> / 50 characters
+                        <span id="char-count">0</span> / 35 characters
                     </div>
                     <div class="quality-indicator" id="quality-indicator">
                         <div class="quality-badge quality-poor">❓ Start typing to see quality feedback</div>
@@ -88,31 +88,37 @@
                 <div class="form-group">
                     <label for="clue-input" class="form-label">
                         Clue *
-                        <span class="help-text">Provide a helpful hint to make it more fun to solve (required)</span>
+                        <span class="help-text">Max 32 characters - provide a helpful hint (required)</span>
                     </label>
                     <input 
                         type="text" 
                         id="clue-input" 
                         class="form-input" 
                         placeholder="Enter a helpful hint or clue..."
-                        maxlength="500"
+                        maxlength="32"
                         required
                     >
+                    <div class="character-count">
+                        <span id="clue-char-count">0</span> / 32 characters
+                    </div>
                     <div class="error-message" id="clue-input-error"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="contributor-name" class="form-label">
                         Your Name (Optional)
-                        <span class="help-text">Will be shown to the player</span>
+                        <span class="help-text">Max 10 characters - will be shown to the player</span>
                     </label>
                     <input 
                         type="text" 
                         id="contributor-name" 
                         class="form-input" 
-                        placeholder="Your name (optional)"
-                        maxlength="50"
+                        placeholder="Your name (max 10 chars)"
+                        maxlength="10"
                     >
+                    <div class="character-count">
+                        <span id="name-char-count">0</span> / 10 characters
+                    </div>
                     <div class="error-message" id="contributor-name-error"></div>
                 </div>
 
@@ -234,8 +240,8 @@
         </div>
     </div>
 
-    <script src="/shared/api-client.js?v=4"></script>
-    <script src="/shared/validation.js?v=4"></script>
-    <script src="/contribute/contribute.js?v=4"></script>
+    <script src="/shared/api-client.js?v=5"></script>
+    <script src="/shared/validation.js?v=5"></script>
+    <script src="/contribute/contribute.js?v=5"></script>
 </body>
 </html>

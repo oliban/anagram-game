@@ -71,20 +71,27 @@ class DatabasePhrase {
       if (trimmed.length === 0) {
         errors.push('Content cannot be empty');
       } else {
-        // Split into words and validate count (2-6 words)
+        // Split into words and validate count (2-4 words)
         const words = trimmed.split(/\s+/);
         if (words.length < 2) {
           errors.push('Phrase must contain at least 2 words');
         }
-        if (words.length > 6) {
-          errors.push('Phrase cannot contain more than 6 words');
+        if (words.length > 4) {
+          errors.push('Phrase cannot contain more than 4 words');
         }
 
         // Validate each word contains only letters, numbers, and basic punctuation
+        // Also validate word length (max 7 letters per word)
         const validWordPattern = /^[\p{L}\p{N}\-']+$/u;
         for (let word of words) {
+          console.log(`🔍 WORD VALIDATION: word="${word}", length=${word.length}`);
           if (!validWordPattern.test(word)) {
             errors.push('Words can only contain letters, numbers, hyphens, and apostrophes');
+            break;
+          }
+          if (word.length > 7) {
+            console.log(`❌ WORD TOO LONG: "${word}" has ${word.length} chars (max 7)`);
+            errors.push('Each word cannot be longer than 7 characters');
             break;
           }
         }
@@ -715,6 +722,7 @@ class DatabasePhrase {
 
     // Comprehensive validation
     const validation = this.validatePhrase(content, hint);
+    console.log(`🔍 VALIDATION DEBUG: content="${content}", errors=[${validation.errors.join(', ')}], valid=${validation.valid}`);
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
     }

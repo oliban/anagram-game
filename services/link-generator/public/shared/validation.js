@@ -13,8 +13,8 @@ class ValidationHelpers {
             errors.push('Phrase must be at least 3 characters long');
         }
         
-        if (trimmed.length > 50) {
-            errors.push('Phrase must be less than 50 characters');
+        if (trimmed.length > 35) {
+            errors.push('Phrase must be less than 35 characters');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-',.!?]+$/.test(trimmed)) {
@@ -65,8 +65,8 @@ class ValidationHelpers {
             errors.push('Clue must be at least 3 characters long');
         }
         
-        if (trimmed.length > 500) {
-            errors.push('Clue must be less than 500 characters');
+        if (trimmed.length > 32) {
+            errors.push('Clue must be 32 characters or less');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-',.!?0-9]+$/.test(trimmed)) {
@@ -95,8 +95,8 @@ class ValidationHelpers {
         
         const trimmed = name.trim();
         
-        if (trimmed.length > 50) {
-            errors.push('Name must be less than 50 characters');
+        if (trimmed.length > 10) {
+            errors.push('Name must be 10 characters or less');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-']+$/.test(trimmed)) {
