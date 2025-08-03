@@ -204,10 +204,10 @@ module.exports = (dependencies) => {
         });
       }
 
-      if (clue.trim().length > 500) {
+      if (clue.trim().length > 32) {
         return res.status(400).json({ 
           success: false, 
-          error: 'Clue must be less than 500 characters' 
+          error: 'Clue must be 32 characters or less' 
         });
       }
 
@@ -216,6 +216,14 @@ module.exports = (dependencies) => {
         return res.status(400).json({ 
           success: false, 
           error: 'Invalid language' 
+        });
+      }
+
+      // Validate contributor name (optional, but if provided must be <= 10 chars)
+      if (contributorName && contributorName.trim && contributorName.trim().length > 10) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Contributor name must be 10 characters or less' 
         });
       }
 

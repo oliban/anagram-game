@@ -201,9 +201,16 @@ class ContributionForm {
     }
 
     handleClueInput(e) {
-        if (e.target.value.length > 500) {
-            e.target.value = e.target.value.substring(0, 500);
+        const charCount = e.target.value.length;
+        document.getElementById('clue-char-count').textContent = charCount;
+        
+        if (e.target.value.length > 32) {
+            e.target.value = e.target.value.substring(0, 32);
+            document.getElementById('clue-char-count').textContent = 32;
         }
+        
+        // Show real-time validation feedback
+        this.validateClue();
     }
 
     handleLanguageChange(e) {
@@ -211,9 +218,16 @@ class ContributionForm {
     }
 
     handleContributorNameInput(e) {
-        if (e.target.value.length > 50) {
-            e.target.value = e.target.value.substring(0, 50);
+        const charCount = e.target.value.length;
+        document.getElementById('name-char-count').textContent = charCount;
+        
+        if (e.target.value.length > 10) {
+            e.target.value = e.target.value.substring(0, 10);
+            document.getElementById('name-char-count').textContent = 10;
         }
+        
+        // Show real-time validation feedback
+        this.validateContributorName();
     }
 
     handleThemeInput(e) {
