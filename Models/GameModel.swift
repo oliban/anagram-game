@@ -91,6 +91,10 @@ class GameModel: ObservableObject {
     // Phrase notification state
     private var activeNotifications: Set<String> = [] // Track active notifications by sender name
     
+    // Phrase loading state to prevent duplicate API calls
+    private var isLoadingPhrases: Bool = false
+    private var lastPhraseFetchTime: Date = Date.distantPast
+    
     // Game scene reference for tile spawning
     weak var messageTileSpawner: MessageTileSpawner?
     
@@ -822,6 +826,17 @@ class GameModel: ObservableObject {
     }
     
     func refreshPhrasesForLobby() async {
+        // Prevent duplicate API calls within 2 seconds
+        let now = Date()
+        if isLoadingPhrases || now.timeIntervalSince(lastPhraseFetchTime) < 2.0 {
+            print("⏭️ PHRASES: Skipping duplicate fetch - already loading or too recent")
+            return
+        }
+        
+        isLoadingPhrases = true
+        lastPhraseFetchTime = now
+        defer { isLoadingPhrases = false }
+        
         let networkManager = NetworkManager.shared
         
         let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)

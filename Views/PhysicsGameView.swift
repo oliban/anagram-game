@@ -2496,14 +2496,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         if isNewDiscovery {
             emojiTile.name = "new_discovery_emoji"
             DebugLogger.shared.ui("🌟 NEW DISCOVERY: \(emoji) (\(rarity?.displayName ?? "unknown") rarity)")
-            
-            // Add visual effect for new discoveries
-            addNewDiscoveryEffect(to: emojiTile, rarity: rarity)
         } else if rarity?.triggersGlobalDrop == true {
             emojiTile.name = "rare_collectable_emoji"
         } else {
             emojiTile.name = "collectable_emoji"
         }
+        
+        // Add sparkle effect for all rare emojis (Epic and above)
+        addSparkleEffect(to: emojiTile, rarity: rarity)
         
         // Position at top of visible screen
         let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
@@ -2525,7 +2525,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         emojiTile.run(dropAction)
     }
     
-    private func addNewDiscoveryEffect(to emojiTile: EmojiIconTile, rarity: EmojiRarity?) {
+    private func addSparkleEffect(to emojiTile: EmojiIconTile, rarity: EmojiRarity?) {
         // Add sparkle effect for rare emojis
         if let rarity = rarity {
             // Only add sparkle effect for Epic or rarer (5% drop rate or lower)
