@@ -246,7 +246,7 @@ struct LegendPlayerCard: View {
                             .foregroundColor(.secondary)
                         
                         HStack(spacing: 4) {
-                            ForEach(rarestEmojis.prefix(5), id: \.emojiCharacter) { emoji in
+                            ForEach(rarestEmojis.prefix(8), id: \.emojiCharacter) { emoji in
                                 VStack(spacing: 2) {
                                     Text(emoji.emojiCharacter)
                                         .font(.system(size: 16))

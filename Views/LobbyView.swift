@@ -242,6 +242,8 @@ struct LobbyView: View {
     }
     
     // MARK: - Rarest Emojis Section
+    @State private var isEmojiSectionExpanded = false
+    
     private func rarestEmojisSection(emojis: [PlayerRareEmoji]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -258,33 +260,54 @@ struct LobbyView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
-            HStack(spacing: 12) {
-                ForEach(emojis, id: \.emojiCharacter) { emoji in
-                    VStack(spacing: 6) {
+            // Show up to 8 emojis in 2 rows by default, 16 when expanded
+            let displayEmojis = isEmojiSectionExpanded ? Array(emojis.prefix(16)) : Array(emojis.prefix(8))
+            let columns = Array(repeating: GridItem(.flexible()), count: 8)
+            
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(displayEmojis, id: \.emojiCharacter) { emoji in
+                    VStack(spacing: 4) {
                         Text(emoji.emojiCharacter)
-                            .font(.title2)
+                            .font(.title3)
                         
                         if emoji.isFirstGlobalDiscovery {
                             Image(systemName: "crown.fill")
-                                .font(.system(size: 8))
+                                .font(.system(size: 6))
                                 .foregroundColor(.yellow)
                         }
                         
                         // Rarity indicator dot
                         Circle()
                             .fill(rarityColor(for: emoji.rarityTier))
-                            .frame(width: 6, height: 6)
+                            .frame(width: 4, height: 4)
                         
                         Text("\(emoji.dropRate, specifier: "%.1f")%")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-                    .frame(width: 50, height: 70)
+                    .frame(width: 35, height: 55)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .cornerRadius(6)
                 }
-                
-                Spacer()
+            }
+            
+            // Show expand/collapse button if there are more than 8 emojis
+            if emojis.count > 8 {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isEmojiSectionExpanded.toggle()
+                    }
+                }) {
+                    HStack {
+                        Text(isEmojiSectionExpanded ? "Show Less" : "Show More (\(min(emojis.count, 16)) total)")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                        Image(systemName: isEmojiSectionExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.blue)
+                }
+                .padding(.top, 4)
             }
         }
         .padding()
