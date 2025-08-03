@@ -23,11 +23,13 @@ async function getRandomEmojisForPhrase(client, numberOfDrops = Math.floor(Math.
     for (let i = 0; i < numberOfDrops; i++) {
         let attempts = 0;
         let selectedEmoji = null;
+        let lastRandomValue = 0;
         
         // Try up to 10 times to get a unique emoji (avoid duplicates)
         while (attempts < 10) {
             // Generate random number between 0 and totalWeight
             const randomValue = Math.random() * totalWeight;
+            lastRandomValue = randomValue;
             
             // Find the emoji using proper weighted selection
             let cumulativeWeight = 0;
@@ -57,7 +59,7 @@ async function getRandomEmojisForPhrase(client, numberOfDrops = Math.floor(Math.
         
         droppedEmojis.push(selectedEmoji);
         
-        console.log(`🎲 EMOJI SELECTION: Random ${randomValue.toFixed(3)} / ${totalWeight.toFixed(3)} -> ${selectedEmoji.emoji_character} (${selectedEmoji.rarity_tier}, ${selectedEmoji.drop_rate_percentage}%)`);
+        console.log(`🎲 EMOJI SELECTION: Random ${lastRandomValue.toFixed(3)} / ${totalWeight.toFixed(3)} -> ${selectedEmoji.emoji_character} (${selectedEmoji.rarity_tier}, ${selectedEmoji.drop_rate_percentage}%)`);
     }
     
     return droppedEmojis;

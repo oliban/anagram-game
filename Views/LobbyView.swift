@@ -43,6 +43,11 @@ struct LobbyView: View {
                     // Personal statistics
                     personalStatsSection
                     
+                    // Rarest emojis section
+                    if let rarestEmojis = playerStats?.rarestEmojis, !rarestEmojis.isEmpty {
+                        rarestEmojisSection(emojis: rarestEmojis)
+                    }
+                    
                     // Contribution link generator
                     contributionLinkSection
                     
@@ -234,6 +239,69 @@ struct LobbyView: View {
         .frame(minHeight: 120)
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+    
+    // MARK: - Rarest Emojis Section
+    private func rarestEmojisSection(emojis: [PlayerRareEmoji]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.yellow)
+                Text("Your Rarest Finds")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            Text("Your \(emojis.count) rarest emoji discoveries")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: 12) {
+                ForEach(emojis, id: \.emojiCharacter) { emoji in
+                    VStack(spacing: 6) {
+                        Text(emoji.emojiCharacter)
+                            .font(.title2)
+                        
+                        if emoji.isFirstGlobalDiscovery {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 8))
+                                .foregroundColor(.yellow)
+                        }
+                        
+                        // Rarity indicator dot
+                        Circle()
+                            .fill(rarityColor(for: emoji.rarityTier))
+                            .frame(width: 6, height: 6)
+                        
+                        Text("\(emoji.dropRate, specifier: "%.1f")%")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(width: 50, height: 70)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(8)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private func rarityColor(for tier: String) -> Color {
+        switch tier.lowercased() {
+        case "legendary": return .yellow
+        case "mythic": return .purple
+        case "epic": return .pink
+        case "rare": return .blue
+        case "uncommon": return .green
+        case "common": return .gray
+        default: return .gray
+        }
     }
     
     // MARK: - Leaderboards Section

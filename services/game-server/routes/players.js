@@ -241,7 +241,8 @@ module.exports = (dependencies) => {
 
       const result = await pool.query(queryText, [minimumPoints]);
       
-      const legendPlayers = result.rows.map(row => {
+      // Get each player's rarest emojis (up to 5)
+      const legendPlayers = await Promise.all(result.rows.map(async row => {
         const totalScore = parseInt(row.total_score);
         
         // Calculate skill level based on total score using ScoringSystem
@@ -249,15 +250,39 @@ module.exports = (dependencies) => {
         const skillLevel = skillInfo.level;
         const skillTitle = skillInfo.title;
         
+        // Get player's 5 rarest emojis
+        const rarestEmojisQuery = `
+          SELECT 
+            ec.emoji_character,
+            ec.name,
+            ec.rarity_tier,
+            ec.drop_rate_percentage,
+            pec.is_first_global_discovery
+          FROM player_emoji_collections pec
+          JOIN emoji_catalog ec ON pec.emoji_id = ec.id
+          WHERE pec.player_id = $1
+          ORDER BY ec.drop_rate_percentage ASC
+          LIMIT 5
+        `;
+        
+        const emojiResult = await pool.query(rarestEmojisQuery, [row.id]);
+        
         return {
           id: row.id,
           name: row.name,
           totalScore: totalScore,
           skillLevel: skillLevel,
           skillTitle: skillTitle,
-          phrasesCompleted: parseInt(row.phrases_completed)
+          phrasesCompleted: parseInt(row.phrases_completed),
+          rarestEmojis: emojiResult.rows.map(emoji => ({
+            emojiCharacter: emoji.emoji_character,
+            name: emoji.name,
+            rarityTier: emoji.rarity_tier,
+            dropRate: parseFloat(emoji.drop_rate_percentage),
+            isFirstGlobalDiscovery: emoji.is_first_global_discovery
+          }))
         };
-      });
+      }));
 
       console.log(`👑 LEGENDS: Found ${legendPlayers.length} legend players`);
 
@@ -310,7 +335,24 @@ module.exports = (dependencies) => {
       
       // Get skill level and title based on total score
       const skillInfo = ScoringSystem.getSkillLevel(scores.totalScore);
-
+      
+      // Get player's 5 rarest emojis
+      const rarestEmojisQuery = `
+        SELECT 
+          ec.emoji_character,
+          ec.name,
+          ec.rarity_tier,
+          ec.drop_rate_percentage,
+          pec.is_first_global_discovery
+        FROM player_emoji_collections pec
+        JOIN emoji_catalog ec ON pec.emoji_id = ec.id
+        WHERE pec.player_id = $1
+        ORDER BY ec.drop_rate_percentage ASC
+        LIMIT 5
+      `;
+      
+      const emojiResult = await pool.query(rarestEmojisQuery, [playerId]);
+      
       res.json({
         success: true,
         playerId,
@@ -320,6 +362,13 @@ module.exports = (dependencies) => {
           skillTitle: skillInfo.title,
           skillLevel: skillInfo.level
         },
+        rarestEmojis: emojiResult.rows.map(emoji => ({
+          emojiCharacter: emoji.emoji_character,
+          name: emoji.name,
+          rarityTier: emoji.rarity_tier,
+          dropRate: parseFloat(emoji.drop_rate_percentage),
+          isFirstGlobalDiscovery: emoji.is_first_global_discovery
+        })),
         timestamp: new Date().toISOString()
       });
 
