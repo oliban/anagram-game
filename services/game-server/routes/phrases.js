@@ -15,6 +15,42 @@ module.exports = (dependencies) => {
     pool 
   } = dependencies;
 
+  // Helper function to fetch skipped phrases as fallback
+  async function getSkippedPhrasesForPlayer(playerId, maxDifficulty = null) {
+    const difficultyFilter = maxDifficulty ? 'AND p.difficulty_level <= $2' : '';
+    const queryParams = maxDifficulty ? [playerId, maxDifficulty] : [playerId];
+    
+    const skippedPhrasesQuery = `
+      SELECT DISTINCT p.* 
+      FROM phrases p
+      INNER JOIN skipped_phrases sp ON p.id = sp.phrase_id
+      WHERE sp.player_id = $1
+        AND p.is_global = true 
+        AND p.is_approved = true
+        AND p.created_by_player_id != $1
+        ${difficultyFilter}
+      ORDER BY sp.skipped_at ASC
+      LIMIT 25
+    `;
+    
+    const result = await query(skippedPhrasesQuery, queryParams);
+    return result.rows.map(row => new DatabasePhrase(row));
+  }
+
+  // Helper function to clear skipped status for phrases we're serving again
+  async function clearSkippedPhrasesForPlayer(playerId, phraseIds) {
+    if (phraseIds.length === 0) return;
+    
+    const placeholders = phraseIds.map((_, index) => `$${index + 2}`).join(',');
+    const clearSkipQuery = `
+      DELETE FROM skipped_phrases 
+      WHERE player_id = $1 AND phrase_id IN (${placeholders})
+    `;
+    
+    await query(clearSkipQuery, [playerId, ...phraseIds]);
+    console.log(`🔄 SKIP CLEAR: Cleared skip status for ${phraseIds.length} phrases for player ${playerId}`);
+  }
+
   // Enhanced phrase creation endpoint
   router.post('/api/phrases/create', async (req, res) => {
     try {
@@ -113,6 +149,8 @@ module.exports = (dependencies) => {
           // Ensure targetId and senderName are included for iOS client compatibility
           phraseData.targetId = target.id;
           phraseData.senderName = sender.name;
+          
+          console.log(`🔧 WEBSOCKET FIX: Set targetId = ${phraseData.targetId}, senderName = ${phraseData.senderName}`);
           
           io.to(target.socketId).emit('new-phrase', {
             phrase: phraseData,
@@ -218,12 +256,34 @@ module.exports = (dependencies) => {
       // Get phrases for player from database (both targeted and global)
       let phrases = await DatabasePhrase.getPhrasesForPlayer(playerId, maxDifficulty);
       
-      // If no phrases available (getPhrasesForPlayer already checked targeted AND global phrases)
+      // If no phrases available, try skipped phrases as fallback
       if (phrases.length === 0) {
-        console.log(`🌍 PHRASE: No phrases available for player ${playerId} (all filtered out: skipped, completed, or self-created)`);
-        return res.status(404).json({
-          error: 'No phrases available for player'
-        });
+        console.log(`🌍 PHRASE: No fresh phrases available for player ${playerId}, trying skipped phrases as fallback...`);
+        
+        try {
+          // Fetch skipped phrases as fallback - remove the exclusion filter
+          const skippedPhrases = await getSkippedPhrasesForPlayer(playerId, maxDifficulty);
+          
+          if (skippedPhrases.length > 0) {
+            phrases = skippedPhrases;
+            
+            // Remove these phrases from skipped_phrases table since we're serving them again
+            const phraseIds = phrases.map(p => p.getPublicInfo().id);
+            await clearSkippedPhrasesForPlayer(playerId, phraseIds);
+            
+            console.log(`♻️ PHRASE: Found ${phrases.length} skipped phrases as fallback for player ${playerId}, cleared skip status`);
+          } else {
+            console.log(`🌍 PHRASE: No phrases available at all for player ${playerId} (including skipped)`);
+            return res.status(404).json({
+              error: 'No phrases available for player'
+            });
+          }
+        } catch (fallbackError) {
+          console.error('❌ PHRASE FALLBACK: Error fetching skipped phrases:', fallbackError);
+          return res.status(404).json({
+            error: 'No phrases available for player'
+          });
+        }
       }
       
       // Import difficulty scoring algorithm for client-side hint system

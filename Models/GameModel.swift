@@ -150,8 +150,7 @@ class GameModel: ObservableObject {
     
     private var localPhrases: [LocalPhrase] = []
     var currentCustomPhrase: CustomPhrase? = nil // Made public for LanguageTile access
-    private var phraseQueue: [CustomPhrase] = [] // Queue for incoming phrases
-    private var lobbyDisplayQueue: [CustomPhrase] = [] // Separate queue for lobby display only
+    private var phraseQueue: [CustomPhrase] = [] // Single queue for all phrases
     private var isStartingNewGame = false
     private var isCheckingPhrases = false
     private var isSkipping = false // Prevent concurrent skip operations
@@ -168,17 +167,20 @@ class GameModel: ObservableObject {
     }
     
     // Computed properties for phrase queue status (public for UI access)
-    // Only count targeted phrases (sent by other players), not global fallback phrases
+    // Only count custom phrases SENT TO this player (targetId matches current player)
     var waitingPhrasesCount: Int {
-        return lobbyDisplayQueue.filter { $0.targetId != nil }.count
+        guard let playerId = playerId else { return 0 }
+        return phraseQueue.filter { $0.targetId == playerId }.count
     }
     
     var waitingPhrasesSenders: [String] {
-        return lobbyDisplayQueue.filter { $0.targetId != nil }.map { $0.senderName }
+        guard let playerId = playerId else { return [] }
+        return phraseQueue.filter { $0.targetId == playerId }.map { $0.senderName }
     }
     
     var hasWaitingPhrases: Bool {
-        return lobbyDisplayQueue.contains { $0.targetId != nil }
+        guard let playerId = playerId else { return false }
+        return phraseQueue.contains { $0.targetId == playerId }
     }
     
     enum GameState {
@@ -314,62 +316,68 @@ class GameModel: ObservableObject {
                 networkManager.hasNewPhrase = false
                 print("📤 GAME: Using push-delivered phrase \(pushedPhrase.id)")
             } else {
-                // FALLBACK: Use local phrases if no server phrases available
-                phraseSource = "Local-File"
-                print("🎯 GAME: No custom phrases available, using local file sentence")
+                // FALLBACK: Try to fetch more phrases from server first
+                print("📥 GAME: Queue empty, attempting to fetch more phrases from server...")
+                DebugLogger.shared.game("QUEUE_EMPTY: Attempting server refetch")
                 
-                // Debug: Log that we're using local phrases
-                await DebugLogger.shared.sendToServer("USING_LOCAL_PHRASES: localPhrases.count=\(localPhrases.count)")
+                // Try to refetch from server
+                await refreshPhrasesForLobby()
                 
-                // Use a random sentence from the default collection
-                guard !localPhrases.isEmpty else {
+                // Try queue again after refresh
+                if let queuedPhrase = getNextPhraseFromQueue() {
+                    // Successfully got a phrase after refresh
+                    phraseSource = queuedPhrase.targetId != nil ? "Targeted (\(queuedPhrase.senderName))" : "Global"
+                    customPhraseInfo = queuedPhrase.targetId != nil ? "Custom phrase from \(queuedPhrase.senderName)" : ""
+                    print("📤 GAME: Using phrase after refresh: '\(queuedPhrase.content)' from \(queuedPhrase.senderName)")
+                    
+                    currentCustomPhrase = queuedPhrase
+                    currentSentence = queuedPhrase.content
+                    currentPhraseId = queuedPhrase.id
+                } else if !networkManager.isConnected {
+                    // Only use local phrases if we're offline
+                    phraseSource = "Local-Offline"
+                    print("📴 GAME: Offline - using local phrases as last resort")
+                    DebugLogger.shared.game("OFFLINE: Using local phrases")
+                    
+                    guard !localPhrases.isEmpty else {
+                        gameState = .error
+                        isCheckingPhrases = false
+                        return
+                    }
+                    
+                    currentCustomPhrase = nil
+                    
+                    // Use local phrase logic
+                    let maxDifficulty = currentSkillLevel.maxDifficulty
+                    let levelAppropriatePhrases = localPhrases.filter { phrase in
+                        let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: phrase.content, language: "en")
+                        return difficultyAnalysis.score <= Double(maxDifficulty)
+                    }
+                    
+                    let phrasesToChooseFrom = levelAppropriatePhrases.isEmpty ? localPhrases : levelAppropriatePhrases
+                    let selectedPhrase = phrasesToChooseFrom.randomElement()?.content ?? "The cat sat on the mat"
+                    
+                    currentSentence = selectedPhrase
+                    customPhraseInfo = ""
+                    
+                    // Use a local ID for local phrases
+                    currentPhraseId = "local-\(UUID().uuidString)"
+                    
+                    // Log calculated difficulty for debugging
+                    let calculatedDifficulty = calculateDifficultyForPhrase(selectedPhrase)
+                    print("🔍 DEBUG: LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
+                    DebugLogger.shared.game("LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
+                    
+                    // Set phraseDifficulty for local phrases
+                    phraseDifficulty = calculatedDifficulty
+                } else {
+                    // Server is online but has no phrases available
+                    print("⚠️ GAME: Server online but no phrases available")
+                    DebugLogger.shared.game("NO_PHRASES: Server has no phrases available")
                     gameState = .error
                     isCheckingPhrases = false
                     return
                 }
-                
-                currentCustomPhrase = nil
-                
-                // Filter local phrases by current level (same logic as server filtering)
-                let maxDifficulty = currentSkillLevel.maxDifficulty
-                let levelAppropriatePhrases = localPhrases.filter { phrase in
-                    let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: phrase.content, language: "en")
-                    return difficultyAnalysis.score <= Double(maxDifficulty)
-                }
-                
-                print("🎯 LOCAL_PHRASE_FILTER: Level \(currentLevel), max difficulty: \(maxDifficulty)")
-                print("🎯 LOCAL_PHRASE_FILTER: Filtered \(localPhrases.count) phrases to \(levelAppropriatePhrases.count) level-appropriate phrases")
-                
-                // Select from level-appropriate phrases, fallback to all if none match
-                let phrasesToChooseFrom = levelAppropriatePhrases.isEmpty ? localPhrases : levelAppropriatePhrases
-                let selectedPhrase = phrasesToChooseFrom.randomElement()?.content ?? "The cat sat on the mat"
-                
-                // Debug the selected local phrase
-                let difficultyAnalysis = NetworkManager.analyzeDifficultyClientSide(phrase: selectedPhrase, language: "en")
-                print("🔍 LOCAL_PHRASE_DEBUG: Selected local phrase '\(selectedPhrase)'")
-                print("🔍 LOCAL_PHRASE_DEBUG: Difficulty score: \(difficultyAnalysis.score)")
-                print("🔍 LOCAL_PHRASE_DEBUG: Used filtered list: \(!levelAppropriatePhrases.isEmpty)")
-                await DebugLogger.shared.sendToServer("LOCAL_PHRASE_DEBUG: phrase='\(selectedPhrase)', difficulty=\(difficultyAnalysis.score), filtered=\(!levelAppropriatePhrases.isEmpty)")
-                
-                currentSentence = selectedPhrase
-                customPhraseInfo = ""
-                
-                // Use a local ID for local phrases
-                currentPhraseId = "local-\(UUID().uuidString)"
-                
-                print("🔍 DEBUG: Selected local phrase: '\(selectedPhrase)' with ID: \(currentPhraseId ?? "none")")
-                print("🔍 DEBUG: Total local phrases available: \(localPhrases.count)")
-                
-                // Log calculated difficulty for debugging
-                let calculatedDifficulty = calculateDifficultyForPhrase(selectedPhrase)
-                print("🔍 DEBUG: LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
-                
-                // Send debug info to server
-                await DebugLogger.shared.sendToServer("LOCAL_PHRASE_SELECTED: '\(selectedPhrase)' calculated_difficulty=\(calculatedDifficulty)")
-                
-                // CRITICAL: Set phraseDifficulty for local phrases
-                phraseDifficulty = calculatedDifficulty
-                await DebugLogger.shared.sendToServer("LOCAL_PHRASE_DIFFICULTY_SET: phraseDifficulty=\(phraseDifficulty)")
             }
         }
         
@@ -569,7 +577,15 @@ class GameModel: ObservableObject {
         // Simply move to the next phrase in the queue
         if let customPhrase = currentCustomPhrase {
             print("⏭️ Skipping phrase: \(customPhrase.content)")
-            // No server calls needed - just move to next phrase in queue
+            
+            // Notify server about skip for ALL phrases (targeted and global)
+            if let networkManager = networkManager {
+                let skipSuccess = await networkManager.skipPhrase(phraseId: customPhrase.id)
+                print("⏭️ SKIP: Server notification \(skipSuccess ? "✅ successful" : "❌ failed") for phrase: \(customPhrase.content)")
+                DebugLogger.shared.game("SKIP: Server notification for phrase \(customPhrase.id): \(skipSuccess)")
+            } else {
+                print("⏭️ SKIP: No network manager available to notify server")
+            }
             
             // Remove the skipped phrase from local queues
             let phraseIdToRemove = customPhrase.id
@@ -579,22 +595,17 @@ class GameModel: ObservableObject {
                 phraseQueue.removeAll { $0.id == phraseIdToRemove }
                 let removedFromPhraseQueue = originalPhraseQueueCount - phraseQueue.count
                 
-                // Remove from lobbyDisplayQueue  
-                let originalLobbyQueueCount = lobbyDisplayQueue.count
-                lobbyDisplayQueue.removeAll { $0.id == phraseIdToRemove }
-                let removedFromLobbyQueue = originalLobbyQueueCount - lobbyDisplayQueue.count
-                
-                print("📤 SKIP: Removed skipped phrase from queues - phraseQueue: \(removedFromPhraseQueue), lobbyQueue: \(removedFromLobbyQueue)")
+                print("📤 SKIP: Removed skipped phrase from queue - removed: \(removedFromPhraseQueue), remaining: \(phraseQueue.count)")
                 
                 // Clear current phrase references
                 currentCustomPhrase = nil
                 customPhraseInfo = ""
                 currentPhraseId = nil
                 
-                return (removedFromPhraseQueue, removedFromLobbyQueue)
+                return removedFromPhraseQueue
             }
             
-            await DebugLogger.shared.sendToServer("SKIP_QUEUE_CLEANUP: Removed phrase \(phraseIdToRemove) from local queues (phraseQueue: \(removedCounts.0), lobbyQueue: \(removedCounts.1))")
+            await DebugLogger.shared.sendToServer("SKIP_QUEUE_CLEANUP: Removed phrase \(phraseIdToRemove) from queue (removed: \(removedCounts))")
         } else {
             await DebugLogger.shared.sendToServer("SKIP_NO_CUSTOM_PHRASE: No custom phrase to skip")
         }
@@ -812,44 +823,29 @@ class GameModel: ObservableObject {
         let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
         
         await MainActor.run { [self] in
-            print("📥 LOBBY: BEFORE REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count), phraseQueue: \(phraseQueue.count)")
+            print("📥 LOBBY: BEFORE REFRESH - phraseQueue: \(phraseQueue.count)")
             
             // CRITICAL FIX: Preserve targeted phrases that were received via WebSocket push
             let existingTargetedPhrases = phraseQueue.filter { $0.targetId != nil }
-            let existingTargetedLobbyPhrases = lobbyDisplayQueue.filter { $0.targetId != nil }
             
-            print("📥 LOBBY: Found \(existingTargetedPhrases.count) existing targeted phrases in game queue")
-            print("📥 LOBBY: Found \(existingTargetedLobbyPhrases.count) existing targeted phrases in lobby queue")
+            print("📥 LOBBY: Found \(existingTargetedPhrases.count) existing targeted phrases in queue")
             
-            // Only update if the server data is different from what we have
-            let serverPhraseIds = Set(phrases.map { $0.id })
-            let currentLobbyPhraseIds = Set(lobbyDisplayQueue.filter { $0.targetId == nil }.map { $0.id })
-            let currentGamePhraseIds = Set(phraseQueue.filter { $0.targetId == nil }.map { $0.id })
+            // PRIORITY FIX: Always rebuild queue to ensure correct ordering
+            // This prevents race conditions between WebSocket delivery and lobby refresh
+            print("📥 LOBBY: Rebuilding phrase queue to ensure WebSocket phrase priority")
+            phraseQueue.removeAll()
             
-            if serverPhraseIds != currentLobbyPhraseIds {
-                print("📥 LOBBY: Server data changed, updating lobby display queue while preserving targeted phrases")
-                lobbyDisplayQueue.removeAll()
-                // Add preserved targeted phrases first (higher priority)
-                lobbyDisplayQueue.append(contentsOf: existingTargetedLobbyPhrases)
-                // Then add server phrases (global phrases)
-                lobbyDisplayQueue.append(contentsOf: phrases)
-            } else {
-                print("📥 LOBBY: Server data unchanged, keeping current lobby display queue")
-            }
+            // Add targeted phrases first (highest priority, maintain their order)
+            phraseQueue.append(contentsOf: existingTargetedPhrases)
             
-            // CRITICAL FIX: Also populate phraseQueue for first game access while preserving targeted phrases
-            if serverPhraseIds != currentGamePhraseIds {
-                print("📥 GAME: Server data changed, updating game phrase queue while preserving targeted phrases")
-                phraseQueue.removeAll()
-                // Add preserved targeted phrases first (higher priority)
-                phraseQueue.append(contentsOf: existingTargetedPhrases)
-                // Then add server phrases (global phrases)
-                phraseQueue.append(contentsOf: phrases)
-            } else {
-                print("📥 GAME: Server data unchanged, keeping current game phrase queue")
-            }
+            // Add new server phrases (global phrases only, avoid duplicates)
+            let existingIds = Set(existingTargetedPhrases.map { $0.id })
+            let newGlobalPhrases = phrases.filter { !existingIds.contains($0.id) }
+            phraseQueue.append(contentsOf: newGlobalPhrases)
             
-            print("📥 LOBBY: AFTER REFRESH - lobbyDisplayQueue: \(lobbyDisplayQueue.count), phraseQueue: \(phraseQueue.count)")
+            print("📥 LOBBY: Queue rebuilt - \(existingTargetedPhrases.count) targeted + \(newGlobalPhrases.count) global = \(phraseQueue.count) total")
+            
+            print("📥 LOBBY: AFTER REFRESH - phraseQueue: \(phraseQueue.count)")
             print("📥 LOBBY: Loaded \(phrases.count) server phrases + preserved targeted phrases")
             if !phrases.isEmpty {
                 print("📥 LOBBY: Server phrase senders: \(phrases.map { $0.senderName })")
@@ -863,12 +859,26 @@ class GameModel: ObservableObject {
     
     // Phrase queue management
     private func addPhraseToQueue(_ phrase: CustomPhrase) {
-        phraseQueue.append(phrase)
-        lobbyDisplayQueue.append(phrase) // Also add to lobby display queue
-        print("📥 QUEUE: Added phrase to queue: '\(phrase.content)' from \(phrase.senderName) (Lobby: \(lobbyDisplayQueue.count))")
+        // Targeted phrases go to front, global phrases go to back
+        if phrase.targetId != nil {
+            phraseQueue.insert(phrase, at: 0)
+            print("📥 QUEUE: Added TARGETED phrase to FRONT: '\(phrase.content)' from \(phrase.senderName)")
+            print("🏆 PRIORITY: Targeted phrase now at position 0, queue length: \(phraseQueue.count)")
+        } else {
+            phraseQueue.append(phrase)
+            print("📥 QUEUE: Added GLOBAL phrase to BACK: '\(phrase.content)' from \(phrase.senderName)")
+        }
+        
+        print("📥 QUEUE: Total phrases in queue: \(phraseQueue.count)")
         
         // DEBUG: Log the targetId when adding to queue
         print("🐛 DEBUG: Adding phrase with targetId = '\(phrase.targetId ?? "nil")' from \(phrase.senderName)")
+        
+        // DEBUG: Show first few phrases in queue for verification
+        for (index, queuedPhrase) in phraseQueue.prefix(3).enumerated() {
+            let priority = queuedPhrase.targetId != nil ? "TARGETED" : "GLOBAL"
+            print("🔢 QUEUE[\(index)]: [\(priority)] '\(queuedPhrase.content)' from \(queuedPhrase.senderName)")
+        }
         
         // Show notification for the new phrase
         showPhraseNotification(senderName: phrase.senderName)
@@ -881,13 +891,49 @@ class GameModel: ObservableObject {
         
         let nextPhrase = phraseQueue.removeFirst()
         
-        // Also remove from lobby display queue if it exists there
-        if let index = lobbyDisplayQueue.firstIndex(where: { $0.id == nextPhrase.id }) {
-            lobbyDisplayQueue.remove(at: index)
+        print("📤 QUEUE: Retrieved phrase from queue: '\(nextPhrase.content)' from \(nextPhrase.senderName) (Remaining: \(phraseQueue.count))")
+        
+        // Auto-refill if queue is getting low
+        if phraseQueue.count < 10 {
+            Task {
+                await checkAndRefillQueue()
+            }
         }
         
-        print("📤 QUEUE: Retrieved phrase from queue: '\(nextPhrase.content)' from \(nextPhrase.senderName) (Lobby: \(lobbyDisplayQueue.count))")
         return nextPhrase
+    }
+    
+    private func checkAndRefillQueue() async {
+        guard let networkManager = networkManager else {
+            print("📥 AUTO-REFILL: No network manager available")
+            return
+        }
+        
+        let isConnected = await MainActor.run { networkManager.isConnected }
+        guard phraseQueue.count < 10 && isConnected else {
+            print("📥 AUTO-REFILL: Skipped - queue: \(phraseQueue.count), connected: \(isConnected)")
+            return
+        }
+        
+        print("📥 AUTO-REFILL: Queue low (\(phraseQueue.count)), fetching more phrases...")
+        DebugLogger.shared.game("AUTO_REFILL: Queue low, fetching more phrases")
+        
+        // Fetch new phrases from server (server handles priority: global phrases, then skipped phrases as fallback)
+        let newPhrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
+        
+        await MainActor.run { [self] in
+            // Add new phrases to queue (avoid duplicates)
+            let existingIds = Set(phraseQueue.map { $0.id })
+            let newUniquePhrases = newPhrases.filter { !existingIds.contains($0.id) }
+            
+            if !newUniquePhrases.isEmpty {
+                phraseQueue.append(contentsOf: newUniquePhrases)
+                print("📥 AUTO-REFILL: Added \(newUniquePhrases.count) new phrases (Total: \(phraseQueue.count))")
+                DebugLogger.shared.game("AUTO_REFILL: Added \(newUniquePhrases.count) phrases")
+            } else {
+                print("📥 AUTO-REFILL: No new phrases available from server")
+            }
+        }
     }
     
     // Phrase notification system

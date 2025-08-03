@@ -64,7 +64,9 @@ struct ContentView: View {
                     gameModel.loadTotalScore()
                     
                     // Start the first game after registration is complete
+                    // Wait for phrases to be loaded first
                     Task { @MainActor in
+                        await gameModel.refreshPhrasesForLobby()
                         await gameModel.startNewGame()
                     }
                 } else {

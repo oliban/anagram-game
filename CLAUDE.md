@@ -4,7 +4,13 @@
 iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter tiles to form words from scrambled sentences.
 
 ## 🚨 MANDATORY: iOS Simulator Debugging
-**File-Based Logging - ALWAYS USE**: `./Scripts/tail-logs.sh` (REQUIRED for all debugging)
+**File-Based Logging**: Device-specific logs (`anagram-debug-iPhone-15.log`, `anagram-debug-iPhone-15-Pro.log`)
+**Log Analysis Protocol**:
+1. Run `./Scripts/tail-logs.sh` to identify most recent log file path
+2. **CRITICAL**: Use device-specific logs (`anagram-debug-iPhone-15.log`) NOT old generic logs (`anagram-debug.log`)
+3. Priority order: `iPhone-15.log` > `iPhone-15-Pro.log` > generic logs (avoid)
+4. Use `grep`, `head`, `tail` commands on the device-specific log file
+5. Search patterns: `grep -E "(ENTERING_|GAME.*🎮|ERROR.*❌|USING_LOCAL)" /path/to/device-specific.log`
 **Code Usage**: `DebugLogger.shared.ui/network/error/info/game("message")` - Add to ALL new functions
 **Categories**: 🎨 UI, 🌐 NETWORK, ℹ️ INFO, ❌ ERROR, 🎮 GAME
 
@@ -20,7 +26,7 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 ## DEPLOYMENT GUIDELINES
 - Always build new apps using the build script and wait for feedback before proceeding
 - When user says "commit and push", that constitutes explicit approval to commit
-- **🚨 LOG MONITORING: For debugging issues, use `./Scripts/tail-logs.sh` in a separate session. Do NOT block builds on log tailing.**
+- **🚨 LOG MONITORING: For debugging, use device-specific logs via `./Scripts/tail-logs.sh` to find path, then `grep`/`head`/`tail` on specific device log files. Do NOT use tail in blocking mode.**
 
 ## CODE QUALITY REQUIREMENTS
 - **Zero tolerance for bad patterns** - Stop and refactor immediately

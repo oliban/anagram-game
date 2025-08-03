@@ -243,6 +243,7 @@ class PhraseService: PhraseServiceDelegate {
             }
             
             print("📨 SOCKET: Received new phrase: \(phrase.content)")
+            print("🐛 SOCKET DEBUG: targetId = '\(phrase.targetId ?? "nil")', senderName = '\(phrase.senderName)'")
             
         } catch {
             print("❌ SOCKET: Failed to parse new phrase: \(error.localizedDescription)")
