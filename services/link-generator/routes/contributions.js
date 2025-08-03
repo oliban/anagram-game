@@ -229,7 +229,7 @@ module.exports = (dependencies) => {
         language: language,
         senderId: null, // External contribution - no sender
         targetId: validation.link.requestingPlayerId,
-        phraseType: 'contribution',
+        phraseType: 'custom',
         contributorName: contributorName || 'Anonymous'
       };
 
