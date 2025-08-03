@@ -2555,7 +2555,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 glowNode.lineWidth = 3.0
                 glowNode.alpha = 1.0 // Start at full brightness
                 glowNode.blendMode = .screen // Screen blend mode for maximum brightness
-                glowNode.zPosition = emojiTile.zPosition - 1
+                glowNode.zPosition = 1000 // Place in front of dark overlay
                 
                 // Add multiple glow layers for ultra-intensity
                 let outerGlow = SKShapeNode(circleOfRadius: glowConfig.glowRadius * 1.5)
@@ -2563,11 +2563,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 outerGlow.strokeColor = UIColor.clear
                 outerGlow.alpha = 0.8
                 outerGlow.blendMode = .screen
-                outerGlow.zPosition = emojiTile.zPosition - 2
+                outerGlow.zPosition = 999 // Behind main glow but in front of overlay
                 
-                // Position glows behind the emoji
-                emojiTile.addChild(glowNode)
-                emojiTile.addChild(outerGlow)
+                // Position glows at the same location as emoji but in front of overlay
+                glowNode.position = emojiTile.position
+                outerGlow.position = emojiTile.position
+                
+                // Add glows to the main scene (not as child nodes) so they appear in front
+                addChild(glowNode)
+                addChild(outerGlow)
                 
                 // Create finite pulsing effect (not infinite)
                 let glowPulse = SKAction.sequence([
@@ -2599,10 +2603,16 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 let finiteGlowNodePulse = SKAction.repeat(glowNodePulse, count: pulseCount)
                 let finiteOuterPulse = SKAction.repeat(outerGlowPulse, count: Int(10.0 / (glowConfig.duration * 2.4)))
                 
+                // Create tracking action so glows follow the emoji
+                let trackEmoji = SKAction.repeatForever(SKAction.run {
+                    glowNode.position = emojiTile.position
+                    outerGlow.position = emojiTile.position
+                })
+                
                 // Run finite effects
                 emojiTile.run(finiteGlowPulse)
-                glowNode.run(finiteGlowNodePulse)
-                outerGlow.run(finiteOuterPulse)
+                glowNode.run(SKAction.group([finiteGlowNodePulse, trackEmoji]))
+                outerGlow.run(SKAction.group([finiteOuterPulse, trackEmoji]))
                 
                 // Clean up after 10 seconds - remove all glow effects
                 let cleanup = SKAction.sequence([
@@ -2611,6 +2621,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                         SKAction.scale(to: 1.0, duration: 0.5), // Return to normal size
                         SKAction.fadeAlpha(to: 1.0, duration: 0.5), // Return to normal opacity
                         SKAction.run { 
+                            glowNode.removeAllActions()
+                            outerGlow.removeAllActions()
                             glowNode.removeFromParent()
                             outerGlow.removeFromParent()
                         }
