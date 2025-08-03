@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anagram Game - Monitoring Dashboard</title>
-    <link rel="stylesheet" href="/web/shared/shared.css">
-    <link rel="stylesheet" href="/web/monitoring/monitoring.css">
+    <link rel="stylesheet" href="/shared/shared.css">
+    <link rel="stylesheet" href="/monitoring/monitoring.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
@@ -31,6 +31,32 @@
             <div class="stat-card">
                 <div class="stat-number" id="completion-rate">0%</div>
                 <div class="stat-label">Completion Rate</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Phrase Inventory Status</h2>
+            <div class="inventory-grid">
+                <div class="inventory-card very-easy">
+                    <div class="inventory-number" id="phrases-very-easy">0</div>
+                    <div class="inventory-label">Very Easy (≤20)</div>
+                </div>
+                <div class="inventory-card easy">
+                    <div class="inventory-number" id="phrases-easy">0</div>
+                    <div class="inventory-label">Easy (21-40)</div>
+                </div>
+                <div class="inventory-card medium">
+                    <div class="inventory-number" id="phrases-medium">0</div>
+                    <div class="inventory-label">Medium (41-60)</div>
+                </div>
+                <div class="inventory-card hard">
+                    <div class="inventory-number" id="phrases-hard">0</div>
+                    <div class="inventory-label">Hard (61-80)</div>
+                </div>
+                <div class="inventory-card very-hard">
+                    <div class="inventory-number" id="phrases-very-hard">0</div>
+                    <div class="inventory-label">Very Hard (>80)</div>
+                </div>
             </div>
         </div>
 
@@ -105,11 +131,20 @@
                         </div>
                     </div>
                 </div>
+                <div class="game-state-section">
+                    <h3>Players Nearing Phrase Depletion</h3>
+                    <div id="depletion-list" class="depletion-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <span>Loading player depletion data...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="/web/shared/api-client.js"></script>
-    <script src="/web/monitoring/monitoring.js"></script>
+    <script src="/shared/api-client.js"></script>
+    <script src="/monitoring/monitoring.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { pool } = require('./shared/database/connection');
+const { testConnection, pool } = require('./shared/database/connection');
 const levelConfig = require('./shared/config/level-config.json');
 
 const app = express();
@@ -31,6 +31,17 @@ app.get('/api/status', (req, res) => {
     service: 'web-dashboard',
     timestamp: new Date().toISOString() 
   });
+});
+
+// Monitoring stats endpoint
+app.get('/api/monitoring/stats', async (req, res) => {
+    try {
+        const stats = await getMonitoringStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching monitoring stats:', error);
+        res.status(500).json({ error: 'Failed to fetch monitoring stats' });
+    }
 });
 
 // Get contribution link details with REAL player data
@@ -150,9 +161,206 @@ app.get('/monitoring', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'monitoring', 'index.html'));
 });
 
+// Helper function to get monitoring stats
+async function getMonitoringStats() {
+    try {
+        const [playersResult, phrasesResult, todayPhrasesResult] = await Promise.all([
+            pool.query('SELECT COUNT(*) as count FROM players WHERE is_active = true AND last_seen > NOW() - INTERVAL \'5 minutes\''),
+            pool.query('SELECT COUNT(*) as count FROM phrases WHERE created_at > NOW() - INTERVAL \'24 hours\''),
+            pool.query('SELECT COUNT(*) as count FROM phrases WHERE created_at > CURRENT_DATE')
+        ]);
+
+        const completedResult = await pool.query(`
+            SELECT 
+                COUNT(*) as completed,
+                COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM phrases WHERE created_at > NOW() - INTERVAL '24 hours'), 0) as completion_rate
+            FROM completed_phrases cp
+            JOIN phrases p ON cp.phrase_id = p.id
+            WHERE cp.completed_at > NOW() - INTERVAL '24 hours'
+        `);
+
+        // Get phrase inventory by difficulty
+        const inventoryResult = await getPhraseInventoryByDifficulty();
+        
+        // Get players nearing phrase depletion
+        const playersNearingDepletion = await getPlayersNearingPhraseDepletion();
+
+        return {
+            onlinePlayers: parseInt(playersResult.rows[0].count),
+            activePhrases: parseInt(phrasesResult.rows[0].count),
+            phrasesToday: parseInt(todayPhrasesResult.rows[0].count),
+            completionRate: Math.round(parseFloat(completedResult.rows[0].completion_rate || 0)),
+            phraseInventory: inventoryResult,
+            playersNearingDepletion: playersNearingDepletion
+        };
+    } catch (error) {
+        console.error('Error calculating monitoring stats:', error);
+        return {
+            onlinePlayers: 0,
+            activePhrases: 0,
+            phrasesToday: 0,
+            completionRate: 0,
+            phraseInventory: {
+                veryEasy: 0,
+                easy: 0,
+                medium: 0,
+                hard: 0,
+                veryHard: 0
+            },
+            playersNearingDepletion: []
+        };
+    }
+}
+
+// Helper function to get phrase inventory by difficulty ranges
+async function getPhraseInventoryByDifficulty() {
+    try {
+        const inventoryQuery = `
+            SELECT 
+                CASE 
+                    WHEN difficulty_level <= 20 THEN 'veryEasy'
+                    WHEN difficulty_level <= 40 THEN 'easy'
+                    WHEN difficulty_level <= 60 THEN 'medium'
+                    WHEN difficulty_level <= 80 THEN 'hard'
+                    ELSE 'veryHard'
+                END as difficulty_range,
+                COUNT(*) as phrase_count
+            FROM phrases 
+            WHERE is_global = true 
+                AND is_approved = true
+                AND NOT EXISTS (
+                    SELECT 1 FROM completed_phrases cp 
+                    WHERE cp.phrase_id = phrases.id
+                )
+            GROUP BY difficulty_range
+            ORDER BY 
+                CASE difficulty_range
+                    WHEN 'veryEasy' THEN 1
+                    WHEN 'easy' THEN 2
+                    WHEN 'medium' THEN 3
+                    WHEN 'hard' THEN 4
+                    WHEN 'veryHard' THEN 5
+                END
+        `;
+
+        const result = await pool.query(inventoryQuery);
+        
+        // Initialize with zeros
+        const inventory = {
+            veryEasy: 0,
+            easy: 0,
+            medium: 0,
+            hard: 0,
+            veryHard: 0
+        };
+
+        // Fill in actual counts
+        result.rows.forEach(row => {
+            inventory[row.difficulty_range] = parseInt(row.phrase_count);
+        });
+
+        console.log('📊 INVENTORY: Phrase counts by difficulty:', inventory);
+        return inventory;
+
+    } catch (error) {
+        console.error('❌ INVENTORY: Error getting phrase inventory:', error);
+        return {
+            veryEasy: 0,
+            easy: 0,
+            medium: 0,
+            hard: 0,
+            veryHard: 0
+        };
+    }
+}
+
+// Helper function to get players nearing phrase depletion
+async function getPlayersNearingPhraseDepletion() {
+    try {
+        const depletionQuery = `
+            WITH player_stats as (
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.is_active,
+                    p.last_seen,
+                    COUNT(cp.phrase_id) as phrases_completed,
+                    -- Calculate available phrases for player's level range
+                    (
+                        SELECT COUNT(*) 
+                        FROM phrases ph
+                        WHERE ph.is_global = true 
+                            AND ph.is_approved = true
+                            AND ph.difficulty_level <= COALESCE(p.level, 1) * 50  -- Assuming level * 50 = max difficulty
+                            AND NOT EXISTS (
+                                SELECT 1 FROM completed_phrases cp2 
+                                WHERE cp2.phrase_id = ph.id AND cp2.player_id = p.id
+                            )
+                    ) as available_phrases,
+                    -- Player's current level (default to 1 if null)
+                    COALESCE(p.level, 1) as player_level
+                FROM players p
+                LEFT JOIN completed_phrases cp ON p.id = cp.player_id
+                WHERE p.is_active = true 
+                    AND p.last_seen > NOW() - INTERVAL '7 days'  -- Active in last 7 days
+                GROUP BY p.id, p.name, p.is_active, p.last_seen, p.level
+            )
+            SELECT 
+                id,
+                name,
+                phrases_completed,
+                available_phrases,
+                player_level,
+                last_seen,
+                CASE 
+                    WHEN available_phrases = 0 THEN 'critical'
+                    WHEN available_phrases < 5 THEN 'low'
+                    WHEN available_phrases < 15 THEN 'medium'
+                    ELSE 'good'
+                END as depletion_status
+            FROM player_stats
+            WHERE available_phrases < 20  -- Only show players with less than 20 available phrases
+            ORDER BY available_phrases ASC, phrases_completed DESC
+            LIMIT 20
+        `;
+
+        const result = await pool.query(depletionQuery);
+        
+        const playersNearingDepletion = result.rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            phrasesCompleted: parseInt(row.phrases_completed),
+            availablePhrases: parseInt(row.available_phrases),
+            playerLevel: parseInt(row.player_level),
+            lastSeen: row.last_seen,
+            depletionStatus: row.depletion_status
+        }));
+
+        console.log(`📊 DEPLETION: Found ${playersNearingDepletion.length} players nearing phrase depletion`);
+        return playersNearingDepletion;
+
+    } catch (error) {
+        console.error('❌ DEPLETION: Error getting players nearing depletion:', error);
+        return [];
+    }
+}
+
 const PORT = 3001;
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`📊 Web Dashboard running on port ${PORT}`);
-  console.log(`🌐 Dashboard: http://0.0.0.0:${PORT}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    await testConnection();
+    console.log('✅ Database connected successfully');
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`📊 Web Dashboard running on port ${PORT}`);
+      console.log(`🌐 Dashboard: http://0.0.0.0:${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start web dashboard:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

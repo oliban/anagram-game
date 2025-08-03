@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Monitoring Data</title>
+</head>
+<body>
+    <h1>Test Monitoring API</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/monitoring/stats');
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                console.log('API Response:', data);
+            } catch (error) {
+                console.error('API Error:', error);
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+        
+        testAPI();
+        setInterval(testAPI, 5000); // Test every 5 seconds
+    </script>
+</body>
+</html>
