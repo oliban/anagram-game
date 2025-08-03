@@ -629,15 +629,31 @@ struct LobbyView: View {
         }
         
         print("📊 Loading player stats for playerId: \(playerId)")
+        DebugLogger.shared.network("Loading player stats for playerId: \(playerId)")
         
         do {
             let stats = try await networkManager.getPlayerStats(playerId: playerId)
             await MainActor.run {
                 self.playerStats = stats
+                // Log the scores for debugging
+                DebugLogger.shared.info("SCORE COMPARISON: gameModel=\(gameModel.playerTotalScore), server=\(stats.totalScore)")
+                print("🔍 SCORE COMPARISON: gameModel=\(gameModel.playerTotalScore), server=\(stats.totalScore)")
+                
+                // Synchronize gameModel's playerTotalScore with server-authoritative score
+                if gameModel.playerTotalScore != stats.totalScore {
+                    print("🔄 SYNC: Updating gameModel total score from \(gameModel.playerTotalScore) to \(stats.totalScore)")
+                    DebugLogger.shared.info("SYNC: Updating gameModel total score from \(gameModel.playerTotalScore) to \(stats.totalScore)")
+                    gameModel.playerTotalScore = stats.totalScore
+                } else {
+                    print("✅ SYNC: Scores already match - no sync needed")
+                    DebugLogger.shared.info("SYNC: Scores already match - no sync needed")
+                }
             }
-            print("✅ Successfully loaded player stats")
+            print("✅ Successfully loaded player stats and synchronized total score")
+            DebugLogger.shared.network("Successfully loaded player stats and synchronized total score")
         } catch {
             print("❌ Failed to load player stats: \(error)")
+            DebugLogger.shared.error("Failed to load player stats: \(error)")
         }
     }
     

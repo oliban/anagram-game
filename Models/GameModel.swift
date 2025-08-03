@@ -724,62 +724,58 @@ class GameModel: ObservableObject {
     
     /// Load level configuration from server
     func loadLevelConfig() async {
-        do {
-            // Try to load from server first
-            if let serverConfig = await fetchLevelConfigFromServer() {
-                levelConfig = serverConfig 
-                print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
-            } else {
-                // Fall back to local config file if available
-                if let localConfig = loadLocalLevelConfig() {
-                    levelConfig = localConfig
-                    print("⚙️ LEVEL CONFIG: Loaded from local file - \(localConfig.skillLevels.count) skill levels")
-                } else {
-                    print("⚙️ LEVEL CONFIG: Using default - \(levelConfig.skillLevels.count) skill levels")
-                }
-            }
+        guard let serverConfig = await fetchLevelConfigFromServer() else {
+            fatalError("❌ LEVEL CONFIG: Cannot load level configuration from server - no fallbacks allowed!")
         }
+        
+        levelConfig = serverConfig 
+        print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
+        DebugLogger.shared.info("LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
     }
     
     /// Fetch level config from server endpoint
     private func fetchLevelConfigFromServer() async -> LevelConfig? {
         guard let url = URL(string: "\(AppConfig.baseURL)/api/config/levels") else { 
             print("❌ LEVEL CONFIG: Invalid server URL")
+            DebugLogger.shared.error("LEVEL CONFIG: Invalid server URL")
             return nil 
         }
         
         do {
+            print("🔄 LEVEL CONFIG: Fetching from \(url)")
+            DebugLogger.shared.network("LEVEL CONFIG: Fetching from \(url)")
+            
             let (data, response) = try await URLSession.shared.data(from: url)
             
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 print("❌ LEVEL CONFIG: Server request failed with status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                DebugLogger.shared.error("LEVEL CONFIG: Server request failed with status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
                 return nil
             }
             
-            let config = try JSONDecoder().decode(LevelConfig.self, from: data)
-            return config
+            // Server returns {"success": true, "config": {...}} format
+            struct LevelConfigResponse: Codable {
+                let success: Bool
+                let config: LevelConfig
+            }
+            
+            let response_obj = try JSONDecoder().decode(LevelConfigResponse.self, from: data)
+            if response_obj.success {
+                print("✅ LEVEL CONFIG: Successfully fetched from server")
+                DebugLogger.shared.network("LEVEL CONFIG: Successfully fetched from server")
+                return response_obj.config
+            } else {
+                print("❌ LEVEL CONFIG: Server responded with success=false")
+                DebugLogger.shared.error("LEVEL CONFIG: Server responded with success=false")
+                return nil
+            }
         } catch {
             print("❌ LEVEL CONFIG: Failed to fetch from server: \(error)")
+            DebugLogger.shared.error("LEVEL CONFIG: Failed to fetch from server: \(error)")
             return nil
         }
     }
     
-    /// Load level config from local JSON file
-    private func loadLocalLevelConfig() -> LevelConfig? {
-        guard let path = Bundle.main.path(forResource: "level-config", ofType: "json"),
-              let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-            print("⚠️ LEVEL CONFIG: No local config file found")
-            return nil
-        }
-        
-        do {
-            let config = try JSONDecoder().decode(LevelConfig.self, from: data)
-            return config
-        } catch {
-            print("❌ LEVEL CONFIG: Failed to parse local config: \(error)")
-            return nil
-        }
-    }
     
     // MARK: - Debug Methods
     
