@@ -2526,47 +2526,71 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func addSparkleEffect(to emojiTile: EmojiIconTile, rarity: EmojiRarity?) {
-        // Add sparkle effect for rare emojis
+        // Add intense glow effect for rare emojis that cuts through dark backgrounds
         if let rarity = rarity {
             // Only add sparkle effect for Epic or rarer (5% drop rate or lower)
             let shouldSparkle: Bool
-            let sparkleIntensity: (scale: CGFloat, duration: TimeInterval, alpha: CGFloat)
+            let glowConfig: (scale: CGFloat, duration: TimeInterval, glowRadius: CGFloat, glowColor: UIColor)
             
             switch rarity {
             case .legendary:
                 shouldSparkle = true
-                sparkleIntensity = (scale: 1.4, duration: 0.4, alpha: 0.3)
+                glowConfig = (scale: 1.6, duration: 0.3, glowRadius: 25.0, glowColor: UIColor.systemYellow)
             case .mythic:
                 shouldSparkle = true
-                sparkleIntensity = (scale: 1.3, duration: 0.5, alpha: 0.25)
+                glowConfig = (scale: 1.5, duration: 0.4, glowRadius: 20.0, glowColor: UIColor.systemPurple)
             case .epic:
                 shouldSparkle = true
-                sparkleIntensity = (scale: 1.2, duration: 0.6, alpha: 0.2)
+                glowConfig = (scale: 1.4, duration: 0.5, glowRadius: 15.0, glowColor: UIColor.systemBlue)
             case .rare, .uncommon, .common:
                 shouldSparkle = false
-                sparkleIntensity = (scale: 1.0, duration: 1.0, alpha: 0.0)
+                glowConfig = (scale: 1.0, duration: 1.0, glowRadius: 0.0, glowColor: UIColor.clear)
             }
             
             if shouldSparkle {
-                // Create pulsing glow effect
-                let glowEffect = SKAction.sequence([
+                // Create intense glow background that shines through dark overlay
+                let glowNode = SKShapeNode(circleOfRadius: glowConfig.glowRadius)
+                glowNode.fillColor = glowConfig.glowColor
+                glowNode.strokeColor = glowConfig.glowColor
+                glowNode.alpha = 0.0
+                glowNode.blendMode = .add // Additive blending for bright glow
+                glowNode.zPosition = emojiTile.zPosition - 1
+                
+                // Position glow behind the emoji
+                emojiTile.addChild(glowNode)
+                
+                // Create intense pulsing glow effect with scaling and brightness
+                let glowPulse = SKAction.sequence([
                     SKAction.group([
-                        SKAction.scale(to: sparkleIntensity.scale, duration: sparkleIntensity.duration),
-                        SKAction.fadeAlpha(to: 1.0 - sparkleIntensity.alpha, duration: sparkleIntensity.duration)
+                        SKAction.scale(to: glowConfig.scale, duration: glowConfig.duration),
+                        SKAction.fadeAlpha(to: 0.8, duration: glowConfig.duration) // Strong glow
                     ]),
                     SKAction.group([
-                        SKAction.scale(to: 1.0, duration: sparkleIntensity.duration),
-                        SKAction.fadeAlpha(to: 1.0, duration: sparkleIntensity.duration)
+                        SKAction.scale(to: 1.0, duration: glowConfig.duration),
+                        SKAction.fadeAlpha(to: 0.4, duration: glowConfig.duration) // Medium glow
                     ])
                 ])
                 
-                // Run the sparkle effect for a limited time (10 seconds) then fade out
-                let sparkleSequence = SKAction.sequence([
-                    SKAction.repeat(glowEffect, count: Int(10.0 / (sparkleIntensity.duration * 2))),
-                    SKAction.fadeAlpha(to: 1.0, duration: 0.5)
+                // Glow node pulsing effect - brighter and more intense
+                let glowNodePulse = SKAction.sequence([
+                    SKAction.fadeAlpha(to: 0.9, duration: glowConfig.duration),
+                    SKAction.fadeAlpha(to: 0.3, duration: glowConfig.duration)
                 ])
                 
-                emojiTile.run(sparkleSequence)
+                // Run both effects simultaneously for maximum impact
+                emojiTile.run(SKAction.repeatForever(glowPulse))
+                glowNode.run(SKAction.repeatForever(glowNodePulse))
+                
+                // Stop glowing after 15 seconds and remove glow node
+                let stopGlowing = SKAction.sequence([
+                    SKAction.wait(forDuration: 15.0),
+                    SKAction.group([
+                        SKAction.fadeAlpha(to: 1.0, duration: 1.0), // Fade emoji back to normal
+                        SKAction.run { glowNode.removeFromParent() } // Remove glow node
+                    ])
+                ])
+                
+                emojiTile.run(stopGlowing)
             }
         }
     }
