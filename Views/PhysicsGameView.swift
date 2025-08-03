@@ -2502,14 +2502,25 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             emojiTile.name = "collectable_emoji"
         }
         
-        // Add sparkle effect for all rare emojis (Epic and above)
-        addSparkleEffect(to: emojiTile, rarity: rarity)
-        
         // Position at top of visible screen
         let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
         let startY = size.height - 50
         emojiTile.position = CGPoint(x: randomX, y: startY)
-        emojiTile.zPosition = 1000 // Place emoji tiles in front of dark overlay
+        
+        // Set z-position based on rarity - only rare emojis need to be in front of overlay
+        if let rarity = rarity {
+            switch rarity {
+            case .legendary, .mythic, .epic:
+                emojiTile.zPosition = 1000 // In front of dark overlay for sparkle effects
+            case .rare, .uncommon, .common:
+                emojiTile.zPosition = 100 // Normal position behind overlay
+            }
+        } else {
+            emojiTile.zPosition = 100 // Default position for emojis without rarity
+        }
+        
+        // Add sparkle effect for all rare emojis (Epic and above)
+        addSparkleEffect(to: emojiTile, rarity: rarity)
         
         addChild(emojiTile)
         
