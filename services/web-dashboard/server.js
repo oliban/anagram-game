@@ -220,6 +220,7 @@ async function getRecentPhrases() {
                 p.created_by_player_id,
                 p.contributor_name,
                 pl.name as creator_name,
+                COALESCE(pp.target_count, 0) as target_count,
                 CASE 
                     WHEN p.difficulty_level <= 20 THEN 'very-easy'
                     WHEN p.difficulty_level <= 40 THEN 'easy'
@@ -237,6 +238,11 @@ async function getRecentPhrases() {
                 END as creation_method
             FROM phrases p
             LEFT JOIN players pl ON p.created_by_player_id = pl.id
+            LEFT JOIN (
+                SELECT phrase_id, COUNT(*) as target_count
+                FROM player_phrases 
+                GROUP BY phrase_id
+            ) pp ON p.id = pp.phrase_id
             WHERE p.created_at > NOW() - INTERVAL '24 hours'
             ORDER BY p.created_at DESC
             LIMIT 10
@@ -254,6 +260,7 @@ async function getRecentPhrases() {
             createdAt: row.created_at,
             isGlobal: row.is_global,
             isApproved: row.is_approved,
+            targetCount: parseInt(row.target_count) || 0,
             creatorName: row.contributor_name || row.creator_name || 'Unknown',
             creationMethod: row.creation_method
         }));

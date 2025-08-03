@@ -103,8 +103,8 @@ class DatabasePhrase {
       errors.push('Hint must be a string');
     } else {
       const trimmedHint = (hint || '').trim();  // Default to empty string if hint is null/undefined
-      if (trimmedHint.length > 300) {
-        errors.push('Hint cannot be longer than 300 characters');
+      if (trimmedHint.length > 32) {
+        errors.push('Hint cannot be longer than 32 characters');
       }
       
       // Check that hint doesn't contain the exact answer words (only words longer than 5 chars)
@@ -755,12 +755,11 @@ class DatabasePhrase {
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 
-        // Handle targeting
+        // Handle targeting - support both global AND targeted simultaneously
         let targetCount = 0;
-        if (isGlobal) {
-          // Global phrases are available to all players
-          console.log(`🌍 DATABASE: Global phrase created - "${cleanContent}"`);
-        } else if (targetIds.length > 0) {
+        
+        // Handle targeted delivery
+        if (targetIds.length > 0) {
           // Multi-player targeting
           for (const targetId of targetIds) {
             await client.query(`
@@ -771,6 +770,15 @@ class DatabasePhrase {
             targetCount++;
           }
           console.log(`🎯 DATABASE: Phrase ${phrase.id} assigned to ${targetCount} players`);
+        }
+        
+        // Log the type of phrase created
+        if (isGlobal && targetCount > 0) {
+          console.log(`🌍🎯 DATABASE: Dual-mode phrase created - "${cleanContent}" (Global + ${targetCount} targeted)`);
+        } else if (isGlobal) {
+          console.log(`🌍 DATABASE: Global phrase created - "${cleanContent}"`);
+        } else if (targetCount > 0) {
+          console.log(`🎯 DATABASE: Targeted phrase created - "${cleanContent}" to ${targetCount} players`);
         }
 
         console.log(`📝 DATABASE: Enhanced phrase created - "${cleanContent}" with hint: "${cleanHint}"`);

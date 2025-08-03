@@ -36,13 +36,58 @@ struct PhraseCreationView: View {
         let words = wordCount
         let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return words >= 2 && words <= 6 && hasPhrase && hasClue
+        let validClueLength = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 32
+        return words >= 2 && words <= 4 && hasPhrase && hasClue && validClueLength && isValidWordLengths
     }
     
     private var isValidPhraseForDifficulty: Bool {
         let words = wordCount
         let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return words >= 2 && words <= 6 && hasPhrase
+        return words >= 2 && words <= 4 && hasPhrase && isValidWordLengths
+    }
+    
+    private var isValidWordLengths: Bool {
+        let trimmedPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = trimmedPhrase.split(separator: " ")
+        return words.allSatisfy { $0.count <= 7 }
+    }
+    
+    private var validationMessage: String {
+        let words = wordCount
+        let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let clueLength = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count
+        
+        if !hasPhrase {
+            return ""
+        }
+        
+        if words < 2 {
+            return "Phrase must have at least 2 words"
+        }
+        
+        if words > 4 {
+            return "Phrase can have at most 4 words"
+        }
+        
+        if !isValidWordLengths {
+            let trimmedPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let words = trimmedPhrase.split(separator: " ")
+            let longWords = words.filter { $0.count > 7 }
+            if longWords.count == 1 {
+                return "Word '\(longWords.first!)' is too long (max 7 letters)"
+            } else {
+                return "Some words are too long (max 7 letters per word)"
+            }
+        }
+        
+        if hasClue && clueLength > 32 {
+            return "Clue is too long (\(clueLength)/32 characters)"
+        }
+        
+        // Remove the clue requirement from validation message - let difficulty show without clue
+        
+        return ""
     }
     
     private var availableTargets: [Player] {
@@ -156,7 +201,7 @@ struct PhraseCreationView: View {
                 
                 // Phrase input section
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Phrase (2-6 words)")
+                    Text("Phrase (2-4 words, max 7 letters per word)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
@@ -188,16 +233,34 @@ struct PhraseCreationView: View {
                             
                             Spacer()
                             
+                            // Word length indicator
+                            if !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                HStack(spacing: 4) {
+                                    ForEach(Array(phraseText.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: " ").enumerated()), id: \.offset) { index, word in
+                                        Text("\(word.count)")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(word.count > 7 ? .red : (word.count > 5 ? .orange : .secondary))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 2)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .fill(word.count > 7 ? Color.red.opacity(0.1) : Color.clear)
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                        
+                        HStack {
+                            Spacer()
+                            
                             // Difficulty display and validation messages (shared space)
                             HStack {
-                                if wordCount > 6 {
-                                    Text("Too many words")
+                                if !validationMessage.isEmpty {
+                                    Text(validationMessage)
                                         .font(.caption)
                                         .foregroundColor(.red)
-                                } else if wordCount > 0 && wordCount < 2 {
-                                    Text("Need at least 2 words")
-                                        .font(.caption)
-                                        .foregroundColor(.orange)
                                 } else if isValidPhraseForDifficulty {
                                     if isAnalyzingDifficulty {
                                         ProgressView()
@@ -236,7 +299,7 @@ struct PhraseCreationView: View {
                 
                 // Clue input section
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Clue")
+                    Text("Clue (max 32 characters)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
@@ -267,10 +330,10 @@ struct PhraseCreationView: View {
                             
                             Spacer()
                             
-                            Text("\(clueText.count) characters")
+                            Text("\(clueText.count)/32 characters")
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(clueText.count > 32 ? .red : (clueText.count > 25 ? .orange : .secondary))
                         }
                     }
                 }
@@ -503,9 +566,6 @@ struct PhraseCreationView: View {
             debounceTimer?.invalidate()
         }
         .onChange(of: phraseText) { _, newValue in
-            // Auto-detect language based on Swedish characters
-            detectLanguage(from: newValue)
-            
             // Cancel existing timer
             debounceTimer?.invalidate()
             
@@ -516,13 +576,22 @@ struct PhraseCreationView: View {
                 return
             }
             
-            // Use client-side scoring for immediate feedback
-            analyzeDifficultyClientSide(newValue)
+            // Immediately show score for valid phrases (no debouncing for better UX)
+            if isValidPhraseForDifficulty {
+                analyzeDifficultyClientSide(newValue)
+            }
         }
-        .onChange(of: selectedLanguage) { _, newLanguage in
-            // Re-analyze difficulty when language changes
+        .onChange(of: selectedLanguage) { oldLanguage, newLanguage in
+            // Re-analyze difficulty when language changes (immediate, no debouncing needed)
+            print("📱 LANGUAGE CHANGE: From '\(oldLanguage)' to '\(newLanguage)' for phrase '\(phraseText)'")
             if isValidPhraseForDifficulty && !phraseText.isEmpty {
+                print("🔄 LANGUAGE CHANGE: Re-analyzing difficulty for '\(phraseText)' with language '\(newLanguage)'")
+                // Cancel any pending analysis
+                debounceTimer?.invalidate()
+                // Immediately analyze with new language
                 analyzeDifficultyClientSide(phraseText)
+            } else {
+                print("⚠️ LANGUAGE CHANGE: Skipping analysis - isValidPhraseForDifficulty=\(isValidPhraseForDifficulty), phraseText='\(phraseText)'")
             }
         }
         .onChange(of: playerSearchText) { _, newValue in
@@ -628,14 +697,15 @@ struct PhraseCreationView: View {
             return
         }
         
-        // Client-side analysis for immediate feedback (no network calls)
+        // Use direct client-side analysis with proper language-specific scoring
+        print("📊 CLIENT DIFFICULTY: Analyzing '\(trimmedPhrase)' with language '\(selectedLanguage)'")
         let analysis = NetworkManager.analyzeDifficultyClientSide(
             phrase: trimmedPhrase,
             language: selectedLanguage
         )
-        
         currentDifficulty = analysis
         isAnalyzingDifficulty = false
+        print("📊 CLIENT DIFFICULTY: Result - \(analysis.difficulty) (\(String(format: "%.1f", analysis.score)))")
     }
     
     private func selectPlayer(_ player: Player) {
@@ -657,19 +727,6 @@ struct PhraseCreationView: View {
         selectedPlayers.removeAll { $0.id == player.id }
     }
     
-    private func detectLanguage(from text: String) {
-        let cleanText = text.lowercased()
-        
-        // Detect Swedish characters (å, ä, ö)
-        if cleanText.range(of: "[åäö]", options: .regularExpression) != nil {
-            if selectedLanguage != "sv" {
-                selectedLanguage = "sv"
-            }
-        } else if !cleanText.isEmpty && selectedLanguage == "sv" {
-            // If text doesn't contain Swedish characters but language was Swedish, reset to English
-            selectedLanguage = "en"
-        }
-    }
 }
 
 struct PhraseCreationView_Previews: PreviewProvider {

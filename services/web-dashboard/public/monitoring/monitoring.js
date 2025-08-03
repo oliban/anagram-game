@@ -283,10 +283,22 @@ class MonitoringDashboard {
                             <strong>Method:</strong> ${phrase.creationMethod}
                         </span>
                         <span class="phrase-status">
-                            ${phrase.isGlobal ? 
-                                (phrase.isApproved ? '<span class="status-global-approved">✅ Global Pool</span>' : '<span class="status-global-pending">⏳ Pending Approval</span>') 
-                                : '<span class="status-targeted">🎯 Targeted</span>'
-                            }
+                            ${(() => {
+                                const hasTargets = phrase.targetCount > 0;
+                                const isGlobal = phrase.isGlobal;
+                                
+                                if (isGlobal && hasTargets) {
+                                    return '<span class="status-dual">🌍🎯 Global + Targeted (' + phrase.targetCount + ')</span>';
+                                } else if (isGlobal) {
+                                    return phrase.isApproved ? 
+                                        '<span class="status-global-approved">✅ Global Pool</span>' : 
+                                        '<span class="status-global-pending">⏳ Pending Approval</span>';
+                                } else if (hasTargets) {
+                                    return '<span class="status-targeted">🎯 Targeted (' + phrase.targetCount + ')</span>';
+                                } else {
+                                    return '<span class="status-unknown">❓ Unknown</span>';
+                                }
+                            })()}
                         </span>
                     </div>
                 </div>
