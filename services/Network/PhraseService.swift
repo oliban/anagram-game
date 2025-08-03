@@ -169,15 +169,31 @@ class PhraseService: PhraseServiceDelegate {
     
     // MARK: - Phrase Completion
     
-    func completePhraseOnServer(phraseId: String, playerId: String, hintsUsed: Int, completionTime: Int) async throws -> CompletionResult {
+    func completePhraseOnServer(phraseId: String, playerId: String, hintsUsed: Int, completionTime: Int, celebrationEmojis: [EmojiCatalogItem] = []) async throws -> CompletionResult {
         guard let url = URL(string: "\(baseURL)/api/phrases/\(phraseId)/complete") else {
             throw NetworkError.invalidURL
+        }
+        
+        // Convert celebrationEmojis to JSON-serializable format
+        let emojiData = celebrationEmojis.map { emoji in
+            return [
+                "id": emoji.id.uuidString,
+                "emoji_character": emoji.emojiCharacter,
+                "name": emoji.name,
+                "rarity_tier": emoji.rarity.rawValue,
+                "drop_rate_percentage": emoji.dropRatePercentage,
+                "points_reward": emoji.pointsReward,
+                "unicode_version": emoji.unicodeVersion ?? "",
+                "is_active": emoji.isActive,
+                "created_at": ISO8601DateFormatter().string(from: emoji.createdAt)
+            ] as [String: Any]
         }
         
         let requestBody: [String: Any] = [
             "playerId": playerId,
             "hintsUsed": hintsUsed,
-            "completionTime": completionTime
+            "completionTime": completionTime,
+            "celebrationEmojis": emojiData
         ]
         
         var request = URLRequest(url: url)
@@ -311,7 +327,7 @@ class PhraseService: PhraseServiceDelegate {
 // MARK: - CustomPhrase Initializer Extension
 
 extension CustomPhrase {
-    init(id: String, content: String, senderId: String, targetId: String?, createdAt: Date, isConsumed: Bool, senderName: String, language: String, clue: String, difficultyLevel: Int = 50, theme: String? = nil) {
+    init(id: String, content: String, senderId: String, targetId: String?, createdAt: Date, isConsumed: Bool, senderName: String, language: String, clue: String, difficultyLevel: Int = 50, theme: String? = nil, celebrationEmojis: [EmojiCatalogItem] = []) {
         self.id = id
         self.content = content
         self.senderId = senderId
@@ -323,6 +339,7 @@ extension CustomPhrase {
         self.clue = clue
         self.difficultyLevel = difficultyLevel
         self.theme = theme
+        self.celebrationEmojis = celebrationEmojis
     }
 }
 

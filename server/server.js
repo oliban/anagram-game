@@ -2621,6 +2621,10 @@ app.use('*', (req, res) => {
   });
 });
 
+// Emoji Collection Routes
+const emojiRoutes = require('./routes/emoji');
+app.use('/api/emoji', emojiRoutes);
+
 // WebSocket connection handling
 let connectedClients = 0;
 

@@ -240,7 +240,7 @@ class NetworkManager: ObservableObject {
         }
     }
     
-    func completePhrase(phraseId: String, hintsUsed: Int = 0, completionTime: Int = 0) async -> CompletionResult? {
+    func completePhrase(phraseId: String, hintsUsed: Int = 0, completionTime: Int = 0, celebrationEmojis: [EmojiCatalogItem] = []) async -> CompletionResult? {
         guard let currentPlayer = currentPlayer else {
             print("❌ COMPLETE: No current player to complete phrase")
             return nil
@@ -251,7 +251,8 @@ class NetworkManager: ObservableObject {
                 phraseId: phraseId,
                 playerId: currentPlayer.id,
                 hintsUsed: hintsUsed,
-                completionTime: completionTime
+                completionTime: completionTime,
+                celebrationEmojis: celebrationEmojis
             )
         } catch {
             print("❌ COMPLETE: Error completing phrase: \(error.localizedDescription)")
@@ -264,8 +265,8 @@ class NetworkManager: ObservableObject {
     }
     
     
-    func completePhraseOnServer(phraseId: String, playerId: String, hintsUsed: Int, completionTime: Int) async throws -> CompletionResult {
-        return try await phraseService.completePhraseOnServer(phraseId: phraseId, playerId: playerId, hintsUsed: hintsUsed, completionTime: completionTime)
+    func completePhraseOnServer(phraseId: String, playerId: String, hintsUsed: Int, completionTime: Int, celebrationEmojis: [EmojiCatalogItem] = []) async throws -> CompletionResult {
+        return try await phraseService.completePhraseOnServer(phraseId: phraseId, playerId: playerId, hintsUsed: hintsUsed, completionTime: completionTime, celebrationEmojis: celebrationEmojis)
     }
     
     func skipPhrase(phraseId: String) async -> Bool {

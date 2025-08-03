@@ -132,10 +132,11 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
     let clue: String // Hint clue for level 3 hints
     let difficultyLevel: Int // Server-provided difficulty score
     let theme: String? // Theme for ThemeInformationTile feature
+    let celebrationEmojis: [EmojiCatalogItem] // Pre-generated emojis for this phrase
     
     private enum CodingKeys: String, CodingKey {
         case id, content, senderId, targetId, createdAt, isConsumed, senderName, language, clue
-        case difficultyLevel, theme
+        case difficultyLevel, theme, celebrationEmojis
     }
     
     init(from decoder: Decoder) throws {
@@ -150,6 +151,7 @@ struct CustomPhrase: Codable, Identifiable, Equatable {
         clue = try container.decodeIfPresent(String.self, forKey: .clue) ?? "" // Server sends "clue" field, default to empty if missing
         difficultyLevel = try container.decodeIfPresent(Int.self, forKey: .difficultyLevel) ?? 50 // Default to medium difficulty if missing
         theme = try container.decodeIfPresent(String.self, forKey: .theme) // Theme is optional
+        celebrationEmojis = try container.decodeIfPresent([EmojiCatalogItem].self, forKey: .celebrationEmojis) ?? [] // Default to empty array
         
         // Handle date parsing - make optional since server might not include it
         if let dateString = try container.decodeIfPresent(String.self, forKey: .createdAt) {

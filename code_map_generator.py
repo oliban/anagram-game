@@ -316,12 +316,6 @@ def generate_code_map(file_path: str) -> str:
     # Build the complete API surface
     api_components = []
     
-    # Add timestamp header
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    api_components.append(f"// Generated: {timestamp}")
-    api_components.append("")
-    
     # Add imports
     if imports:
         api_components.extend(imports)
@@ -389,7 +383,7 @@ def main():
             swift_files = []
             for root, _, files in os.walk(path):
                 for file in files:
-                    if file.endswith('.swift'):
+                    if file.endswith('.swift') and not file.endswith('code_map.swift'):
                         swift_files.append(os.path.join(root, file))
             
             if swift_files:
