@@ -336,7 +336,7 @@ module.exports = (dependencies) => {
       // Get skill level and title based on total score
       const skillInfo = ScoringSystem.getSkillLevel(scores.totalScore);
       
-      // Get player's 16 rarest emojis
+      // Get player's emojis ordered by rarity (rarest first, but show all up to 16)
       const rarestEmojisQuery = `
         SELECT 
           ec.emoji_character,
