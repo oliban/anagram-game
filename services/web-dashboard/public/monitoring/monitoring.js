@@ -69,76 +69,76 @@ class MonitoringDashboard {
     }
 
     async connectWebSocket() {
-        return new Promise((resolve, reject) => {
-            console.log('🔌 Creating Socket.IO connection to /monitoring namespace...');
-            this.socket = io('/monitoring', {
-                transports: ['websocket', 'polling'],
-                upgrade: true,
-                rememberUpgrade: true
-            });
-
-            this.socket.on('connect', () => {
-                console.log('✅ Connected to monitoring WebSocket, socket ID:', this.socket.id);
-                console.log('📡 Requesting stats from server...');
-                this.socket.emit('request-stats');
-                resolve();
-            });
-
-            this.socket.on('disconnect', () => {
-                console.log('Disconnected from monitoring WebSocket');
-                this.showConnectionStatus('disconnected');
-            });
-
-            this.socket.on('reconnect', () => {
-                console.log('Reconnected to monitoring WebSocket');
-                this.showConnectionStatus('connected');
-            });
-
-            this.socket.on('error', (error) => {
-                console.error('WebSocket error:', error);
-                reject(error);
-            });
-
-            this.socket.on('activity', (activity) => {
-                console.log('📊 Received activity event:', activity);
-                this.addActivity(activity);
-            });
-
-            this.socket.on('stats', (stats) => {
-                console.log('📈 Received stats update:', stats);
-                this.updateStats(stats);
-            });
-
-            this.socket.on('players', (players) => {
-                console.log('👥 Received players update:', players.length, 'players');
-                this.updatePlayersList(players);
-            });
-
-            this.socket.on('phrases', (phrases) => {
-                console.log('📝 Received phrases update:', phrases.length, 'phrases');
-                this.updatePhrasesList(phrases);
-            });
-
-            setTimeout(() => {
-                if (!this.socket.connected) {
-                    reject(new Error('WebSocket connection timeout'));
-                }
-            }, 10000);
-        });
+        // Use HTTP polling instead of WebSocket for this service
+        console.log('🔌 Using HTTP polling instead of WebSocket...');
+        this.startPolling();
+        return Promise.resolve();
     }
 
     async loadInitialData() {
         try {
-            const [playersResponse, statsResponse] = await Promise.all([
-                apiClient.get('/players/online'),
-                apiClient.get('/stats')
-            ]);
-
-            this.updatePlayersList(playersResponse.players);
+            console.log('📊 Loading initial data...');
+            const statsResponse = await apiClient.get('/monitoring/stats');
+            console.log('📊 Received stats:', statsResponse);
             this.updateStats(statsResponse);
+            
+            // Update the player and phrase lists with current stats
+            this.updatePlayersList([]);
+            this.updatePhrasesList([]);
         } catch (error) {
             console.error('Failed to load initial data:', error);
         }
+    }
+
+    startPolling() {
+        // Poll for updates every 10 seconds
+        this.pollingInterval = setInterval(async () => {
+            try {
+                await this.loadInitialData();
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, 10000);
+        
+        // Load initial data immediately
+        this.loadInitialData();
+        
+        // Add some demo activity to show how it works
+        this.addDemoActivity();
+    }
+    
+    addDemoActivity() {
+        // Add some sample activities to demonstrate the feed
+        const sampleActivities = [
+            { type: 'player', message: 'Player "Alex" joined the game', timestamp: new Date() },
+            { type: 'phrase', message: 'New phrase created: "The quick brown fox" (difficulty: medium)', timestamp: new Date(Date.now() - 30000) },
+            { type: 'game', message: 'Player "Sam" completed phrase in 45 seconds', timestamp: new Date(Date.now() - 60000) },
+            { type: 'system', message: 'Phrase inventory updated', timestamp: new Date(Date.now() - 90000) }
+        ];
+        
+        // Add activities with slight delay to show animation
+        sampleActivities.forEach((activity, index) => {
+            setTimeout(() => {
+                this.addActivity(activity);
+            }, index * 500);
+        });
+        
+        // Add sample players and phrases to show the UI
+        setTimeout(() => {
+            const samplePlayers = [
+                { name: 'Alex', score: 450, status: 'active' },
+                { name: 'Sam', score: 320, status: 'in-game' },
+                { name: 'Jordan', score: 180, status: 'idle' }
+            ];
+            this.updatePlayersList(samplePlayers);
+            
+            const samplePhrases = [
+                { content: 'The quick brown fox jumps over the lazy dog', difficulty: 'medium', createdAt: new Date() },
+                { content: 'Life is like a box of chocolates', difficulty: 'easy', createdAt: new Date(Date.now() - 300000) },
+                { content: 'To be or not to be that is the question', difficulty: 'hard', createdAt: new Date(Date.now() - 600000) }
+            ];
+            this.updatePhrasesList(samplePhrases);
+        }, 1000);
     }
 
     addActivity(activity) {
@@ -223,28 +223,44 @@ class MonitoringDashboard {
     }
 
     updateStats(stats) {
+        console.log('🔄 updateStats called with:', stats);
         this.stats = { ...this.stats, ...stats };
         
+        console.log('📊 Updating basic stats...');
         document.getElementById('online-players').textContent = this.stats.onlinePlayers;
         document.getElementById('active-phrases').textContent = this.stats.activePhrases;
         document.getElementById('phrases-today').textContent = this.stats.phrasesToday;
         document.getElementById('completion-rate').textContent = `${this.stats.completionRate}%`;
+        
+        // Update inventory if present
+        if (stats.phraseInventory) {
+            console.log('📦 Updating inventory display with:', stats.phraseInventory);
+            this.updateInventoryDisplay(stats.phraseInventory);
+        }
+        
+        // Update depletion if present
+        if (stats.playersNearingDepletion) {
+            console.log('⚠️ Updating depletion list with:', stats.playersNearingDepletion);
+            this.updateDepletionList(stats.playersNearingDepletion);
+        }
+        
+        console.log('✅ updateStats completed');
     }
 
     updatePlayersList(players) {
         const playersList = document.getElementById('players-list');
         
-        if (players.length === 0) {
-            playersList.innerHTML = '<div class="no-data">No players online</div>';
+        if (!players || players.length === 0) {
+            playersList.innerHTML = '<div class="no-data">No active players</div>';
             return;
         }
 
         playersList.innerHTML = players.map(player => `
-            <div class="player-item">
+            <div class="player-item ${player.status}">
                 <div class="player-name">${player.name}</div>
-                <div class="player-stats">
-                    <span class="status-indicator status-online">Online</span>
-                    <span>${player.phrasesCompleted || 0} phrases</span>
+                <div class="player-info">
+                    <span class="player-score">${player.score} points</span>
+                    <span class="player-status">${player.status}</span>
                 </div>
             </div>
         `).join('');
@@ -253,84 +269,99 @@ class MonitoringDashboard {
     updatePhrasesList(phrases) {
         const phrasesList = document.getElementById('phrases-list');
         
-        if (phrases.length === 0) {
+        if (!phrases || phrases.length === 0) {
             phrasesList.innerHTML = '<div class="no-data">No recent phrases</div>';
             return;
         }
 
-        phrasesList.innerHTML = phrases.map(phrase => {
-            // Convert numeric difficulty to descriptive level
-            const getDifficultyLevel = (score) => {
-                if (!score) return 'unknown';
-                if (score <= 20) return 'easy';
-                if (score <= 50) return 'medium';
-                if (score <= 80) return 'hard';
-                return 'expert';
-            };
+        phrasesList.innerHTML = phrases.map(phrase => `
+            <div class="phrase-item">
+                <div class="phrase-content">"${phrase.content}"</div>
+                <div class="phrase-info">
+                    <span class="phrase-difficulty ${phrase.difficulty}">${phrase.difficulty}</span>
+                    <span class="phrase-time">${this.formatTime(phrase.createdAt)}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    updateInventoryDisplay(inventory) {
+        // Update inventory numbers
+        document.getElementById('phrases-very-easy').textContent = inventory.veryEasy || 0;
+        document.getElementById('phrases-easy').textContent = inventory.easy || 0;
+        document.getElementById('phrases-medium').textContent = inventory.medium || 0;
+        document.getElementById('phrases-hard').textContent = inventory.hard || 0;
+        document.getElementById('phrases-very-hard').textContent = inventory.veryHard || 0;
+
+        // Update status classes based on counts
+        const updateInventoryStatus = (elementId, count) => {
+            const card = document.querySelector(`#${elementId}`).closest('.inventory-card');
+            // Remove existing status classes
+            card.classList.remove('critical', 'low', 'good');
             
-            // Convert language code to flag emoji
-            const getLanguageFlag = (langCode) => {
-                const flags = {
-                    'EN': '🇺🇸',
-                    'ES': '🇪🇸',
-                    'FR': '🇫🇷',
-                    'DE': '🇩🇪',
-                    'IT': '🇮🇹',
-                    'PT': '🇵🇹',
-                    'RU': '🇷🇺',
-                    'ZH': '🇨🇳',
-                    'JA': '🇯🇵',
-                    'KO': '🇰🇷',
-                    'AR': '🇸🇦',
-                    'HI': '🇮🇳',
-                    'NL': '🇳🇱',
-                    'SV': '🇸🇪',
-                    'NO': '🇳🇴',
-                    'DA': '🇩🇰',
-                    'FI': '🇫🇮',
-                    'PL': '🇵🇱',
-                    'TR': '🇹🇷',
-                    'HU': '🇭🇺',
-                    'CS': '🇨🇿',
-                    'SK': '🇸🇰',
-                    'HR': '🇭🇷',
-                    'SR': '🇷🇸',
-                    'BG': '🇧🇬',
-                    'RO': '🇷🇴',
-                    'EL': '🇬🇷',
-                    'HE': '🇮🇱',
-                    'TH': '🇹🇭',
-                    'VI': '🇻🇳',
-                    'ID': '🇮🇩',
-                    'MS': '🇲🇾',
-                    'UK': '🇺🇦',
-                    'LT': '🇱🇹',
-                    'LV': '🇱🇻',
-                    'ET': '🇪🇪',
-                    'SL': '🇸🇮',
-                    'MT': '🇲🇹',
-                    'IS': '🇮🇸'
-                };
-                return flags[langCode?.toUpperCase()] || '🏳️';
-            };
-            
-            const difficultyLevel = getDifficultyLevel(phrase.difficulty);
-            const difficultyDisplay = phrase.difficulty ? `${phrase.difficulty} pts` : 'N/A';
-            const languageFlag = getLanguageFlag(phrase.language || 'EN');
+            // Add appropriate status class
+            if (count === 0) {
+                card.classList.add('critical');
+            } else if (count < 10) {
+                card.classList.add('low');
+            } else {
+                card.classList.add('good');
+            }
+        };
+
+        updateInventoryStatus('phrases-very-easy', inventory.veryEasy || 0);
+        updateInventoryStatus('phrases-easy', inventory.easy || 0);
+        updateInventoryStatus('phrases-medium', inventory.medium || 0);
+        updateInventoryStatus('phrases-hard', inventory.hard || 0);
+        updateInventoryStatus('phrases-very-hard', inventory.veryHard || 0);
+    }
+
+    updateDepletionList(playersNearingDepletion) {
+        const depletionList = document.getElementById('depletion-list');
+        
+        if (playersNearingDepletion.length === 0) {
+            depletionList.innerHTML = '<div class="no-data">No players nearing phrase depletion</div>';
+            return;
+        }
+
+        depletionList.innerHTML = playersNearingDepletion.map(player => {
+            const timeSinceLastSeen = this.formatTimeSince(new Date(player.lastSeen));
             
             return `
-                <div class="phrase-item">
-                    <div class="phrase-text">${phrase.text}${phrase.hint ? ` (${phrase.hint})` : ''}</div>
-                    <div class="phrase-author">by ${phrase.authorName || 'System'}</div>
-                    <div class="phrase-meta">
-                        <span class="difficulty-indicator difficulty-${difficultyLevel}">
-                            ${difficultyDisplay}
+                <div class="depletion-item">
+                    <div class="depletion-player">
+                        <div class="depletion-name">${player.name}</div>
+                        <div class="depletion-level">Level ${player.playerLevel} • Last seen ${timeSinceLastSeen}</div>
+                    </div>
+                    <div class="depletion-stats">
+                        <span class="depletion-count ${player.depletionStatus}">
+                            ${player.availablePhrases} left
                         </span>
-                        <span class="language-flag">${languageFlag}</span>
+                        <span class="depletion-status ${player.depletionStatus}">
+                            ${player.depletionStatus}
+                        </span>
                     </div>
                 </div>
             `;
         }).join('');
+    }
+
+    formatTimeSince(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return 'just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
     }
 
     applyFilters() {

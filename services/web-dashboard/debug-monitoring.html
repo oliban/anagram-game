@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Monitoring</title>
+</head>
+<body>
+    <h1>Debug Monitoring Dashboard</h1>
+    <div id="debug-info"></div>
+    <hr>
+    <div id="test-inventory">
+        <h2>Test Inventory Display</h2>
+        <div class="inventory-card very-easy">
+            <div class="inventory-number" id="phrases-very-easy">0</div>
+            <div class="inventory-label">Very Easy (≤20)</div>
+        </div>
+        <div class="inventory-card easy">
+            <div class="inventory-number" id="phrases-easy">0</div>
+            <div class="inventory-label">Easy (21-40)</div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔍 Debug script starting...');
+        
+        // Test 1: Basic fetch
+        async function testBasicFetch() {
+            try {
+                console.log('🔍 Testing basic fetch...');
+                const response = await fetch('/api/monitoring/stats');
+                console.log('📊 Response status:', response.status);
+                const data = await response.json();
+                console.log('📊 Response data:', data);
+                
+                document.getElementById('debug-info').innerHTML = `
+                    <h3>API Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Test updating inventory display
+                if (data.phraseInventory) {
+                    console.log('📦 Updating inventory display...');
+                    document.getElementById('phrases-very-easy').textContent = data.phraseInventory.veryEasy || 0;
+                    document.getElementById('phrases-easy').textContent = data.phraseInventory.easy || 0;
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('❌ Basic fetch error:', error);
+                document.getElementById('debug-info').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                return null;
+            }
+        }
+        
+        // Test 2: ApiClient class
+        class TestApiClient {
+            constructor(baseUrl = '') {
+                this.baseUrl = baseUrl;
+            }
+            
+            async get(endpoint) {
+                const url = `${this.baseUrl}${endpoint}`;
+                console.log('🔍 ApiClient fetching:', url);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            }
+        }
+        
+        async function testApiClient() {
+            try {
+                console.log('🔍 Testing ApiClient...');
+                const apiClient = new TestApiClient('/api');
+                const data = await apiClient.get('/monitoring/stats');
+                console.log('📊 ApiClient data:', data);
+                return data;
+            } catch (error) {
+                console.error('❌ ApiClient error:', error);
+                return null;
+            }
+        }
+        
+        // Run tests
+        async function runTests() {
+            console.log('🚀 Starting debug tests...');
+            await testBasicFetch();
+            await testApiClient();
+            console.log('✅ Debug tests complete');
+        }
+        
+        // Start tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+        
+        // Also start immediately
+        runTests();
+    </script>
+</body>
+</html>
