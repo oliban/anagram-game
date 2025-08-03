@@ -2509,7 +2509,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
         let startY = size.height - 50
         emojiTile.position = CGPoint(x: randomX, y: startY)
-        emojiTile.zPosition = 100
+        emojiTile.zPosition = 1000 // Place emoji tiles in front of dark overlay
         
         addChild(emojiTile)
         
@@ -2555,7 +2555,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 glowNode.lineWidth = 3.0
                 glowNode.alpha = 1.0 // Start at full brightness
                 glowNode.blendMode = .screen // Screen blend mode for maximum brightness
-                glowNode.zPosition = emojiTile.zPosition - 1
+                glowNode.zPosition = -1 // Behind emoji but will inherit parent's high z-position
                 
                 // Add multiple glow layers for ultra-intensity
                 let outerGlow = SKShapeNode(circleOfRadius: glowConfig.glowRadius * 1.5)
@@ -2563,9 +2563,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 outerGlow.strokeColor = UIColor.clear
                 outerGlow.alpha = 0.8
                 outerGlow.blendMode = .screen
-                outerGlow.zPosition = emojiTile.zPosition - 2
+                outerGlow.zPosition = -2 // Behind main glow, will inherit parent's high z-position
                 
-                // Position glows behind the emoji
+                // Position glows as child nodes (safe approach)
                 emojiTile.addChild(glowNode)
                 emojiTile.addChild(outerGlow)
                 
