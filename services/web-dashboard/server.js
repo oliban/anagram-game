@@ -163,6 +163,145 @@ app.get('/monitoring', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'monitoring', 'index.html'));
 });
 
+// Helper function to get active players
+async function getActivePlayers() {
+    try {
+        const playersQuery = `
+            SELECT 
+                p.id,
+                p.name,
+                p.is_active,
+                p.last_seen,
+                COALESCE(SUM(cp.score), 0) as total_score,
+                CASE 
+                    WHEN p.last_seen > NOW() - INTERVAL '1 minute' THEN 'active'
+                    WHEN p.last_seen > NOW() - INTERVAL '5 minutes' THEN 'idle'
+                    ELSE 'away'
+                END as status
+            FROM players p
+            LEFT JOIN completed_phrases cp ON p.id = cp.player_id
+            WHERE p.is_active = true 
+                AND p.last_seen > NOW() - INTERVAL '30 minutes'
+            GROUP BY p.id, p.name, p.is_active, p.last_seen
+            ORDER BY p.last_seen DESC
+            LIMIT 20
+        `;
+        
+        const result = await pool.query(playersQuery);
+        
+        return result.rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            score: parseInt(row.total_score),
+            status: row.status,
+            lastSeen: row.last_seen
+        }));
+        
+    } catch (error) {
+        console.error('❌ Error getting active players:', error);
+        return [];
+    }
+}
+
+// Helper function to get recent phrases
+async function getRecentPhrases() {
+    try {
+        const phrasesQuery = `
+            SELECT 
+                p.id,
+                p.content,
+                p.language,
+                p.created_at,
+                CASE 
+                    WHEN p.difficulty_level <= 20 THEN 'very-easy'
+                    WHEN p.difficulty_level <= 40 THEN 'easy'
+                    WHEN p.difficulty_level <= 60 THEN 'medium'
+                    WHEN p.difficulty_level <= 80 THEN 'hard'
+                    ELSE 'very-hard'
+                END as difficulty
+            FROM phrases p
+            WHERE p.created_at > NOW() - INTERVAL '24 hours'
+            ORDER BY p.created_at DESC
+            LIMIT 10
+        `;
+        
+        const result = await pool.query(phrasesQuery);
+        
+        return result.rows.map(row => ({
+            id: row.id,
+            content: row.content,
+            language: row.language,
+            difficulty: row.difficulty,
+            createdAt: row.created_at
+        }));
+        
+    } catch (error) {
+        console.error('❌ Error getting recent phrases:', error);
+        return [];
+    }
+}
+
+// Helper function to get recent activities
+async function getRecentActivities() {
+    try {
+        const activitiesQuery = `
+            WITH recent_activities AS (
+                -- Completed phrases
+                SELECT 
+                    cp.completed_at as timestamp,
+                    'game' as type,
+                    'Player "' || p.name || '" completed phrase in ' || ROUND(cp.completion_time_ms / 1000.0, 1) || ' seconds' as message
+                FROM completed_phrases cp
+                JOIN players p ON cp.player_id = p.id
+                WHERE cp.completed_at > NOW() - INTERVAL '1 hour'
+                
+                UNION ALL
+                
+                -- New phrases created
+                SELECT 
+                    ph.created_at as timestamp,
+                    'phrase' as type,
+                    'New phrase created: "' || LEFT(ph.content, 30) || '..." (difficulty: ' || 
+                    CASE 
+                        WHEN ph.difficulty_level <= 20 THEN 'very easy'
+                        WHEN ph.difficulty_level <= 40 THEN 'easy'
+                        WHEN ph.difficulty_level <= 60 THEN 'medium'
+                        WHEN ph.difficulty_level <= 80 THEN 'hard'
+                        ELSE 'very hard'
+                    END || ')' as message
+                FROM phrases ph
+                WHERE ph.created_at > NOW() - INTERVAL '1 hour'
+                
+                UNION ALL
+                
+                -- Player logins (based on last_seen updates)
+                SELECT 
+                    last_seen as timestamp,
+                    'player' as type,
+                    'Player "' || name || '" logged in' as message
+                FROM players
+                WHERE last_seen > NOW() - INTERVAL '1 hour'
+                AND is_active = true
+            )
+            SELECT * FROM recent_activities
+            ORDER BY timestamp DESC
+            LIMIT 20
+        `;
+        
+        const result = await pool.query(activitiesQuery);
+        
+        return result.rows.map(row => ({
+            timestamp: row.timestamp,
+            type: row.type,
+            message: row.message
+        }));
+        
+    } catch (error) {
+        console.error('❌ Error getting recent activities:', error);
+        return [];
+    }
+}
+
 // Helper function to get monitoring stats
 async function getMonitoringStats() {
     try {
@@ -184,8 +323,16 @@ async function getMonitoringStats() {
         // Get phrase inventory by difficulty
         const inventoryResult = await getPhraseInventoryByDifficulty();
         
+        // Get phrase inventory by language
+        const languageInventoryResult = await getPhraseInventoryByLanguage();
+        
         // Get players nearing phrase depletion
         const playersNearingDepletion = await getPlayersNearingPhraseDepletion();
+        
+        // Get active players and recent phrases
+        const activePlayers = await getActivePlayers();
+        const recentPhrases = await getRecentPhrases();
+        const recentActivities = await getRecentActivities();
 
         return {
             onlinePlayers: parseInt(playersResult.rows[0].count),
@@ -193,7 +340,11 @@ async function getMonitoringStats() {
             phrasesToday: parseInt(todayPhrasesResult.rows[0].count),
             completionRate: Math.round(parseFloat(completedResult.rows[0].completion_rate || 0)),
             phraseInventory: inventoryResult,
-            playersNearingDepletion: playersNearingDepletion
+            languageInventory: languageInventoryResult,
+            playersNearingDepletion: playersNearingDepletion,
+            activePlayers: activePlayers,
+            recentPhrases: recentPhrases,
+            recentActivities: recentActivities
         };
     } catch (error) {
         console.error('Error calculating monitoring stats:', error);
@@ -278,6 +429,87 @@ async function getPhraseInventoryByDifficulty() {
             medium: 0,
             hard: 0,
             veryHard: 0
+        };
+    }
+}
+
+// Helper function to get phrase inventory by language
+async function getPhraseInventoryByLanguage() {
+    try {
+        const languageQuery = `
+            WITH language_phrases AS (
+                SELECT 
+                    language,
+                    CASE 
+                        WHEN difficulty_level <= 20 THEN 'veryEasy'
+                        WHEN difficulty_level <= 40 THEN 'easy'
+                        WHEN difficulty_level <= 60 THEN 'medium'
+                        WHEN difficulty_level <= 80 THEN 'hard'
+                        ELSE 'veryHard'
+                    END as difficulty_range,
+                    id
+                FROM phrases 
+                WHERE is_global = true 
+                    AND is_approved = true
+                    AND NOT EXISTS (
+                        SELECT 1 FROM completed_phrases cp 
+                        WHERE cp.phrase_id = phrases.id
+                    )
+            )
+            SELECT 
+                language,
+                difficulty_range,
+                COUNT(*) as phrase_count
+            FROM language_phrases
+            GROUP BY language, difficulty_range
+            ORDER BY language, 
+                CASE difficulty_range
+                    WHEN 'veryEasy' THEN 1
+                    WHEN 'easy' THEN 2
+                    WHEN 'medium' THEN 3
+                    WHEN 'hard' THEN 4
+                    WHEN 'veryHard' THEN 5
+                END
+        `;
+
+        const result = await pool.query(languageQuery);
+        
+        // Initialize language inventory structure
+        const languageInventory = {
+            en: {
+                veryEasy: 0,
+                easy: 0,
+                medium: 0,
+                hard: 0,
+                veryHard: 0,
+                total: 0
+            },
+            sv: {
+                veryEasy: 0,
+                easy: 0,
+                medium: 0,
+                hard: 0,
+                veryHard: 0,
+                total: 0
+            }
+        };
+
+        // Fill in actual counts
+        result.rows.forEach(row => {
+            if (languageInventory[row.language]) {
+                languageInventory[row.language][row.difficulty_range] = parseInt(row.phrase_count);
+                languageInventory[row.language].total += parseInt(row.phrase_count);
+            }
+        });
+
+        console.log('📊 LANGUAGE INVENTORY:', languageInventory);
+        return languageInventory;
+
+    } catch (error) {
+        console.error('❌ LANGUAGE INVENTORY: Error getting language inventory:', error);
+        return {
+            en: { veryEasy: 0, easy: 0, medium: 0, hard: 0, veryHard: 0, total: 0 },
+            sv: { veryEasy: 0, easy: 0, medium: 0, hard: 0, veryHard: 0, total: 0 }
         };
     }
 }

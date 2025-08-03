@@ -82,9 +82,24 @@ class MonitoringDashboard {
             console.log('📊 Received stats:', statsResponse);
             this.updateStats(statsResponse);
             
-            // Update the player and phrase lists with current stats
-            this.updatePlayersList([]);
-            this.updatePhrasesList([]);
+            // Update the player and phrase lists with real data
+            if (statsResponse.activePlayers) {
+                this.updatePlayersList(statsResponse.activePlayers);
+            }
+            if (statsResponse.recentPhrases) {
+                this.updatePhrasesList(statsResponse.recentPhrases);
+            }
+            // Add recent activities to the feed
+            if (statsResponse.recentActivities && statsResponse.recentActivities.length > 0) {
+                // Clear loading message
+                const feed = document.getElementById('activity-feed');
+                feed.innerHTML = '';
+                
+                // Add activities
+                statsResponse.recentActivities.forEach(activity => {
+                    this.addActivity(activity);
+                });
+            }
         } catch (error) {
             console.error('Failed to load initial data:', error);
         }
@@ -102,43 +117,6 @@ class MonitoringDashboard {
         
         // Load initial data immediately
         this.loadInitialData();
-        
-        // Add some demo activity to show how it works
-        this.addDemoActivity();
-    }
-    
-    addDemoActivity() {
-        // Add some sample activities to demonstrate the feed
-        const sampleActivities = [
-            { type: 'player', message: 'Player "Alex" joined the game', timestamp: new Date() },
-            { type: 'phrase', message: 'New phrase created: "The quick brown fox" (difficulty: medium)', timestamp: new Date(Date.now() - 30000) },
-            { type: 'game', message: 'Player "Sam" completed phrase in 45 seconds', timestamp: new Date(Date.now() - 60000) },
-            { type: 'system', message: 'Phrase inventory updated', timestamp: new Date(Date.now() - 90000) }
-        ];
-        
-        // Add activities with slight delay to show animation
-        sampleActivities.forEach((activity, index) => {
-            setTimeout(() => {
-                this.addActivity(activity);
-            }, index * 500);
-        });
-        
-        // Add sample players and phrases to show the UI
-        setTimeout(() => {
-            const samplePlayers = [
-                { name: 'Alex', score: 450, status: 'active' },
-                { name: 'Sam', score: 320, status: 'in-game' },
-                { name: 'Jordan', score: 180, status: 'idle' }
-            ];
-            this.updatePlayersList(samplePlayers);
-            
-            const samplePhrases = [
-                { content: 'The quick brown fox jumps over the lazy dog', difficulty: 'medium', createdAt: new Date() },
-                { content: 'Life is like a box of chocolates', difficulty: 'easy', createdAt: new Date(Date.now() - 300000) },
-                { content: 'To be or not to be that is the question', difficulty: 'hard', createdAt: new Date(Date.now() - 600000) }
-            ];
-            this.updatePhrasesList(samplePhrases);
-        }, 1000);
     }
 
     addActivity(activity) {
@@ -238,6 +216,12 @@ class MonitoringDashboard {
             this.updateInventoryDisplay(stats.phraseInventory);
         }
         
+        // Update language inventory if present
+        if (stats.languageInventory) {
+            console.log('🌐 Updating language inventory with:', stats.languageInventory);
+            this.updateLanguageInventory(stats.languageInventory);
+        }
+        
         // Update depletion if present
         if (stats.playersNearingDepletion) {
             console.log('⚠️ Updating depletion list with:', stats.playersNearingDepletion);
@@ -259,7 +243,7 @@ class MonitoringDashboard {
             <div class="player-item ${player.status}">
                 <div class="player-name">${player.name}</div>
                 <div class="player-info">
-                    <span class="player-score">${player.score} points</span>
+                    <span class="player-score">${player.score} pts</span>
                     <span class="player-status">${player.status}</span>
                 </div>
             </div>
@@ -322,6 +306,35 @@ class MonitoringDashboard {
         updateInventoryStatus('phrases-medium', inventory.medium || 0);
         updateInventoryStatus('phrases-hard', inventory.hard || 0);
         updateInventoryStatus('phrases-very-hard', inventory.veryHard || 0);
+    }
+    
+    updateLanguageInventory(languageInventory) {
+        // Update language inventory for each language
+        ['en', 'sv'].forEach(lang => {
+            const data = languageInventory[lang] || { veryEasy: 0, easy: 0, medium: 0, hard: 0, veryHard: 0, total: 0 };
+            
+            // Update total
+            document.getElementById(`lang-${lang}-total`).textContent = data.total;
+            
+            // Update breakdown
+            document.getElementById(`lang-${lang}-veryEasy`).textContent = data.veryEasy;
+            document.getElementById(`lang-${lang}-easy`).textContent = data.easy;
+            document.getElementById(`lang-${lang}-medium`).textContent = data.medium;
+            document.getElementById(`lang-${lang}-hard`).textContent = data.hard;
+            document.getElementById(`lang-${lang}-veryHard`).textContent = data.veryHard;
+            
+            // Update card status based on total
+            const card = document.getElementById(`lang-${lang}`);
+            card.classList.remove('critical', 'low', 'good');
+            
+            if (data.total === 0) {
+                card.classList.add('critical');
+            } else if (data.total < 50) {
+                card.classList.add('low');
+            } else {
+                card.classList.add('good');
+            }
+        });
     }
 
     updateDepletionList(playersNearingDepletion) {

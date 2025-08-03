@@ -497,3 +497,126 @@
         color: #e2e8f0;
     }
 }
+
+/* Language Inventory */
+.language-inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.language-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.language-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.language-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.language-flag {
+    font-size: 32px;
+}
+
+.language-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+}
+
+.language-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.language-total {
+    text-align: center;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.language-number {
+    display: block;
+    font-size: 36px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.language-label {
+    font-size: 14px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.language-breakdown {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.breakdown-label {
+    color: #666;
+}
+
+.breakdown-count {
+    font-weight: 600;
+    color: #333;
+    padding: 2px 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+/* Color coding for language totals */
+.language-card.critical .language-total {
+    background: #fee;
+    border: 1px solid #f88;
+}
+
+.language-card.critical .language-number {
+    color: #d32f2f;
+}
+
+.language-card.low .language-total {
+    background: #fff8e1;
+    border: 1px solid #ffeb3b;
+}
+
+.language-card.low .language-number {
+    color: #f57c00;
+}
+
+.language-card.good .language-total {
+    background: #e8f5e9;
+    border: 1px solid #4caf50;
+}
+
+.language-card.good .language-number {
+    color: #388e3c;
+}
