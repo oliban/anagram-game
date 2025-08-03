@@ -197,7 +197,8 @@ module.exports = (dependencies) => {
         isGlobal,
         phraseType,
         language: language,
-        theme: theme // Pass theme to database layer
+        theme: theme, // Pass theme to database layer
+        contributorName: req.body.contributorName // Pass contributor name for external contributions
       });
 
       const { phrase, targetCount, isGlobal: phraseIsGlobal } = result;
@@ -209,15 +210,15 @@ module.exports = (dependencies) => {
       for (const target of validTargets) {
         if (target.socketId) {
           const phraseData = phrase.getPublicInfo();
-          // Ensure targetId and senderName are included for iOS client compatibility
+          // Ensure targetId is set for iOS client priority queue
           phraseData.targetId = target.id;
-          phraseData.senderName = sender.name;
+          // The senderName should now be correct from getPublicInfo() due to contributorName support
           
-          console.log(`🔧 WEBSOCKET FIX: Set targetId = ${phraseData.targetId}, senderName = ${phraseData.senderName}`);
+          console.log(`🔧 WEBSOCKET: Sending phrase to ${target.name} - targetId = ${phraseData.targetId}, senderName = ${phraseData.senderName}, contributorName = ${phrase.contributorName || 'null'}`);
           
           io.to(target.socketId).emit('new-phrase', {
             phrase: phraseData,
-            senderName: sender.name,
+            senderName: phraseData.senderName, // Use the senderName from getPublicInfo()
             timestamp: new Date().toISOString()
           });
           notifications.push(target.name);

@@ -19,6 +19,7 @@ class DatabasePhrase {
     this.phraseType = data.phrase_type || 'custom';
     this.language = data.language || LANGUAGES.ENGLISH;
     this.theme = data.theme || null;
+    this.contributorName = data.contributor_name || null;
   }
 
   /**
@@ -26,6 +27,12 @@ class DatabasePhrase {
    * Includes backward compatibility fields
    */
   getPublicInfo() {
+    // Determine sender name - prioritize contributorName for external contributions
+    let senderName = this.senderName || 'Unknown Player';
+    if (!this.createdByPlayerId && this.contributorName) {
+      senderName = this.contributorName;
+    }
+    
     const publicInfo = {
       id: this.id,
       content: this.content,
@@ -39,13 +46,13 @@ class DatabasePhrase {
       createdAt: this.createdAt ? this.createdAt.toISOString() : new Date().toISOString(),
       // Legacy fields for backward compatibility
       senderId: this.senderId || this.createdByPlayerId || 'system',
-      senderName: this.senderName || 'Unknown Player',
+      senderName: senderName,
       targetId: this.targetId,
       isConsumed: this.isConsumed || false
     };
     
     // Debug logging to see what targetId is being sent
-    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${this.senderName || 'Unknown Player'}`);
+    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${senderName}, contributorName: ${this.contributorName || 'null'}`);
     
     return publicInfo;
   }
@@ -240,8 +247,9 @@ class DatabasePhrase {
           p.is_global,
           p.theme,
           p.language,
+          p.contributor_name,
           p.created_by_player_id as "senderId",
-          COALESCE(pl.name, 'System') as "senderName",
+          COALESCE(p.contributor_name, pl.name, 'System') as "senderName",
           pp.target_player_id as "targetId",
           false as "isConsumed",
           'targeted' as phrase_type
@@ -266,7 +274,8 @@ class DatabasePhrase {
           created_by_player_id: row.senderId,
           phrase_type: row.phrase_type,
           language: row.language,
-          theme: row.theme
+          theme: row.theme,
+          contributor_name: row.contributor_name
         });
         
         // Add legacy properties for backward compatibility
@@ -293,8 +302,9 @@ class DatabasePhrase {
             p.is_global,
             p.theme,
             p.language,
+            p.contributor_name,
             p.created_by_player_id as "senderId",
-            COALESCE(pl.name, 'System') as "senderName",
+            COALESCE(p.contributor_name, pl.name, 'System') as "senderName",
             null as "targetId",
             false as "isConsumed",
             'global' as phrase_type
@@ -321,7 +331,8 @@ class DatabasePhrase {
             created_by_player_id: row.senderId,
             phrase_type: row.phrase_type,
             language: row.language,
-            theme: row.theme
+            theme: row.theme,
+            contributor_name: row.contributor_name
           });
           
           // Add legacy properties for backward compatibility
@@ -698,7 +709,8 @@ class DatabasePhrase {
       isGlobal = false,
       phraseType = 'custom',
       language = LANGUAGES.ENGLISH, // Language parameter for LanguageTile feature
-      theme = null // Theme for categorizing phrases and themed clue generation
+      theme = null, // Theme for categorizing phrases and themed clue generation
+      contributorName = null // Name of external contributor (for web contributions)
     } = options;
 
     // Comprehensive validation
@@ -719,14 +731,17 @@ class DatabasePhrase {
       throw new Error(`Invalid phrase type. Must be one of: ${validTypes.join(', ')}`);
     }
 
+    // Debug logging for contributorName
+    console.log(`🔍 CREATE_PHRASE DEBUG: contributorName = "${contributorName}", senderId = ${senderId}`);
+
     try {
       return await transaction(async (client) => {
         // Create the phrase
         const phraseResult = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme, contributor_name)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme]);
+        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme, contributorName]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 
