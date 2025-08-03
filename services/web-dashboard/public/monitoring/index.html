@@ -36,26 +36,67 @@
 
         <div class="card">
             <h2>Phrase Inventory Status</h2>
-            <div class="inventory-grid">
-                <div class="inventory-card very-easy">
-                    <div class="inventory-number" id="phrases-very-easy">0</div>
-                    <div class="inventory-label">Very Easy (≤20)</div>
+            
+            <!-- Overall Difficulty Breakdown -->
+            <div class="inventory-section">
+                <h3>By Difficulty Level</h3>
+                <div class="inventory-grid">
+                    <div class="inventory-card very-easy">
+                        <div class="inventory-number" id="phrases-very-easy">0</div>
+                        <div class="inventory-label">Very Easy (≤20)</div>
+                    </div>
+                    <div class="inventory-card easy">
+                        <div class="inventory-number" id="phrases-easy">0</div>
+                        <div class="inventory-label">Easy (21-40)</div>
+                    </div>
+                    <div class="inventory-card medium">
+                        <div class="inventory-number" id="phrases-medium">0</div>
+                        <div class="inventory-label">Medium (41-60)</div>
+                    </div>
+                    <div class="inventory-card hard">
+                        <div class="inventory-number" id="phrases-hard">0</div>
+                        <div class="inventory-label">Hard (61-80)</div>
+                    </div>
+                    <div class="inventory-card very-hard">
+                        <div class="inventory-number" id="phrases-very-hard">0</div>
+                        <div class="inventory-label">Very Hard (>80)</div>
+                    </div>
                 </div>
-                <div class="inventory-card easy">
-                    <div class="inventory-number" id="phrases-easy">0</div>
-                    <div class="inventory-label">Easy (21-40)</div>
-                </div>
-                <div class="inventory-card medium">
-                    <div class="inventory-number" id="phrases-medium">0</div>
-                    <div class="inventory-label">Medium (41-60)</div>
-                </div>
-                <div class="inventory-card hard">
-                    <div class="inventory-number" id="phrases-hard">0</div>
-                    <div class="inventory-label">Hard (61-80)</div>
-                </div>
-                <div class="inventory-card very-hard">
-                    <div class="inventory-number" id="phrases-very-hard">0</div>
-                    <div class="inventory-label">Very Hard (>80)</div>
+            </div>
+
+            <!-- Compact Language Breakdown -->
+            <div class="inventory-section">
+                <h3>By Language</h3>
+                <div class="language-inventory-compact">
+                    <div class="language-compact-item" id="lang-en-compact">
+                        <div class="language-compact-header">
+                            <span class="language-flag">🇬🇧</span>
+                            <span class="language-name">English</span>
+                            <span class="language-total-compact" id="lang-en-total">0</span>
+                        </div>
+                        <div class="language-breakdown-compact">
+                            <span class="breakdown-compact" id="lang-en-veryEasy">0</span>
+                            <span class="breakdown-compact" id="lang-en-easy">0</span>
+                            <span class="breakdown-compact" id="lang-en-medium">0</span>
+                            <span class="breakdown-compact" id="lang-en-hard">0</span>
+                            <span class="breakdown-compact" id="lang-en-veryHard">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="language-compact-item" id="lang-sv-compact">
+                        <div class="language-compact-header">
+                            <span class="language-flag">🇸🇪</span>
+                            <span class="language-name">Swedish</span>
+                            <span class="language-total-compact" id="lang-sv-total">0</span>
+                        </div>
+                        <div class="language-breakdown-compact">
+                            <span class="breakdown-compact" id="lang-sv-veryEasy">0</span>
+                            <span class="breakdown-compact" id="lang-sv-easy">0</span>
+                            <span class="breakdown-compact" id="lang-sv-medium">0</span>
+                            <span class="breakdown-compact" id="lang-sv-hard">0</span>
+                            <span class="breakdown-compact" id="lang-sv-veryHard">0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -110,82 +151,6 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Language Inventory Status -->
-            <div class="card">
-                <h2>Phrase Inventory by Language</h2>
-                <div class="language-inventory-grid">
-                    <div class="language-card" id="lang-en">
-                        <div class="language-header">
-                            <span class="language-flag">🇬🇧</span>
-                            <span class="language-name">English</span>
-                        </div>
-                        <div class="language-stats">
-                            <div class="language-total">
-                                <span class="language-number" id="lang-en-total">0</span>
-                                <span class="language-label">Total Available</span>
-                            </div>
-                            <div class="language-breakdown">
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Very Easy:</span>
-                                    <span class="breakdown-count" id="lang-en-veryEasy">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Easy:</span>
-                                    <span class="breakdown-count" id="lang-en-easy">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Medium:</span>
-                                    <span class="breakdown-count" id="lang-en-medium">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Hard:</span>
-                                    <span class="breakdown-count" id="lang-en-hard">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Very Hard:</span>
-                                    <span class="breakdown-count" id="lang-en-veryHard">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="language-card" id="lang-sv">
-                        <div class="language-header">
-                            <span class="language-flag">🇸🇪</span>
-                            <span class="language-name">Swedish</span>
-                        </div>
-                        <div class="language-stats">
-                            <div class="language-total">
-                                <span class="language-number" id="lang-sv-total">0</span>
-                                <span class="language-label">Total Available</span>
-                            </div>
-                            <div class="language-breakdown">
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Very Easy:</span>
-                                    <span class="breakdown-count" id="lang-sv-veryEasy">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Easy:</span>
-                                    <span class="breakdown-count" id="lang-sv-easy">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Medium:</span>
-                                    <span class="breakdown-count" id="lang-sv-medium">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Hard:</span>
-                                    <span class="breakdown-count" id="lang-sv-hard">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="breakdown-label">Very Hard:</span>
-                                    <span class="breakdown-count" id="lang-sv-veryHard">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div class="card">
                 <h2>Current Game State</h2>
@@ -199,21 +164,22 @@
                     </div>
                 </div>
                 <div class="game-state-section">
-                    <h3>Recent Phrases</h3>
-                    <div id="phrases-list" class="phrases-list">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            <span>Loading phrases...</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="game-state-section">
                     <h3>Players Nearing Phrase Depletion</h3>
                     <div id="depletion-list" class="depletion-list">
                         <div class="loading">
                             <div class="spinner"></div>
                             <span>Loading player depletion data...</span>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Recent Phrases</h2>
+                <div id="phrases-list" class="phrases-list recent-phrases-expanded">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Loading phrases...</span>
                     </div>
                 </div>
             </div>

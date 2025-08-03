@@ -163,7 +163,9 @@ class DatabasePhrase {
       hint,
       language = LANGUAGES.ENGLISH,
       contributionLinkId = null,
-      theme = null
+      theme = null,
+      source = 'app',
+      contributorName = null
     } = options;
 
     // Basic validation
@@ -173,11 +175,8 @@ class DatabasePhrase {
     
     const cleanContent = content.trim();
     
-    // Generate automatic hint if none provided
-    const cleanHint = hint || (() => {
-      const words = cleanContent.split(/\s+/);
-      return words.length > 1 ? `Unscramble these ${words.length} words` : 'Unscramble this word';
-    })();
+    // Use the provided hint as-is, no fallback generation
+    const cleanHint = hint || '';
 
     // Calculate automatic difficulty score (1-100)
     const difficultyScore = this.calculateDifficultyScore(cleanContent);
@@ -187,10 +186,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const result = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language, contribution_link_id, theme)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, is_approved, language, contribution_link_id, theme, source, contributor_name)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language, contributionLinkId, theme]);
+        `, [cleanContent, cleanHint, difficultyScore, false, senderId, true, language, contributionLinkId, theme, source, contributorName]);
 
         const phraseData = result.rows[0];
         console.log(`📝 DATABASE: Phrase created - "${phraseData.content}" with hint: "${phraseData.hint}"`);
@@ -717,7 +716,8 @@ class DatabasePhrase {
       phraseType = 'custom',
       language = LANGUAGES.ENGLISH, // Language parameter for LanguageTile feature
       theme = null, // Theme for categorizing phrases and themed clue generation
-      contributorName = null // Name of external contributor (for web contributions)
+      contributorName = null, // Name of external contributor (for web contributions)
+      source = 'app' // Source of phrase creation (app, external, admin)
     } = options;
 
     // Comprehensive validation
@@ -728,7 +728,9 @@ class DatabasePhrase {
     }
 
     const cleanContent = validation.content;
-    const cleanHint = validation.hint;
+    
+    // Use the provided hint as-is, no fallback generation
+    const cleanHint = validation.hint || '';
 
     // Calculate automatic difficulty score (1-100)
     const difficultyScore = this.calculateDifficultyScore(cleanContent, language);
@@ -746,10 +748,10 @@ class DatabasePhrase {
       return await transaction(async (client) => {
         // Create the phrase
         const phraseResult = await client.query(`
-          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme, contributor_name)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme, contributor_name, source)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           RETURNING *
-        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme, contributorName]);
+        `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme, contributorName, source]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 

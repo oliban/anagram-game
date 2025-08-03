@@ -503,7 +503,9 @@ app.post('/api/contribution/:token/submit', async (req, res) => {
       language: language,
       senderId: null, // External contribution
       targetId: validation.link.requestingPlayerId,
-      contributionLinkId: validation.link.id // Link to contribution for contributor name
+      contributionLinkId: validation.link.id, // Link to contribution for contributor name
+      source: 'external', // Mark as external contribution
+      contributorName: contributorName || null // Store contributor name directly
     });
     
     if (!createdPhrase) {
