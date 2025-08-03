@@ -28,8 +28,9 @@ class MessageTile: InformationTile {
         tempLabel.text = message
         let singleLineWidth = tempLabel.frame.width
         
-        // Calculate 80% of shelf width as maximum allowed width
-        let maxAllowedWidth = MessageTile.calculateMaxTileWidth(sceneSize: sceneSize)
+        // Calculate 80% of shelf width as maximum allowed width, but cap at 400px
+        let sceneBasedWidth = MessageTile.calculateMaxTileWidth(sceneSize: sceneSize)
+        let maxAllowedWidth = min(sceneBasedWidth, 400.0)
         let actualMaxWidth = min(singleLineWidth + padding, maxAllowedWidth)
         let wrappedLines = MessageTile.wrapText(message, maxWidth: actualMaxWidth - padding, fontSize: fontSize)
         

@@ -701,18 +701,40 @@ class GameModel: ObservableObject {
     /// Handle skill level up animation and effects
     private func handleSkillLevelUp(from oldLevelId: Int, to newLevelId: Int, newTitle: String) {
         print("🎉 SKILL LEVEL UP: Player advanced from level \(oldLevelId) to \(newLevelId) (\(newTitle))")
+        DebugLogger.shared.game("SKILL LEVEL UP: Player advanced from level \(oldLevelId) to \(newLevelId) (\(newTitle))")
         
         // Trigger dramatic level-up animation sequence
         isLevelingUp = true
         
-        // Optional: Spawn celebration message in game scene
+        // Spawn level-up celebration message
         if let spawner = messageTileSpawner {
             spawner.spawnMessageTile(message: "🎉 \(newTitle.uppercased())! 🎉")
         }
         
+        // Check for milestone achievement
+        checkAndHandleMilestones(levelId: newLevelId)
+        
         // Reset animation after longer dramatic duration
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             self.isLevelingUp = false
+        }
+    }
+    
+    /// Check if the new level reached any milestones and spawn celebration tiles
+    private func checkAndHandleMilestones(levelId: Int) {
+        let achievedMilestones = levelConfig.milestones.filter { $0.level == levelId }
+        
+        for milestone in achievedMilestones {
+            print("🏆 MILESTONE ACHIEVED: Level \(milestone.level) - \(milestone.description)")
+            DebugLogger.shared.game("MILESTONE ACHIEVED: Level \(milestone.level) - \(milestone.description)")
+            
+            // Spawn milestone celebration tile with delay to avoid overlap
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if let spawner = self.messageTileSpawner {
+                    let celebrationMessage = "🏆 MILESTONE! \(milestone.description)"
+                    spawner.spawnMessageTile(message: celebrationMessage)
+                }
+            }
         }
     }
     
