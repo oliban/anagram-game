@@ -35,24 +35,33 @@ struct HintButtonView: View {
                         useNextHint()
                     }) {
                         HStack(spacing: 8) {
+                            // Animated lightbulb with glow effect
                             Image(systemName: "lightbulb.fill")
-                                .foregroundColor(.yellow)
+                                .foregroundColor(lightbulbColor)
+                                .scaleEffect(canUseHint ? 1.0 : 0.8)
+                                .shadow(color: lightbulbGlowColor, radius: canUseHint ? 3 : 0)
+                                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: canUseHint)
                             
-                            Text(buttonText)
-                                .font(.system(size: 12, weight: .semibold))
+                            Text("Hint")
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
+                            
+                            // Star rating system showing hint level (1, 2, 3)
+                            HStack(spacing: 2) {
+                                ForEach(0..<3, id: \.self) { index in
+                                    Image(systemName: index < currentHintLevel ? "star.fill" : "star")
+                                        .foregroundColor(index < currentHintLevel ? .yellow : .gray)
+                                        .font(.system(size: 10))
+                                        .scaleEffect(index < currentHintLevel ? 1.0 : 0.7)
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentHintLevel)
+                                }
+                            }
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue, Color.purple]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.purple.opacity(0.8))
                         .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        .shadow(radius: 4)
                     }
                     .disabled(isLoading || !canUseHint)
                     .opacity(showSmokeEffect ? 0.0 : (canUseHint ? 1.0 : 0.6))
@@ -121,6 +130,39 @@ struct HintButtonView: View {
     private var canUseHint: Bool {
         // Always allow hints - let the server decide availability
         return !isLoading
+    }
+    
+    private var remainingHints: Int {
+        guard let hintStatus = hintStatus else { return 3 }
+        return hintStatus.hintsRemaining
+    }
+    
+    private var hintsUsed: Int {
+        guard let hintStatus = hintStatus else { return 0 }
+        return hintStatus.hintsUsed.count
+    }
+    
+    private var currentHintLevel: Int {
+        guard let hintStatus = hintStatus else { return 1 }
+        // Show stars for the NEXT hint level that will be used
+        // Start with 1 star (hint 1 available), then 2 stars (hint 2 available), then 3 stars (hint 3 available)
+        return hintStatus.nextHintLevel ?? 1
+    }
+    
+    private var lightbulbColor: Color {
+        let remaining = remainingHints
+        if remaining == 0 { return .gray }
+        if remaining == 1 { return .orange }
+        if remaining == 2 { return .yellow }
+        return .white // 3 hints remaining
+    }
+    
+    private var lightbulbGlowColor: Color {
+        let remaining = remainingHints
+        if remaining == 0 { return .clear }
+        if remaining == 1 { return .orange }
+        if remaining == 2 { return .yellow }
+        return .white.opacity(0.8) // 3 hints remaining
     }
     
     private func loadHintStatus() {
