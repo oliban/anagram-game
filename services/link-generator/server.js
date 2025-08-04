@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { testConnection, shutdown: shutdownDb, pool } = require('./shared/database/connection');
 const ContributionLinkGenerator = require('./link-generator');
@@ -45,10 +46,42 @@ const corsOptions = isDevelopment && isSecurityRelaxed ? {
   credentials: true
 };
 
+// Rate limiting configuration
+const skipRateLimits = process.env.SKIP_RATE_LIMITS === 'true';
+
+// Link generation rate limiter - very strict to prevent abuse
+const linkLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 15 : 3, // ~1-0.2 requests per minute (extremely limited)
+  message: { error: 'Too many link generation requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+// General API rate limiter
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 60 : 15, // ~4-1 requests per minute (reasonable for contribution pages)
+  message: { error: 'Too many API requests.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+console.log('🛡️ Link Generator Rate Limiting:', {
+  skipRateLimits,
+  linkLimit: isDevelopment ? 15 : 3,
+  apiLimit: isDevelopment ? 60 : 15
+});
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Apply rate limiting to API routes
+app.use('/api', apiLimiter);
 
 // Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());

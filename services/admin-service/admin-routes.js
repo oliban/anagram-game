@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { testConnection } = require('./shared/database/connection');
 const DatabasePhrase = require('./shared/database/models/DatabasePhrase');
+const { sanitizeForDatabase, PATTERNS } = require('./shared/security/validation');
 
 // Admin routes - administrative operations and batch operations
 
@@ -50,6 +51,35 @@ router.post('/phrases/batch-import', async (req, res) => {
       // Required fields for each phrase
       if (!phrase.content || typeof phrase.content !== 'string') {
         validationErrors.push(`Phrase ${index}: content is required and must be a string`);
+        continue;
+      }
+
+      // Validate content against security patterns
+      if (!PATTERNS.SAFE_TEXT.test(phrase.content)) {
+        validationErrors.push(`Phrase ${index}: content contains invalid characters`);
+        continue;
+      }
+
+      if (phrase.content.length > 500) {
+        validationErrors.push(`Phrase ${index}: content too long (max 500 characters)`);
+        continue;
+      }
+
+      // Validate hint if provided
+      if (phrase.hint && typeof phrase.hint === 'string') {
+        if (!PATTERNS.SAFE_TEXT.test(phrase.hint)) {
+          validationErrors.push(`Phrase ${index}: hint contains invalid characters`);
+          continue;
+        }
+        if (phrase.hint.length > 1000) {
+          validationErrors.push(`Phrase ${index}: hint too long (max 1000 characters)`);
+          continue;
+        }
+      }
+
+      // Validate language
+      if (phrase.language && !PATTERNS.LANGUAGE.test(phrase.language)) {
+        validationErrors.push(`Phrase ${index}: invalid language (must be 'en' or 'sv')`);
         continue;
       }
 

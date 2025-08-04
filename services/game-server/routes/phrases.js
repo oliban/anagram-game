@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { validateSchema, ENDPOINT_SCHEMAS, sanitizeForDatabase } = require('../shared/security/validation');
 const router = express.Router();
 
 // Helper function to get weighted random emojis with proper rarity distribution
@@ -114,8 +115,10 @@ module.exports = (dependencies) => {
     console.log(`🔄 SKIP CLEAR: Cleared skip status for ${phraseIds.length} phrases for player ${playerId}`);
   }
 
-  // Enhanced phrase creation endpoint
-  router.post('/api/phrases/create', async (req, res) => {
+  // Enhanced phrase creation endpoint with validation
+  router.post('/api/phrases/create', 
+    validateSchema(ENDPOINT_SCHEMAS.createPhrase, 'body'),
+    async (req, res) => {
     try {
       if (!getDatabaseStatus()) {
         return res.status(503).json({
