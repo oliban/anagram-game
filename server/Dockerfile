@@ -21,6 +21,9 @@ COPY server/ ./
 COPY shared/ ./shared/
 COPY web-dashboard/ ./web-dashboard/
 
+# Copy models from services to the expected location
+COPY services/shared/database/models/ ./models/
+
 # Create necessary directories
 RUN mkdir -p logs && \
     chown -R nodejs:nodejs /app
