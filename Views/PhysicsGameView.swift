@@ -96,19 +96,6 @@ struct PhysicsGameView: View {
                             )
                             .frame(maxWidth: .infinity) // Use maximum available width
                             
-                            // Version number aligned to the right
-                            HStack {
-                                Spacer()
-                                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    .fontWeight(.medium)
-                                    .onTapGesture {
-                                        if let scene = gameScene ?? PhysicsGameView.sharedScene {
-                                            scene.triggerQuake()
-                                        }
-                                    }
-                            }
                         }
                         .padding(.trailing, 10)
                         .padding(.top, 10)
@@ -126,42 +113,44 @@ struct PhysicsGameView: View {
                     
                     Spacer() // Push bottom controls down
                     
-                    // Connection indicator overlay - always visible
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(connectionStatusColor)
-                            .frame(width: 10, height: 10)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                            .animation(.easeInOut(duration: 0.3), value: networkManager.connectionStatus)
-                        
-                        Text(networkManager.connectionStatus.description)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .onAppear {
-                                DebugLogger.shared.network("Connection status displayed: \(networkManager.connectionStatus.description)")
-                            }
-                            .onChange(of: networkManager.connectionStatus) { oldValue, newValue in
-                                let oldDesc = oldValue.description
-                                let newDesc = newValue.description
-                                DebugLogger.shared.network("Connection status changed: \(oldDesc) → \(newDesc)")
-                            }
+                    // Connection indicator overlay - only visible when not connected
+                    if networkManager.connectionStatus != .connected {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(connectionStatusColor)
+                                .frame(width: 10, height: 10)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                                .animation(.easeInOut(duration: 0.3), value: networkManager.connectionStatus)
+                            
+                            Text(networkManager.connectionStatus.description)
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .onAppear {
+                                    DebugLogger.shared.network("Connection status displayed: \(networkManager.connectionStatus.description)")
+                                }
+                                .onChange(of: networkManager.connectionStatus) { oldValue, newValue in
+                                    let oldDesc = oldValue.description
+                                    let newDesc = newValue.description
+                                    DebugLogger.shared.network("Connection status changed: \(oldDesc) → \(newDesc)")
+                                }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(connectionStatusBackgroundColor)
+                                .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                        .padding(.bottom, 8)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(connectionStatusBackgroundColor)
-                            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                    .padding(.bottom, 8)
                     
                     // REAL-TIME METRICS DISPLAY - conditional on performance monitoring
                     if isPerformanceMonitoringEnabled {
@@ -243,27 +232,6 @@ struct PhysicsGameView: View {
                         .padding(.leading, 20)
                         
                         Spacer() // Push buttons to the right
-                        
-                        // Debug celebration button (only in debug builds)
-                        #if DEBUG
-                        Button(action: {
-                            print("🎉 DEBUG: Triggering celebration manually!")
-                            gameScene?.triggerCelebration()
-                        }) {
-                            HStack {
-                                Image(systemName: "party.popper")
-                                Text("🎉")
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(Color.purple.opacity(0.8))
-                            .cornerRadius(20)
-                            .shadow(radius: 4)
-                        }
-                        .padding(.trailing, 8)
-                        #endif
                         
                         // Bottom-right: Skip button (moved from left)
                         Button(action: {
@@ -1128,6 +1096,30 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         }
     }
     
+    private func bounceScoreTile() {
+        guard let scoreTile = scoreTile else { 
+            print("⚠️ BOUNCE: No score tile found")
+            return 
+        }
+        
+        guard let physicsBody = scoreTile.physicsBody else {
+            print("⚠️ BOUNCE: Score tile has no physics body")
+            return
+        }
+        
+        // Apply forceful upward impulse with random angle
+        let baseForce: CGFloat = 400 // Strong upward force
+        let randomAngle = CGFloat.random(in: -0.5...0.5) // Random angle in radians (roughly ±30 degrees)
+        
+        let dx = baseForce * sin(randomAngle)
+        let dy = baseForce * cos(randomAngle)
+        
+        let randomImpulse = CGVector(dx: dx, dy: dy)
+        physicsBody.applyImpulse(randomImpulse)
+        
+        print("💥 BOUNCE: Applied physics impulse to score tile")
+    }
+    
     func updateLanguageTile() {
         let newLanguage = getCurrentPhraseLanguage()
         languageTile?.updateFlag(language: newLanguage)
@@ -1428,8 +1420,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             print("🎯 THEME: Not spawning tile - hintsUsed=\(gameModel.hintsUsed), theme=\(gameModel.currentCustomPhrase?.theme ?? "nil")")
         }
         
-        // Apply jolt effect when hint is used
-        joltPlayingField()
+        // Apply bounce effect when hint is used
+        bounceScoreTile()
     }
     
     func showHint2() {
@@ -1438,16 +1430,16 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         clearTileHints()
         highlightFirstLetterTiles()
         
-        // Apply jolt effect when hint is used
-        joltPlayingField()
+        // Apply bounce effect when hint is used
+        bounceScoreTile()
     }
     
     func showHint3() {
         // Hint 3: Don't clear tile highlights - preserve blue highlighting from Hint 2
         // Only show text hint, maintain all visual hints from previous levels
         
-        // Apply jolt effect when hint is used
-        joltPlayingField()
+        // Apply bounce effect when hint is used
+        bounceScoreTile()
     }
     
     private func joltPlayingField() {
