@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { testConnection, pool } = require('./shared/database/connection');
 const levelConfig = require('./shared/config/level-config.json');
@@ -51,12 +52,44 @@ const corsOptions = isDevelopment && isSecurityRelaxed ? {
   credentials: true
 };
 
+// Rate limiting configuration
+const skipRateLimits = process.env.SKIP_RATE_LIMITS === 'true';
+
+// Dashboard rate limiter - reasonable for monitoring tools  
+const dashboardLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 300 : 60, // ~20-4 requests per minute (dashboard polling)
+  message: { error: 'Too many requests to dashboard API.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+// Strict limiter for contribution endpoints
+const contributionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 30 : 5, // ~2-0.3 requests per minute (very limited)
+  message: { error: 'Too many contribution requests.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+console.log('🛡️ Web Dashboard Rate Limiting:', {
+  skipRateLimits,
+  dashboardLimit: isDevelopment ? 300 : 60,
+  contributionLimit: isDevelopment ? 30 : 5
+});
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 // Also serve static files from /web/ path for compatibility
 app.use('/web', express.static(path.join(__dirname, 'public')));
+
+// Apply rate limiting to API routes
+app.use('/api', dashboardLimiter);
 
 // Health check endpoint
 app.get('/api/status', (req, res) => {
@@ -78,8 +111,8 @@ app.get('/api/monitoring/stats', async (req, res) => {
     }
 });
 
-// Get contribution link details with REAL player data
-app.get('/api/contribution/:token', async (req, res) => {
+// Get contribution link details with REAL player data (with strict rate limiting)
+app.get('/api/contribution/:token', contributionLimiter, async (req, res) => {
   try {
     const { token } = req.params;
     console.log(`🔍 API: Looking up contribution token: ${token}`);

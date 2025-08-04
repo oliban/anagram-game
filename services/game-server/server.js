@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 
@@ -63,6 +64,35 @@ console.log('🔧 CORS Configuration:', {
   isDevelopment,
   isSecurityRelaxed,
   corsMode: isDevelopment && isSecurityRelaxed ? 'RELAXED (origin: true)' : 'RESTRICTED'
+});
+
+// Rate limiting configuration
+const skipRateLimits = process.env.SKIP_RATE_LIMITS === 'true';
+
+// General API rate limiter - realistic for word game usage
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 120 : 30, // ~8-2 requests per minute (reasonable for gameplay)
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+// Strict rate limiter for sensitive endpoints (phrase creation, etc.)
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 30 : 10, // ~2-0.7 requests per minute (very limited)
+  message: { error: 'Rate limit exceeded for sensitive endpoint.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+console.log('🛡️ Rate Limiting Configuration:', {
+  skipRateLimits,
+  apiLimit: isDevelopment ? 120 : 30,
+  strictLimit: isDevelopment ? 30 : 10
 });
 
 const io = new Server(server, {
@@ -231,6 +261,9 @@ function broadcastActivity(type, message, details = null) {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static('public'));
+
+// Apply rate limiting to API routes
+app.use('/api', apiLimiter);
 
 // Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());

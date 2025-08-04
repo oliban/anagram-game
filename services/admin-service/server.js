@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { testConnection, shutdown: shutdownDb } = require('./shared/database/connection');
 const RouteAnalytics = require('./shared/services/routeAnalytics');
@@ -42,10 +43,31 @@ const corsOptions = isDevelopment && isSecurityRelaxed ? {
   credentials: true
 };
 
+// Rate limiting configuration
+const skipRateLimits = process.env.SKIP_RATE_LIMITS === 'true';
+
+// Very strict admin rate limiter - admin operations should be rare
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 30 : 5, // ~2-0.3 requests per minute (very strict for admin)
+  message: { error: 'Too many admin requests. Admin operations are rate limited.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => skipRateLimits
+});
+
+console.log('🛡️ Admin Service Rate Limiting:', {
+  skipRateLimits,
+  adminLimit: isDevelopment ? 30 : 5
+});
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Larger limit for batch operations
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Apply strict rate limiting to all API routes (admin operations)
+app.use('/api', adminLimiter);
 
 // Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());

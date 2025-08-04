@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { validateSchema, ENDPOINT_SCHEMAS, createValidators, handleValidationErrors } = require('../shared/security/validation');
 const router = express.Router();
 
 // Player routes - registration, online status, legends, and scores
@@ -16,8 +17,14 @@ module.exports = (dependencies) => {
     getMonitoringStats 
   } = dependencies;
 
-  // Player registration
-  router.post('/api/players/register', async (req, res) => {
+  // Player registration with validation
+  router.post('/api/players/register', 
+    [
+      createValidators.playerName(),
+      createValidators.queryLimit(), // Optional deviceId validation could be added
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     try {
       if (!getDatabaseStatus()) {
         return res.status(503).json({

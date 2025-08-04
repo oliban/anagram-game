@@ -145,9 +145,56 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 - **Monitoring**: Use Instruments for iOS, `curl -w` for API timing
 
 ## SECURITY REQUIREMENTS
-- **iOS**: Keychain for sensitive data, HTTPS only, input validation, certificate pinning
-- **Backend**: Parameterized queries, rate limiting (100/min), env vars for secrets, CORS restrictions
-- **Checks**: `grep -r "password\|secret\|key"` for hardcoded secrets, `npm audit` for vulnerabilities
+
+### 🛡️ IMPLEMENTED SECURITY FEATURES (Phase 1 Complete)
+- **✅ Environment Security**: Flexible dev/prod configuration with secure defaults
+- **✅ CORS Hardening**: Restricted origins (`origin: true` in dev, domain whitelist in prod)
+- **✅ Rate Limiting**: Realistic limits for word game usage patterns
+  - Game Server: 120/30 requests per 15min (dev/prod) = ~8-2 per minute
+  - Web Dashboard: 300/60 = ~20-4 per minute (dashboard polling)
+  - Admin Service: 30/5 = ~2-0.3 per minute (strictest)
+  - Link Generator: 60/15 general, 15/3 link creation
+- **✅ Input Validation**: XSS/SQL injection protection with Joi + express-validator
+  - Security patterns: `/^[a-zA-Z0-9\s\-_.,!?'"()åäöÅÄÖ]*$/` for safe text
+  - UUID validation for IDs, language code validation
+  - Sanitization for database inputs and output display
+
+### 🔧 SECURITY CONFIGURATION
+```bash
+# Environment variables (automatically set in development):
+SECURITY_RELAXED=true          # Enables relaxed CORS in development
+LOG_SECURITY_EVENTS=true       # Logs CORS violations and security events
+SKIP_RATE_LIMITS=false         # Rate limits active (set true to disable for testing)
+ADMIN_API_KEY=test-admin-key-123 # For admin endpoint authentication (Phase 2)
+```
+
+### 🚨 SECURITY TESTING COMMANDS
+```bash
+# Test rate limiting headers
+curl -I http://localhost:3000/api/status
+# Should show: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset
+
+# Test input validation (should be blocked)
+curl -X POST http://localhost:3000/api/phrases/create \
+  -H "Content-Type: application/json" \
+  -d '{"content": "<script>alert(\"XSS\")</script>", "language": "en"}'
+
+# Test admin validation (should be blocked)  
+curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
+  -H "Content-Type: application/json" \
+  -d '{"phrases": [{"content": "SELECT * FROM users--"}]}'
+```
+
+### 📋 REMAINING SECURITY TASKS (Phase 2)
+- **iOS**: Keychain for sensitive data, HTTPS only, certificate pinning
+- **Backend**: Admin API key authentication, WebSocket security
+- **Monitoring**: Security event dashboards, failed auth tracking
+
+### 🔍 SECURITY CHECKS
+- `grep -r "password\|secret\|key"` for hardcoded secrets
+- `npm audit` for vulnerabilities  
+- Check rate limit headers in API responses
+- Verify CORS configuration in server logs: `🔧 CORS Configuration` and `🛡️ Rate Limiting Configuration`
 
 ## KEY PRINCIPLES
 - **NO LEGACY** - Always remove old code when building replacements
