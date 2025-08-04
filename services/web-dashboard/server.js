@@ -410,7 +410,7 @@ async function getMonitoringStats() {
         const completedResult = await pool.query(`
             SELECT 
                 COUNT(*) as completed,
-                COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM phrases WHERE created_at > NOW() - INTERVAL '24 hours'), 0) as completion_rate
+                COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM phrases), 0) as completion_rate
             FROM completed_phrases cp
             JOIN phrases p ON cp.phrase_id = p.id
             WHERE cp.completed_at > NOW() - INTERVAL '24 hours'
