@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { testConnection, pool } = require('./shared/database/connection');
 const levelConfig = require('./shared/config/level-config.json');
+const { optionalAdminApiKey } = require('./shared/security/auth');
 
 const app = express();
 
@@ -111,8 +112,8 @@ app.get('/api/monitoring/stats', async (req, res) => {
     }
 });
 
-// Get contribution link details with REAL player data (with strict rate limiting)
-app.get('/api/contribution/:token', contributionLimiter, async (req, res) => {
+// Get contribution link details with REAL player data (with strict rate limiting and optional auth)
+app.get('/api/contribution/:token', contributionLimiter, optionalAdminApiKey, async (req, res) => {
   try {
     const { token } = req.params;
     console.log(`🔍 API: Looking up contribution token: ${token}`);

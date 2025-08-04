@@ -169,20 +169,67 @@ ADMIN_API_KEY=test-admin-key-123 # For admin endpoint authentication (Phase 2)
 ```
 
 ### 🚨 SECURITY TESTING COMMANDS
+
+#### Comprehensive Security Test Suite ✅ COMPLETE
+```bash
+# Run all security tests (recommended)
+./security-testing/scripts/comprehensive-security-test.sh
+
+# Test production security enforcement
+./security-testing/scripts/production-security-test.sh
+
+# Test WebSocket security specifically
+node security-testing/scripts/test-websocket-security.js
+```
+
+#### Manual Security Testing
 ```bash
 # Test rate limiting headers
 curl -I http://localhost:3000/api/status
 # Should show: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset
 
-# Test input validation (should be blocked)
+# Test XSS protection (should be blocked)
 curl -X POST http://localhost:3000/api/phrases/create \
   -H "Content-Type: application/json" \
   -d '{"content": "<script>alert(\"XSS\")</script>", "language": "en"}'
 
-# Test admin validation (should be blocked)  
+# Test SQL injection protection (should be blocked)  
 curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
   -H "Content-Type: application/json" \
   -d '{"phrases": [{"content": "SELECT * FROM users--"}]}'
+
+# Monitor security events
+docker-compose -f docker-compose.services.yml logs | grep -E "(🛡️|🔑|🚫|❌)"
+
+# Test API authentication (should work with key)
+curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: test-admin-key-123" \
+  -d '{"phrases": [{"content": "valid phrase"}]}'
+```
+
+#### Production Security Testing (⚠️ Use with caution)
+```bash
+# Enable strict security mode temporarily
+cp .env .env.backup
+sed -i 's/SECURITY_RELAXED=true/SECURITY_RELAXED=false/' .env
+docker-compose -f docker-compose.services.yml restart
+
+# Run tests (should show rejections for unauthorized access)
+node test-websocket-security.js
+
+# Restore development mode
+mv .env.backup .env
+docker-compose -f docker-compose.services.yml restart
+```
+
+#### Security Monitoring
+```bash
+# Watch security events in real-time
+docker-compose -f docker-compose.services.yml logs -f | grep -E "(🚫|❌|🔑|AUTH|CORS|🛡️)"
+
+# Check service security configuration
+docker-compose -f docker-compose.services.yml logs | grep -E "(🔧|🛡️|🔑|🔌)"
 ```
 
 ### 📋 REMAINING SECURITY TASKS (Phase 2)
