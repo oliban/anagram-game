@@ -9,16 +9,19 @@ RUN apk add --no-cache curl && \
     adduser -S nodejs -u 1001
 
 # Copy package files first for better Docker layer caching
-COPY services/web-dashboard/package*.json ./
+COPY web-dashboard/package*.json ./
 
 # Install production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy application code
-COPY --chown=nodejs:nodejs services/web-dashboard/ ./
+COPY --chown=nodejs:nodejs web-dashboard/ ./
 
 # Copy shared modules
-COPY --chown=nodejs:nodejs services/shared/ ./shared/
+COPY --chown=nodejs:nodejs shared/ ./shared/
+
+# Create symlink so shared modules can find node_modules
+RUN ln -sf /app/node_modules /shared/node_modules
 
 # Create necessary directories
 RUN mkdir -p logs && \
