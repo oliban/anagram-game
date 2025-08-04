@@ -27,11 +27,46 @@ const server = createServer(app);
 // Initialize configuration service and route analytics
 const configService = new ConfigService(pool);
 const routeAnalytics = new RouteAnalytics('game-server');
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+
+// CORS configuration - secure but development-friendly
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isSecurityRelaxed = process.env.SECURITY_RELAXED === 'true';
+
+// In development with SECURITY_RELAXED, allow all origins
+const corsOptions = isDevelopment && isSecurityRelaxed ? {
+  origin: true, // Allow all origins in relaxed development mode
+  methods: ["GET", "POST"],
+  credentials: true
+} : {
+  origin: function (origin, callback) {
+    const allowedOrigins = isDevelopment 
+      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 
+         'http://192.168.1.133:3000', 'http://192.168.1.133:3001', 'http://192.168.1.133:3002']
+      : ['https://your-production-domain.com', 'https://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com'];
+    
+    // Allow requests with no origin (mobile apps, curl, iOS simulator)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      if (process.env.LOG_SECURITY_EVENTS === 'true') {
+        console.log(`🚫 CORS: Blocked origin: ${origin}`);
+      }
+      callback(new Error('Not allowed by CORS'));
+    }
   },
+  methods: ["GET", "POST"],
+  credentials: true
+};
+
+// Log CORS configuration for debugging
+console.log('🔧 CORS Configuration:', {
+  isDevelopment,
+  isSecurityRelaxed,
+  corsMode: isDevelopment && isSecurityRelaxed ? 'RELAXED (origin: true)' : 'RESTRICTED'
+});
+
+const io = new Server(server, {
+  cors: corsOptions,
   pingTimeout: 60000,    // 60 seconds (default is 20 seconds)
   pingInterval: 25000,   // 25 seconds (default is 10 seconds)
   upgradeTimeout: 30000, // 30 seconds for WebSocket upgrade
@@ -193,7 +228,7 @@ function broadcastActivity(type, message, details = null) {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static('public'));
 

@@ -13,8 +13,12 @@ const dbConfig = {
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
   connectionTimeoutMillis: 10000, // How long to wait for a connection
   
-  // SSL configuration (disabled for local development)
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  // SSL configuration - secure by default in production
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+    // Optional: provide CA certificate if needed
+    ca: process.env.DB_SSL_CA || undefined
+  } : false
 };
 
 // Create connection pool
