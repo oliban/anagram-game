@@ -95,6 +95,14 @@ console.log('🛡️ Rate Limiting Configuration:', {
   strictLimit: isDevelopment ? 30 : 10
 });
 
+// WebSocket security configuration
+const hasApiKey = !!process.env.ADMIN_API_KEY;
+console.log('🔌 WebSocket Security Configuration:', {
+  monitoringAuthRequired: !isSecurityRelaxed || !isDevelopment,
+  gameNamespaceOpen: true, // Always open for iOS apps
+  apiKeyConfigured: hasApiKey
+});
+
 const io = new Server(server, {
   cors: corsOptions,
   pingTimeout: 60000,    // 60 seconds (default is 20 seconds)
@@ -106,11 +114,54 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 3000;
 
-// Create monitoring namespace for dashboard
+// Create monitoring namespace for dashboard with authentication
 const monitoringNamespace = io.of('/monitoring');
 
+// Add authentication middleware to monitoring namespace  
+monitoringNamespace.use((socket, next) => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isSecurityRelaxed = process.env.SECURITY_RELAXED === 'true';
+  
+  // Skip auth in relaxed development mode
+  if (isDevelopment && isSecurityRelaxed) {
+    if (process.env.LOG_SECURITY_EVENTS === 'true') {
+      console.log('🔓 WEBSOCKET: Bypassing monitoring auth in relaxed development mode');
+    }
+    return next();
+  }
+
+  // Check for API key in handshake auth
+  const apiKey = socket.handshake.auth?.apiKey || socket.handshake.query?.apiKey;
+  const expectedKey = process.env.ADMIN_API_KEY;
+
+  if (process.env.LOG_SECURITY_EVENTS === 'true') {
+    console.log('🔑 WEBSOCKET: Monitoring namespace auth attempt', {
+      hasApiKey: !!apiKey,
+      socketId: socket.id,
+      ip: socket.handshake.address
+    });
+  }
+
+  if (!expectedKey) {
+    console.error('❌ WEBSOCKET: ADMIN_API_KEY not configured for monitoring');
+    return next(new Error('Server configuration error'));
+  }
+
+  if (!apiKey || apiKey !== expectedKey) {
+    if (process.env.LOG_SECURITY_EVENTS === 'true') {
+      console.log('🚫 WEBSOCKET: Invalid or missing API key for monitoring namespace');
+    }
+    return next(new Error('Authentication required for monitoring dashboard'));
+  }
+
+  if (process.env.LOG_SECURITY_EVENTS === 'true') {
+    console.log('✅ WEBSOCKET: Monitoring authentication successful');
+  }
+  next();
+});
+
 monitoringNamespace.on('connection', (socket) => {
-  console.log(`📊 MONITORING: Dashboard connected: ${socket.id}`);
+  console.log(`📊 MONITORING: Authenticated dashboard connected: ${socket.id}`);
   
   // Send initial connection confirmation
   socket.emit('connected', {

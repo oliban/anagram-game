@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { testConnection, shutdown: shutdownDb } = require('./shared/database/connection');
 const RouteAnalytics = require('./shared/services/routeAnalytics');
+const { allowHealthChecks } = require('./shared/security/auth');
 
 const app = express();
 
@@ -61,6 +62,14 @@ console.log('🛡️ Admin Service Rate Limiting:', {
   adminLimit: isDevelopment ? 30 : 5
 });
 
+// Authentication configuration
+const hasApiKey = !!process.env.ADMIN_API_KEY;
+console.log('🔑 Admin Service Authentication:', {
+  apiKeyConfigured: hasApiKey,
+  securityRelaxed: isSecurityRelaxed,
+  authRequired: !isSecurityRelaxed || !isDevelopment
+});
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Larger limit for batch operations
@@ -68,6 +77,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Apply strict rate limiting to all API routes (admin operations)
 app.use('/api', adminLimiter);
+
+// Apply authentication to all API routes (except health checks)
+app.use('/api', allowHealthChecks);
 
 // Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());
