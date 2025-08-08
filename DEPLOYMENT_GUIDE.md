@@ -1,7 +1,7 @@
-# Anagram Game Production Deployment Guide
+# Wordshelf Production Deployment Guide
 
 ## Overview
-This guide covers the complete deployment process for the Anagram Game, including server hosting, database setup, iOS app distribution via TestFlight, and CI/CD pipeline configuration.
+This guide covers the complete deployment process for Wordshelf, including server hosting, database setup, iOS app distribution via TestFlight, and CI/CD pipeline configuration.
 
 ---
 
@@ -294,20 +294,20 @@ agvtool new-version -all 3
 1. **Login** to App Store Connect
 2. **Create New App**:
    - Platform: iOS
-   - Name: "Anagram Game"
+   - Name: "Wordshelf"
    - Bundle ID: `com.fredrik.anagramgame`
    - Language: English (or primary language)
    - SKU: unique identifier
 
 #### Configure App Information
 ```
-App Name: Anagram Game
+App Name: Wordshelf
 Subtitle: Multiplayer Word Puzzle Game
 Category: Games > Word Games
 Content Rating: 4+ (or appropriate rating)
 
 Description:
-"Challenge your mind with Anagram Game! Unscramble letters to form words from hidden phrases in this engaging multiplayer word puzzle game. Compete with friends, climb the leaderboard, and test your vocabulary skills with hints and physics-based gameplay."
+"Challenge your mind with Wordshelf! Unscramble letters to form words from hidden phrases in this engaging multiplayer word puzzle game. Compete with friends, climb the leaderboard, and test your vocabulary skills with hints and physics-based gameplay."
 
 Keywords: anagram, word game, puzzle, multiplayer, vocabulary
 ```
@@ -370,9 +370,9 @@ xcodebuild -exportArchive \
 
 #### Beta Testing Information
 ```
-Beta App Name: Anagram Game Beta
+Beta App Name: Wordshelf Beta
 Beta App Description: 
-"Help us test the latest version of Anagram Game! This multiplayer word puzzle game lets you compete with friends to unscramble letters and form words from hidden phrases.
+"Help us test the latest version of Wordshelf! This multiplayer word puzzle game lets you compete with friends to unscramble letters and form words from hidden phrases.
 
 What to Test:
 - Multiplayer functionality

@@ -1,12 +1,12 @@
 //
-//  Anagram_GameTests.swift
-//  Anagram GameTests
+//  WordshelfTests.swift
+//  WordshelfTests
 //
 //  Created by Fredrik Säfsten on 2025-07-05.
 //
 
 import XCTest
-@testable import Anagram_Game
+@testable import Wordshelf
 
 final class Anagram_GameTests: XCTestCase {
 
