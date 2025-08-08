@@ -27,10 +27,25 @@ class DatabasePhrase {
    * Includes backward compatibility fields
    */
   getPublicInfo() {
-    // Determine sender name - prioritize contributorName for external contributions
-    let senderName = this.senderName || 'Unknown Player';
-    if (!this.createdByPlayerId && this.contributorName) {
+    // Determine sender name with proper priority logic
+    let senderName;
+    
+    // Priority 1: Use senderName from database query (if set via getPhrasesForPlayer)
+    if (this.senderName) {
+      senderName = this.senderName;
+    }
+    // Priority 2: For external contributions without createdByPlayerId, use contributorName
+    else if (!this.createdByPlayerId && this.contributorName) {
       senderName = this.contributorName;
+    }
+    // Priority 3: If we have createdByPlayerId but no senderName (phrase creation context),
+    // we can't do a sync database lookup here, so fallback to system name
+    else if (this.createdByPlayerId) {
+      senderName = 'System'; // Better than 'Unknown Player' for system context
+    }
+    // Priority 4: Final fallback
+    else {
+      senderName = 'Unknown Player';
     }
     
     const publicInfo = {
@@ -52,7 +67,7 @@ class DatabasePhrase {
     };
     
     // Debug logging to see what targetId is being sent
-    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${senderName}, contributorName: ${this.contributorName || 'null'}`);
+    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${senderName}, contributorName: ${this.contributorName || 'null'}, this.senderName: ${this.senderName || 'null'}, createdByPlayerId: ${this.createdByPlayerId || 'null'}`);
     
     return publicInfo;
   }
@@ -754,6 +769,27 @@ class DatabasePhrase {
         `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme, contributorName, source]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
+
+        // Fetch sender name if we have a senderId
+        if (senderId) {
+          const senderResult = await client.query(`
+            SELECT name FROM players WHERE id = $1
+          `, [senderId]);
+          
+          if (senderResult.rows.length > 0) {
+            phrase.senderName = senderResult.rows[0].name;
+            console.log(`👤 DATABASE: Found sender name: ${phrase.senderName} for player ${senderId}`);
+          } else {
+            phrase.senderName = contributorName || 'Unknown Player';
+            console.log(`👤 DATABASE: No player found for senderId ${senderId}, using: ${phrase.senderName}`);
+          }
+        } else if (contributorName) {
+          phrase.senderName = contributorName;
+          console.log(`👤 DATABASE: Using contributor name: ${phrase.senderName}`);
+        } else {
+          phrase.senderName = 'System';
+          console.log(`👤 DATABASE: No sender info, defaulting to: ${phrase.senderName}`);
+        }
 
         // Handle targeting - support both global AND targeted simultaneously
         let targetCount = 0;

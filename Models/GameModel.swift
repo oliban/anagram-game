@@ -95,6 +95,10 @@ class GameModel: ObservableObject {
     private var isLoadingPhrases: Bool = false
     private var lastPhraseFetchTime: Date = Date.distantPast
     
+    // Rate limiting alert state
+    var showRateLimitAlert: Bool = false
+    var rateLimitMessage: String = ""
+    
     // Game scene reference for tile spawning
     weak var messageTileSpawner: MessageTileSpawner?
     
@@ -198,9 +202,10 @@ class GameModel: ObservableObject {
         loadSentences()
         Task { @MainActor in
             setupNetworkNotifications()
-            // Load level configuration from server
+            // Load level configuration from server with error handling
             await loadLevelConfig()
-            // Remove automatic startNewGame() - let it be triggered after registration
+            print("✅ INIT: GameModel initialization completed successfully")
+            DebugLogger.shared.info("GameModel initialization completed successfully")
         }
     }
     
@@ -765,7 +770,18 @@ class GameModel: ObservableObject {
             }
         }
         
-        fatalError("❌ LEVEL CONFIG: Cannot load level configuration from server after \(maxRetries) retries - check server connection and rate limits!")
+        // Instead of crashing, show an alert and use fallback config
+        print("❌ LEVEL CONFIG: Cannot load level configuration from server after \(maxRetries) retries")
+        DebugLogger.shared.error("LEVEL CONFIG: Cannot load from server after \(maxRetries) retries - using fallback")
+        
+        // Show user-friendly error message
+        await MainActor.run {
+            self.showRateLimitAlert = true
+            self.rateLimitMessage = "Unable to connect to game server. You may be rate limited. The game will continue with default settings."
+        }
+        
+        // Use fallback config
+        levelConfig = createFallbackLevelConfig()
     }
     
     /// Fetch level config from server endpoint
@@ -880,7 +896,7 @@ class GameModel: ObservableObject {
         lastPhraseFetchTime = now
         defer { isLoadingPhrases = false }
         
-        let networkManager = NetworkManager.shared
+        let networkManager = await NetworkManager.shared
         
         let phrases = await networkManager.fetchPhrasesForCurrentPlayer(level: currentLevel)
         
@@ -1017,5 +1033,26 @@ class GameModel: ObservableObject {
         // REMOVED: The delayed "Custom phrase from..." tile spawn
         // This was incorrectly showing that the phrase was being played when it was just queued
         // The "Custom phrase from..." tile should only appear when the phrase is actually delivered in checkForCustomPhrases()
+    }
+    
+    /// Create a fallback level configuration when server is unavailable
+    private func createFallbackLevelConfig() -> LevelConfig {
+        return LevelConfig(
+            version: "fallback-1.0.0",
+            progressionMultiplier: 1.3,
+            baseDifficultyPerLevel: 50,
+            skillLevels: [
+                SkillLevel(id: 0, title: "beginner", pointsRequired: 0, maxDifficulty: 30),
+                SkillLevel(id: 1, title: "novice", pointsRequired: 100, maxDifficulty: 40),
+                SkillLevel(id: 2, title: "intermediate", pointsRequired: 500, maxDifficulty: 60),
+                SkillLevel(id: 3, title: "advanced", pointsRequired: 1500, maxDifficulty: 80),
+                SkillLevel(id: 4, title: "expert", pointsRequired: 5000, maxDifficulty: 100)
+            ],
+            milestones: [
+                LevelMilestone(level: 1, bonus: 50, description: "First steps completed"),
+                LevelMilestone(level: 2, bonus: 100, description: "Getting the hang of it"),
+                LevelMilestone(level: 3, bonus: 200, description: "Becoming skilled")
+            ]
+        )
     }
 }

@@ -15,13 +15,39 @@ enum NetworkError: Error, LocalizedError {
     case serverOffline
     case connectionFailed
     case invalidResponse
+    case rateLimited(source: RateLimitSource, retryAfter: Int?)
+    
+    enum RateLimitSource {
+        case wordshelfServer
+        case cloudflare
+        
+        var description: String {
+            switch self {
+            case .wordshelfServer:
+                return "Wordshelf server"
+            case .cloudflare:
+                return "Cloudflare"
+            }
+        }
+    }
     
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Invalid server URL"
-        case .serverOffline: return "Server is offline"
-        case .connectionFailed: return "Connection failed"
-        case .invalidResponse: return "Invalid server response"
+        case .invalidURL: 
+            return "Invalid server URL"
+        case .serverOffline: 
+            return "Server is offline"
+        case .connectionFailed: 
+            return "Connection failed"
+        case .invalidResponse: 
+            return "Invalid server response"
+        case .rateLimited(let source, let retryAfter):
+            let baseMessage = "Too many requests - rate limited by \(source.description)"
+            if let retryAfter = retryAfter {
+                return "\(baseMessage). Please try again in \(retryAfter) seconds."
+            } else {
+                return "\(baseMessage). Please try again later."
+            }
         }
     }
 }

@@ -1400,16 +1400,31 @@ app.post('/api/phrases/create', async (req, res) => {
       content,
       hint,
       senderId,
-      targetIds = [],
+      targetId, // For backward compatibility with iOS client
+      targetIds = [], // For new multi-target functionality
       isGlobal = false,
       difficultyLevel = 1,
       phraseType = 'custom',
       language // Optional - will be auto-detected if not provided
     } = req.body;
 
-    // TEMPORARY DEBUG: Log language parameter
+    // Handle both targetId (singular) and targetIds (plural) for compatibility
+    let finalTargetIds = targetIds;
+    if (targetId && targetIds.length === 0) {
+      finalTargetIds = [targetId];
+    }
+
+    // TEMPORARY DEBUG: Log language parameter and all request data
     console.log(`🔍 DEBUG /api/phrases/create - Language received: "${language}" (type: ${typeof language})`);
     console.log(`🔍 DEBUG /api/phrases/create - Full request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`🔍 DEBUG /api/phrases/create - Destructured values:`);
+    console.log(`  - content: "${content}"`);
+    console.log(`  - hint: "${hint}"`);
+    console.log(`  - senderId: "${senderId}" (type: ${typeof senderId})`);
+    console.log(`  - targetId: "${targetId}" (type: ${typeof targetId})`);
+    console.log(`  - targetIds: ${JSON.stringify(targetIds)} (type: ${typeof targetIds})`);
+    console.log(`  - finalTargetIds: ${JSON.stringify(finalTargetIds)} (type: ${typeof finalTargetIds})`);
+    console.log(`  - isGlobal: ${isGlobal} (type: ${typeof isGlobal})`);
 
     // Validate required fields
     if (!content) {
@@ -1434,12 +1449,12 @@ app.post('/api/phrases/create', async (req, res) => {
 
     // Validate target players if provided
     const validTargets = [];
-    if (targetIds.length > 0) {
-      for (const targetId of targetIds) {
-        const target = await DatabasePlayer.getPlayerById(targetId);
+    if (finalTargetIds.length > 0) {
+      for (const targetPlayerId of finalTargetIds) {
+        const target = await DatabasePlayer.getPlayerById(targetPlayerId);
         if (!target) {
           return res.status(404).json({
-            error: `Target player ${targetId} not found`
+            error: `Target player ${targetPlayerId} not found`
           });
         }
         if (target.id === senderId) {
@@ -1459,7 +1474,7 @@ app.post('/api/phrases/create', async (req, res) => {
       content,
       hint,
       senderId,
-      targetIds,
+      targetIds: finalTargetIds,
       isGlobal,
       phraseType,
       language: language

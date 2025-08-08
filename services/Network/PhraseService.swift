@@ -90,25 +90,39 @@ class PhraseService: PhraseServiceDelegate {
     }
     
     func createCustomPhrase(content: String, playerId: String, targetId: String?, hint: String = "", isGlobal: Bool = false, language: String = "en") async throws -> CustomPhrase {
+        DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: playerId = '\(playerId)'")
+        DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: targetId = '\(targetId ?? "nil")'")
+        DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: content = '\(content)'")
+        
         guard let url = URL(string: "\(baseURL)/api/phrases/create") else {
             throw NetworkError.invalidURL
         }
         
-        let requestBody = [
+        let requestBody: [String: Any] = [
             "content": content,
             "senderId": playerId,
-            "targetId": targetId as Any,
+            "targetId": targetId ?? NSNull(),
             "hint": hint,
             "isGlobal": isGlobal,
             "language": language
         ]
+        
+        DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: requestBody senderId = '\(requestBody["senderId"] ?? "MISSING")'")
+        DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: requestBody targetId = '\(requestBody["targetId"] ?? "MISSING")'")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         do {
+            DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: About to serialize JSON...")
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            // Debug: Convert JSON back to string to see what was actually serialized
+            if let httpBody = request.httpBody,
+               let jsonString = String(data: httpBody, encoding: .utf8) {
+                DebugLogger.shared.network("🔍 CREATE CUSTOM PHRASE: Serialized JSON = \(jsonString)")
+            }
             
             let (data, response) = try await urlSession.data(for: request)
             

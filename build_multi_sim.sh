@@ -2,6 +2,9 @@
 
 # Build and launch Anagram Game with multi-device configuration
 # 
+# SDK Configuration - Update this when Xcode updates
+IOS_SIMULATOR_SDK="iphonesimulator18.5"
+
 # USAGE:
 #   ./build_multi_sim.sh [local|staging|aws] [--clean] [--physical]
 #
@@ -345,6 +348,7 @@ build_and_install() {
     
     xcodebuild -project "$PROJECT_FILE" \
                -scheme "$SCHEME" \
+               -sdk "$IOS_SIMULATOR_SDK" \
                -destination "platform=iOS Simulator,id=$uuid" \
                -configuration Debug \
                $BUILD_ACTION \
@@ -354,7 +358,7 @@ build_and_install() {
         echo -e "${GREEN}✅ Build successful for $name${NC}"
         
         # Find the app bundle
-        APP_PATH=$(find "$DERIVED_DATA_PATH" -name "*.app" -path "*/Build/Products/Debug-iphonesimulator/*" | grep -E "(Anagram.Game|Anagram-Game)" | head -1)
+        APP_PATH=$(find "$DERIVED_DATA_PATH" -name "*.app" -path "*/Build/Products/Debug-iphonesimulator/*" | grep -E "(Wordshelf|Anagram.Game|Anagram-Game)" | head -1)
         
         if [ -n "$APP_PATH" ]; then
             echo -e "${BLUE}📦 Installing app on $name...${NC}"

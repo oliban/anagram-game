@@ -133,7 +133,7 @@ class ConnectionService: ObservableObject {
         }
         
         // Handle successful player connection confirmation
-        socket.on("player-connected") { [weak self] data, _ in
+        socket.on("player-connected") { data, _ in
             if let confirmData = data.first as? [String: Any],
                let success = confirmData["success"] as? Bool, success {
                 print("✅ SOCKET: Player connection confirmed by server")

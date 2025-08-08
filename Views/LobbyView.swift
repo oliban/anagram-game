@@ -107,6 +107,22 @@ struct LobbyView: View {
         .sheet(isPresented: $showingLegends) {
             LegendsView(gameModel: gameModel)
         }
+        .alert("Connection Issue", isPresented: $gameModel.showRateLimitAlert) {
+            Button("OK") {
+                gameModel.showRateLimitAlert = false
+                gameModel.rateLimitMessage = ""
+            }
+            Button("Retry") {
+                gameModel.showRateLimitAlert = false
+                gameModel.rateLimitMessage = ""
+                // Retry loading level configuration
+                Task {
+                    await gameModel.loadLevelConfig()
+                }
+            }
+        } message: {
+            Text(gameModel.rateLimitMessage)
+        }
     }
     
     // MARK: - Title Section
@@ -542,8 +558,8 @@ struct LobbyView: View {
     }
     
     private func startServiceHealthMonitoring() {
-        // Check service health every 30 seconds
-        serviceHealthTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+        // Check service health every 5 minutes (reduced to prevent rate limiting)
+        serviceHealthTimer = Timer.scheduledTimer(withTimeInterval: 300.0, repeats: true) { _ in
             Task {
                 await checkLinkGeneratorServiceHealth()
             }

@@ -185,6 +185,12 @@ const ENDPOINT_SCHEMAS = {
     language: SCHEMAS.language,
     difficultyLevel: SCHEMAS.difficultyLevel.optional(),
     isGlobal: SCHEMAS.boolean.optional(),
+    senderId: SCHEMAS.playerId.optional(),
+    targetId: SCHEMAS.playerId.optional(),
+    targetIds: Joi.array().items(SCHEMAS.playerId).optional(),
+    phraseType: Joi.string().valid('custom', 'global', 'community', 'challenge').optional(),
+    theme: Joi.string().max(100).optional(),
+    contributorName: Joi.string().max(100).optional(),
     createdByPlayerId: SCHEMAS.playerId.optional()
   }),
 

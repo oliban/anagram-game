@@ -68,7 +68,9 @@ class PlayerService: PlayerServiceDelegate {
                     )
                     
                     await MainActor.run {
+                        DebugLogger.shared.network("🔄 PLAYER SERVICE: Setting currentPlayer to: \(player.name)")
                         self.currentPlayer = player
+                        DebugLogger.shared.network("✅ PLAYER SERVICE: currentPlayer set successfully")
                     }
                     
                     print("✅ REGISTER: Success! Player ID: \(playerId)")
@@ -86,6 +88,21 @@ class PlayerService: PlayerServiceDelegate {
                 } else {
                     return .nameConflict(suggestions: [])
                 }
+                
+            case 429:
+                // Rate limited - check headers to determine source
+                let retryAfterString = httpResponse.value(forHTTPHeaderField: "Retry-After") ?? 
+                                      httpResponse.value(forHTTPHeaderField: "RateLimit-Reset")
+                let retryAfter = retryAfterString.flatMap { Int($0) }
+                
+                // Check if it's Cloudflare (they use specific headers)
+                let cfRayHeader = httpResponse.value(forHTTPHeaderField: "CF-RAY")
+                let source: NetworkError.RateLimitSource = cfRayHeader != nil ? .cloudflare : .wordshelfServer
+                
+                print("⚠️ REGISTER: Rate limited by \(source.description). Retry after: \(retryAfter ?? 0) seconds")
+                
+                let rateLimitError = NetworkError.rateLimited(source: source, retryAfter: retryAfter)
+                return .failure(message: rateLimitError.errorDescription ?? "Rate limited")
                 
             default:
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -136,9 +153,29 @@ class PlayerService: PlayerServiceDelegate {
         do {
             let (data, response) = try await urlSession.data(from: url)
             
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                print("❌ PLAYERS: Failed to fetch. Status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ PLAYERS: Invalid HTTP response")
+                return
+            }
+            
+            switch httpResponse.statusCode {
+            case 200:
+                // Success - continue processing
+                break
+            case 429:
+                // Rate limited - check headers to determine source
+                let retryAfterString = httpResponse.value(forHTTPHeaderField: "Retry-After") ?? 
+                                      httpResponse.value(forHTTPHeaderField: "RateLimit-Reset")
+                let retryAfter = retryAfterString.flatMap { Int($0) }
+                
+                // Check if it's Cloudflare (they use specific headers)
+                let cfRayHeader = httpResponse.value(forHTTPHeaderField: "CF-RAY")
+                let source: NetworkError.RateLimitSource = cfRayHeader != nil ? .cloudflare : .wordshelfServer
+                
+                print("⚠️ PLAYERS: Rate limited by \(source.description). Retry after: \(retryAfter ?? 0) seconds")
+                return
+            default:
+                print("❌ PLAYERS: Failed to fetch. Status: \(httpResponse.statusCode)")
                 return
             }
             
