@@ -1,13 +1,13 @@
 //
 //  Anagram_GameUITestsLaunchTests.swift
-//  Anagram GameUITests
+//  WordshelfUITests
 //
 //  Created by Fredrik Säfsten on 2025-07-05.
 //
 
 import XCTest
 
-final class Anagram_GameUITestsLaunchTests: XCTestCase {
+final class WordshelfUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

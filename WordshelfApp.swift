@@ -1,6 +1,6 @@
 //
-//  Anagram_GameApp.swift
-//  Anagram Game
+//  WordshelfApp.swift
+//  Wordshelf
 //
 //  Created by Fredrik Säfsten on 2025-07-05.
 //
@@ -17,7 +17,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 }
 
 @main
-struct Anagram_GameApp: App {
+struct WordshelfApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([

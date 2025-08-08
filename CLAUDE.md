@@ -1,4 +1,4 @@
-# Anagram Game - iOS Development Guide
+# Wordshelf - iOS Development Guide
 
 ## Project Overview
 iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter tiles to form words from scrambled sentences.
@@ -265,7 +265,7 @@ docker-compose -f docker-compose.services.yml logs | grep -E "(🔧|🛡️|🔑
 ### Development
 ```bash
 # iOS Tests
-xcodebuild test -project "Anagram Game.xcodeproj" -scheme "Anagram Game" -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -project "Wordshelf.xcodeproj" -scheme "Wordshelf" -destination 'platform=iOS Simulator,name=iPhone 15'
 
 # Database Access
 docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d anagram_game
