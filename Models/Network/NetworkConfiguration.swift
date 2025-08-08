@@ -48,10 +48,10 @@ private func loadSharedConfig() -> SharedAppConfig {
     
     // Environment-aware configuration
     // Note: host values here are not used - actual hosts come from developmentConfig/productionConfig
-    let gameServerConfig = ServiceInfo(port: 3000, host: "192.168.1.133")
-    let webDashboardConfig = ServiceInfo(port: 3001, host: "192.168.1.133") 
-    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "192.168.1.133")
-    let databaseConfig = ServiceInfo(port: 5432, host: "192.168.1.133")
+    let gameServerConfig = ServiceInfo(port: 3000, host: "192.168.1.188")
+    let webDashboardConfig = ServiceInfo(port: 3001, host: "192.168.1.188") 
+    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "192.168.1.188")
+    let databaseConfig = ServiceInfo(port: 5432, host: "192.168.1.188")
     
     let services = ServiceConfig(
         gameServer: gameServerConfig,
@@ -61,7 +61,7 @@ private func loadSharedConfig() -> SharedAppConfig {
     )
     
     // Environment configurations
-    let developmentConfig = EnvironmentConfig(host: "192.168.1.133", description: "Local Development Server")
+    let developmentConfig = EnvironmentConfig(host: "192.168.1.188", description: "Local Development Server")
     let stagingConfig = EnvironmentConfig(host: "unfortunately-versions-assumed-threat.trycloudflare.com", description: "Pi Staging Server (Cloudflare reverse proxy)")
     let productionConfig = EnvironmentConfig(host: "anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com", description: "AWS Production Server")
     

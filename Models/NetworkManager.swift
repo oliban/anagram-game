@@ -2,6 +2,7 @@ import Foundation
 import Network
 import UIKit
 import SocketIO
+import Combine
 
 // MARK: - Configuration
 // Configuration is now loaded from NetworkConfiguration.swift
@@ -18,6 +19,9 @@ class NetworkManager: ObservableObject {
     private let phraseService = PhraseService()
     private let leaderboardService = LeaderboardService()
     private let difficultyService = DifficultyAnalysisService()
+    
+    // Store cancellables for Combine subscriptions
+    private var cancellables = Set<AnyCancellable>()
     
     // Published properties for UI
     @Published var isConnected: Bool = false
@@ -51,9 +55,13 @@ class NetworkManager: ObservableObject {
         connectionService.$connectionStatus
             .assign(to: &$connectionStatus)
         
-        // Bind player service
+        // Bind player service with debug logging
         playerService.$currentPlayer
-            .assign(to: &$currentPlayer)
+            .sink { [weak self] player in
+                DebugLogger.shared.network("🔄 BINDING: PlayerService.currentPlayer changed to: \(player?.name ?? "nil")")
+                self?.currentPlayer = player
+            }
+            .store(in: &cancellables)
         
         playerService.$onlinePlayers
             .assign(to: &$onlinePlayers)
@@ -217,10 +225,19 @@ class NetworkManager: ObservableObject {
     }
     
     func createEnhancedPhrase(content: String, hint: String, targetIds: [String], isGlobal: Bool, language: String = "en") async -> Bool {
+        DebugLogger.shared.network("🔍 ENHANCED PHRASE: Starting phrase creation...")
+        DebugLogger.shared.network("🔍 ENHANCED PHRASE: NetworkManager.currentPlayer = \(currentPlayer?.name ?? "nil")")
+        DebugLogger.shared.network("🔍 ENHANCED PHRASE: PlayerService.currentPlayer = \(playerService.currentPlayer?.name ?? "nil")")
+        
         guard let currentPlayer = currentPlayer else {
-            print("❌ ENHANCED PHRASE: No current player registered")
+            DebugLogger.shared.error("❌ ENHANCED PHRASE: No current player registered in NetworkManager")
+            DebugLogger.shared.error("❌ ENHANCED PHRASE: This suggests a binding issue between PlayerService and NetworkManager")
             return false
         }
+        
+        DebugLogger.shared.network("🔍 ENHANCED PHRASE: currentPlayer.id = '\(currentPlayer.id)'")
+        DebugLogger.shared.network("🔍 ENHANCED PHRASE: targetIds = \(targetIds)")
+        DebugLogger.shared.network("🔍 ENHANCED PHRASE: targetId (first) = \(targetIds.first ?? "nil")")
         
         // For enhanced phrases, we'll create them as custom phrases
         // Support both global AND targeted - use first targetId regardless of global flag

@@ -9,16 +9,21 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 1. Run `./Scripts/tail-logs.sh` to identify most recent log file path
 2. **CRITICAL**: Use device-specific logs (`anagram-debug-iPhone-15.log`) NOT old generic logs (`anagram-debug.log`)
 3. Priority order: `iPhone-15.log` > `iPhone-15-Pro.log` > generic logs (avoid)
-4. Use `grep`, `head`, `tail` commands on the device-specific log file
+4. **YOU CAN READ iOS LOGS DIRECTLY**: Use `grep`, `head`, `tail` commands on the device-specific log file
 5. Search patterns: `grep -E "(ENTERING_|GAME.*🎮|ERROR.*❌|USING_LOCAL)" /path/to/device-specific.log`
+6. **ALWAYS CHECK iOS LOGS for debugging** - Don't rely only on server logs
 **Code Usage**: `DebugLogger.shared.ui/network/error/info/game("message")` - Add to ALL new functions
 **Categories**: 🎨 UI, 🌐 NETWORK, ℹ️ INFO, ❌ ERROR, 🎮 GAME
+**🚨 CRITICAL DEBUG LOGGING RULE**: 
+- **NEVER use `print()` for debug output** - it only goes to Xcode console, not to log files
+- **ALWAYS use `DebugLogger.shared.method("message")`** - this writes to log files that you can read
+- **Example**: `DebugLogger.shared.network("🔍 DEBUG: Variable = \(value)")` instead of `print("🔍 DEBUG: Variable = \(value)")`
 
 ## 🚨 CORE WORKFLOW - ALWAYS FOLLOW
 1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
 2. **Plan**: Create detailed implementation plan, verify with me before coding
 3. **Implement**: Write production-quality Swift code following all best practices
-4. **Test**: Deploy with `build_and_test.sh` (includes server health checks), await my feedback
+4. **Test**: Deploy with `build_multi_sim.sh` (includes server health checks), await my feedback
 5. **Commit when requested** - "commit and push" is explicit approval
 
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
@@ -84,14 +89,10 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 
 ### Build Script Usage
 ```bash
-# Recommended: Enhanced build with server health checks
-./build_and_test.sh local              # Local development with health checks
-./build_and_test.sh aws                # AWS production with health checks
-./build_and_test.sh local --clean      # Clean build with health checks
-
-# Direct build (no server health checks)
-./build_multi_sim.sh local             # Local development only
-./build_multi_sim.sh aws               # AWS production only
+# Main build script (includes server health checks)
+./build_multi_sim.sh local             # Local development
+./build_multi_sim.sh aws               # AWS production
+./build_multi_sim.sh local --clean     # Clean build (AVOID - requires re-associating players)
 ```
 
 ### Microservices Architecture (Local Development)
@@ -257,6 +258,9 @@ docker-compose -f docker-compose.services.yml logs | grep -E "(🔧|🛡️|🔑
 
 ## BUILD WARNINGS
 - **Never build the apps with clean flag if there is not a very good reason for it!**
+- **🚨 CRITICAL: If you use --clean flag, you MUST immediately re-associate logged-in players afterward!**
+  - Clean builds reset device IDs, breaking auto-login for existing players
+  - After clean build, run device association commands from `docs/device-user-association-guide.md`
 
 ---
 
@@ -274,6 +278,31 @@ docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d 
 ./server/scripts/generate-and-preview.sh "25-75:50" sv
 node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
 ```
+
+### App Store Archive & Distribution
+```bash
+# Archive for App Store (requires Xcode 16+ with iOS 18 SDK)
+xcodebuild clean archive \
+  -project Wordshelf.xcodeproj \
+  -scheme Wordshelf \
+  -archivePath ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Wordshelf.xcarchive \
+  -sdk iphoneos18.5 \
+  -configuration Release \
+  CODE_SIGN_STYLE=Automatic \
+  DEVELOPMENT_TEAM=5XR7USWXMZ \
+  -allowProvisioningUpdates
+
+# Export for App Store distribution
+xcodebuild -exportArchive \
+  -archivePath ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Wordshelf.xcarchive \
+  -exportPath ~/Desktop/WordshelfExport \
+  -exportOptionsPlist ExportOptions.plist
+```
+
+**Important SDK Requirements:**
+- Apple requires iOS 18 SDK or later for App Store submissions (as of 2024)
+- Update SDK version in commands when Xcode updates (current: `iphoneos18.5`)
+- Team ID: `5XR7USWXMZ` (configured in project settings)
 
 ### API Endpoints
 - **Game Server (3000)**: `/api/status`, `/api/players`, `/api/phrases/for/:playerId`, `/api/phrases/create`

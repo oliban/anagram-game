@@ -84,40 +84,53 @@ struct ContentView: View {
     
     private func autoConnectWithStoredName(_ playerName: String) async {
         print("🚀 Starting auto-connect with stored name: \(playerName)")
+        DebugLogger.shared.network("Starting auto-connect with stored name: \(playerName)")
         
-        // Show connecting state
-        await MainActor.run {
-            networkManager.connectionStatus = .connecting
-        }
-        
-        // Test connection first
-        print("🔍 Testing connection...")
-        let connectionResult = await networkManager.testConnection()
-        
-        switch connectionResult {
-        case .success:
-            print("✅ Connection test successful - proceeding with registration")
-            
-            // Register with stored name
-            let success = await networkManager.registerPlayerBool(name: playerName)
-            
+        do {
+            // Show connecting state
             await MainActor.run {
-                if success {
-                    print("✅ Auto-registered with stored name: \(playerName)")
-                    logger.info("✅ [OS_LOG] Auto-registered with stored name: \(playerName)")
-                    DebugLogger.shared.network("Auto-registered with stored name: \(playerName)")
-                } else {
-                    print("❌ Failed to register with stored name - showing registration")
+                networkManager.connectionStatus = .connecting
+            }
+            
+            // Test connection first
+            print("🔍 Testing connection...")
+            let connectionResult = await networkManager.testConnection()
+            
+            switch connectionResult {
+            case .success:
+                print("✅ Connection test successful - proceeding with registration")
+                
+                // Register with stored name
+                let success = await networkManager.registerPlayerBool(name: playerName)
+                
+                await MainActor.run {
+                    if success {
+                        print("✅ Auto-registered with stored name: \(playerName)")
+                        logger.info("✅ [OS_LOG] Auto-registered with stored name: \(playerName)")
+                        DebugLogger.shared.network("Auto-registered with stored name: \(playerName)")
+                    } else {
+                        print("❌ Failed to register with stored name - showing registration")
+                        networkManager.connectionStatus = .disconnected
+                        showingRegistration = true
+                    }
+                }
+                
+            case .failure(let error):
+                print("❌ Connection test failed: \(error)")
+                DebugLogger.shared.error("Auto-connect failed - connection test error: \(error)")
+                
+                await MainActor.run {
+                    networkManager.connectionStatus = .error("Connection failed: \(error)")
+                    // Show registration view for manual retry
                     showingRegistration = true
                 }
             }
-            
-        case .failure(let error):
-            print("❌ Connection test failed: \(error)")
+        } catch {
+            print("❌ AUTOCONNECT: Unexpected error during auto-connect: \(error)")
+            DebugLogger.shared.error("Auto-connect unexpected error: \(error)")
             
             await MainActor.run {
-                networkManager.connectionStatus = .error("Connection failed: \(error)")
-                // Show registration view for manual retry
+                networkManager.connectionStatus = .error("Auto-connect failed")
                 showingRegistration = true
             }
         }
