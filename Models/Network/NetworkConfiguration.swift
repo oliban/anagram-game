@@ -13,6 +13,7 @@ import Foundation
 struct SharedAppConfig: Codable {
     let services: ServiceConfig
     let development: EnvironmentConfig
+    let staging: EnvironmentConfig
     let production: EnvironmentConfig
 }
 
@@ -30,6 +31,7 @@ struct ServiceInfo: Codable {
 
 struct EnvironmentConfig: Codable {
     let host: String
+    let description: String
 }
 
 // MARK: - Configuration Loader
@@ -58,13 +60,15 @@ private func loadSharedConfig() -> SharedAppConfig {
         database: databaseConfig
     )
     
-    // Use IP address for local development so physical devices can connect
-    let developmentConfig = EnvironmentConfig(host: "192.168.1.133")
-    let productionConfig = EnvironmentConfig(host: "anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com")
+    // Environment configurations
+    let developmentConfig = EnvironmentConfig(host: "192.168.1.133", description: "Local Development Server")
+    let stagingConfig = EnvironmentConfig(host: "unfortunately-versions-assumed-threat.trycloudflare.com", description: "Pi Staging Server (Cloudflare reverse proxy)")
+    let productionConfig = EnvironmentConfig(host: "anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com", description: "AWS Production Server")
     
     let config = SharedAppConfig(
         services: services,
         development: developmentConfig,
+        staging: stagingConfig,
         production: productionConfig
     )
     
@@ -81,17 +85,26 @@ private func loadSharedConfig() -> SharedAppConfig {
 struct AppConfig {
     private static let sharedConfig = loadSharedConfig()
     
-    // Build-time environment configuration
-    private static var isLocalServer: Bool {
-        #if DEBUG
-        // Debug builds use local server
-        print("🔧 CONFIG: Using LOCAL server (Debug build)")
-        return true
-        #else
-        // Release builds use production server
-        print("🔧 CONFIG: Using PRODUCTION server (Release build)")
-        return false
-        #endif
+    // Environment detection - can be modified by build script
+    private static var currentEnvironment: String {
+        let env = "local" // DEFAULT_ENVIRONMENT
+        print("🔧 CONFIG: Using \(env.uppercased()) environment")
+        return env
+    }
+    
+    // Get current environment configuration
+    private static var environmentConfig: EnvironmentConfig {
+        switch currentEnvironment {
+        case "local":
+            return sharedConfig.development
+        case "staging":
+            return sharedConfig.staging
+        case "aws":
+            return sharedConfig.production
+        default:
+            print("⚠️ CONFIG: Unknown environment '\(currentEnvironment)', falling back to local")
+            return sharedConfig.development
+        }
     }
     
     // Server Configuration - dynamically loaded from shared config
@@ -100,19 +113,44 @@ struct AppConfig {
     }
     
     static var baseURL: String {
-        let host = isLocalServer ? sharedConfig.development.host : sharedConfig.production.host
-        // AWS ALB doesn't need port specification (uses standard port 80)
-        let url = host.contains("amazonaws.com") ? "http://\(host)" : "http://\(host):\(serverPort)"
-        print("🔧 CONFIG: Using \(isLocalServer ? "LOCAL" : "AWS") server: \(url)")
+        let config = environmentConfig
+        let host = config.host
+        
+        // Determine URL format based on host type
+        let url: String
+        if host.contains("amazonaws.com") {
+            url = "http://\(host)"
+        } else if host.contains("trycloudflare.com") {
+            url = "https://\(host)"
+        } else if host == "STAGING_PLACEHOLDER" {
+            // Staging placeholder - this means tunnel URL wasn't set
+            url = "http://192.168.1.222:3000"  // Fallback to Pi local IP
+            print("⚠️ CONFIG: Staging tunnel URL not set, falling back to Pi local IP")
+        } else {
+            url = "http://\(host):\(serverPort)"
+        }
+        
+        print("🔧 CONFIG: Using \(currentEnvironment.uppercased()) server: \(url)")
+        print("🔧 CONFIG: Environment: \(config.description)")
         return url
     }
     
     // Contribution system URLs (link-generator service) 
     static var contributionBaseURL: String {
-        let host = isLocalServer ? sharedConfig.development.host : sharedConfig.production.host
+        let config = environmentConfig
+        let host = config.host
         let port = sharedConfig.services.linkGenerator.port
-        // AWS ALB doesn't need port specification for production
-        return host.contains("amazonaws.com") ? "http://\(host)" : "http://\(host):\(port)"
+        
+        // Use same logic as baseURL for contribution system
+        if host.contains("amazonaws.com") {
+            return "http://\(host)"
+        } else if host.contains("trycloudflare.com") {
+            return "https://\(host)"
+        } else if host == "STAGING_PLACEHOLDER" {
+            return "http://192.168.1.222:\(port)"  // Fallback to Pi local IP
+        } else {
+            return "http://\(host):\(port)"
+        }
     }
     
     static var contributionAPIURL: String {

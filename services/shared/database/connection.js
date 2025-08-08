@@ -1,25 +1,50 @@
 const { Pool } = require('pg');
 
-// Database configuration
-const dbConfig = {
-  user: process.env.DB_USER || process.env.USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'anagram_game',
-  password: process.env.DB_PASSWORD || '',
-  port: process.env.DB_PORT || 5432,
+// Dynamic database configuration - supports both DATABASE_URL and individual variables
+function getDatabaseConfig() {
+  // If DATABASE_URL is provided (Docker/production), use it
+  if (process.env.DATABASE_URL) {
+    console.log('🔧 DATABASE: Using DATABASE_URL connection string');
+    return {
+      connectionString: process.env.DATABASE_URL,
+      
+      // Connection pool settings
+      max: 20, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
+      connectionTimeoutMillis: 10000, // How long to wait for a connection
+      
+      // SSL configuration based on DB_SSL environment variable
+      ssl: process.env.DB_SSL === 'true' ? {
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+        ca: process.env.DB_SSL_CA || undefined
+      } : false
+    };
+  }
   
-  // Connection pool settings
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
-  connectionTimeoutMillis: 10000, // How long to wait for a connection
-  
-  // SSL configuration - secure by default in production
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-    // Optional: provide CA certificate if needed
-    ca: process.env.DB_SSL_CA || undefined
-  } : false
-};
+  // Fallback to individual environment variables (local development)
+  console.log('🔧 DATABASE: Using individual environment variables');
+  return {
+    user: process.env.DB_USER || process.env.USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'anagram_game',
+    password: process.env.DB_PASSWORD || '',
+    port: process.env.DB_PORT || 5432,
+    
+    // Connection pool settings
+    max: 20, // Maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
+    connectionTimeoutMillis: 10000, // How long to wait for a connection
+    
+    // SSL configuration - secure by default in production
+    ssl: process.env.NODE_ENV === 'production' ? {
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+      // Optional: provide CA certificate if needed
+      ca: process.env.DB_SSL_CA || undefined
+    } : false
+  };
+}
+
+const dbConfig = getDatabaseConfig();
 
 // Create connection pool
 const pool = new Pool(dbConfig);

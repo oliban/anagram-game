@@ -72,7 +72,7 @@ const skipRateLimits = process.env.SKIP_RATE_LIMITS === 'true';
 // General API rate limiter - realistic for word game usage
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 120 : 30, // ~8-2 requests per minute (reasonable for gameplay)
+  max: isDevelopment ? 300 : 30, // ~20-2 requests per minute (generous for development)
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -82,7 +82,7 @@ const apiLimiter = rateLimit({
 // Strict rate limiter for sensitive endpoints (phrase creation, etc.)
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 30 : 10, // ~2-0.7 requests per minute (very limited)
+  max: isDevelopment ? 100 : 10, // ~7-0.7 requests per minute (more generous for development)
   message: { error: 'Rate limit exceeded for sensitive endpoint.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -309,6 +309,7 @@ function broadcastActivity(type, message, details = null) {
 }
 
 // Middleware
+app.set('trust proxy', true); // Trust nginx reverse proxy headers
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static('public'));
@@ -430,6 +431,7 @@ io.on('connection', (socket) => {
     try {
       if (!isDatabaseConnected) {
         console.log(`❌ Database not connected for player-connect: ${socket.id}`);
+        socket.emit('connection-error', { error: 'Database not available' });
         return;
       }
       
@@ -439,11 +441,36 @@ io.on('connection', (socket) => {
       
       const { playerId } = data;
       
+      if (!playerId) {
+        console.log(`❌ Missing playerId in player-connect event`);
+        socket.emit('connection-error', { error: 'Missing player ID' });
+        return;
+      }
+      
       try {
+        // First check if player exists in database
+        const existingPlayer = await DatabasePlayer.getPlayerById(playerId);
+        if (!existingPlayer) {
+          console.log(`❌ Player not found in database: ${playerId}`);
+          console.log(`🔍 DEBUG: This suggests registration didn't complete properly`);
+          socket.emit('connection-error', { error: 'Player not found - please re-register' });
+          return;
+        }
+        
+        console.log(`✅ Found player in database: ${existingPlayer.name} (${playerId})`);
+        
+        // Update socket ID for existing player
         const player = await DatabasePlayer.updateSocketId(playerId, socket.id);
         
         if (player) {
           console.log(`👤 Player connected via socket: ${player.name} (${socket.id})`);
+          
+          // Send success confirmation to this specific client
+          socket.emit('player-connected', {
+            success: true,
+            player: player.getPublicInfo(),
+            timestamp: new Date().toISOString()
+          });
           
           const onlinePlayers = (await DatabasePlayer.getOnlinePlayers()).map(p => p.getPublicInfo());
           const updateData = {
@@ -456,15 +483,18 @@ io.on('connection', (socket) => {
           
           io.emit('player-list-updated', updateData);
         } else {
-          console.log(`❌ Player not found for ID: ${playerId}`);
+          console.log(`❌ Failed to update socket ID for player: ${playerId}`);
+          socket.emit('connection-error', { error: 'Failed to update connection' });
         }
       } catch (dbError) {
-        console.log(`❌ Invalid player ID format or player not found: ${playerId}`);
-        // Client needs to re-register with proper player registration
+        console.log(`❌ Database error during player-connect: ${dbError.message}`);
+        console.log(`🔍 DEBUG: Player ID: ${playerId}, Socket ID: ${socket.id}`);
+        socket.emit('connection-error', { error: 'Database error during connection' });
       }
       
     } catch (error) {
       console.error('❌ Error handling player-connect:', error);
+      socket.emit('connection-error', { error: 'Server error during connection' });
     }
   });
   

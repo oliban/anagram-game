@@ -170,3 +170,9 @@ test_difficulty.swift
 server/swagger-output.json
 
 code_map.swift
+
+# Build environment configuration (changes per build)
+Resources/build-environment.json
+environment-override.plist
+.staging-tunnel-url
+.postgres_version

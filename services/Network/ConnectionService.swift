@@ -120,6 +120,26 @@ class ConnectionService: ObservableObject {
             }
         }
         
+        // Handle connection errors from server
+        socket.on("connection-error") { [weak self] data, _ in
+            if let errorData = data.first as? [String: Any],
+               let errorMessage = errorData["error"] as? String {
+                print("❌ SOCKET: Server connection error: \(errorMessage)")
+                DispatchQueue.main.async {
+                    self?.connectionStatus = .error(errorMessage)
+                    self?.isConnected = false
+                }
+            }
+        }
+        
+        // Handle successful player connection confirmation
+        socket.on("player-connected") { [weak self] data, _ in
+            if let confirmData = data.first as? [String: Any],
+               let success = confirmData["success"] as? Bool, success {
+                print("✅ SOCKET: Player connection confirmed by server")
+            }
+        }
+        
         // Delegate to services for specific events
         socket.on("player-list-updated") { [weak self] data, _ in
             self?.playerDelegate?.handlePlayerListUpdate(data: data)

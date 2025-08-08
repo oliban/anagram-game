@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anagram Game Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .dashboard-card h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+        
+        .dashboard-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .dashboard-link {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 0.8rem 2rem;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .dashboard-link:hover {
+            background-color: #2980b9;
+        }
+        
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .status {
+            margin-top: 3rem;
+            padding: 1rem;
+            background-color: #e8f5e9;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .status.loading {
+            background-color: #fff3e0;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🎮 Anagram Game Dashboard</h1>
+            <p class="subtitle">Game Management & Monitoring Hub</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="icon">📊</div>
+                <h2>Game Monitoring</h2>
+                <p>Real-time game statistics, player activity, and performance metrics</p>
+                <a href="/monitoring" class="dashboard-link">View Monitoring</a>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="icon">🔗</div>
+                <h2>Phrase Contribution</h2>
+                <p>Create and manage contribution links for adding new game phrases</p>
+                <a href="/contribute" class="dashboard-link">Manage Links</a>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="icon">📈</div>
+                <h2>API Status</h2>
+                <p>Check the health and status of all game services</p>
+                <a href="/api/status" class="dashboard-link">Check Status</a>
+            </div>
+        </div>
+        
+        <div id="status" class="status loading">
+            Checking service status...
+        </div>
+    </div>
+
+    <script>
+        // Check API status on load
+        async function checkStatus() {
+            const statusEl = document.getElementById('status');
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    statusEl.className = 'status';
+                    statusEl.innerHTML = `✅ All services operational | Database: ${data.database} | Active players: ${data.stats?.active_players || 0}`;
+                } else {
+                    statusEl.className = 'status error';
+                    statusEl.textContent = '⚠️ Service issues detected';
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = '❌ Unable to connect to services';
+            }
+        }
+        
+        checkStatus();
+        // Refresh status every 30 seconds
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>
