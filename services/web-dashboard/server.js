@@ -282,9 +282,7 @@ async function getRecentPhrases() {
                 p.created_at,
                 p.is_global,
                 p.is_approved,
-                p.source,
                 p.created_by_player_id,
-                p.contributor_name,
                 pl.name as creator_name,
                 COALESCE(pp.target_count, 0) as target_count,
                 CASE 
@@ -295,12 +293,9 @@ async function getRecentPhrases() {
                     ELSE 'very-hard'
                 END as difficulty_category,
                 CASE 
-                    WHEN p.source = 'web' THEN 'contribution-link'
-                    WHEN p.source = 'external' THEN 'contribution-link'
-                    WHEN p.source = 'admin' THEN 'admin-panel'
-                    WHEN p.source = 'app' THEN 'mobile-app'
-                    WHEN p.source IS NULL THEN 'legacy-data'
-                    ELSE p.source
+                    WHEN p.created_by_player_id IS NOT NULL THEN 'mobile-app'
+                    WHEN p.is_global = true THEN 'admin-panel'
+                    ELSE 'legacy-data'
                 END as creation_method
             FROM phrases p
             LEFT JOIN players pl ON p.created_by_player_id = pl.id

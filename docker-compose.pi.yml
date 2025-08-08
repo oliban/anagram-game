@@ -1,0 +1,126 @@
+# Docker Compose for Raspberry Pi deployment
+# Optimized for ARM64 and limited resources
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: anagram-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-anagram_game}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/database:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  game-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.pi
+    container_name: anagram-game-server
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      SERVICE_NAME: game-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web-dashboard:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.pi
+    container_name: anagram-web-dashboard
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      SERVICE_NAME: web-dashboard
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  link-generator:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.pi
+    container_name: anagram-link-generator
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3002
+      DATABASE_URL: ${DATABASE_URL}
+      SERVICE_NAME: link-generator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3002/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  admin-service:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.pi
+    container_name: anagram-admin-service
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3003
+      DATABASE_URL: ${DATABASE_URL}
+      SERVICE_NAME: admin-service
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3003/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

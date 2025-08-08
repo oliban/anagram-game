@@ -744,15 +744,28 @@ class GameModel: ObservableObject {
         print("🎯 LEVEL: Initialized skill level tracking at level \(previousSkillLevelId) (\(currentSkillLevel.title))")
     }
     
-    /// Load level configuration from server
+    /// Load level configuration from server with retry logic for rate limiting
     func loadLevelConfig() async {
-        guard let serverConfig = await fetchLevelConfigFromServer() else {
-            fatalError("❌ LEVEL CONFIG: Cannot load level configuration from server - no fallbacks allowed!")
+        let maxRetries = 3
+        let baseDelay: UInt64 = 2_000_000_000 // 2 seconds in nanoseconds
+        
+        for attempt in 1...maxRetries {
+            if let serverConfig = await fetchLevelConfigFromServer() {
+                levelConfig = serverConfig 
+                print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
+                DebugLogger.shared.info("LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
+                return
+            }
+            
+            if attempt < maxRetries {
+                let delay = baseDelay * UInt64(attempt) // Exponential backoff
+                print("⏳ LEVEL CONFIG: Retry \(attempt)/\(maxRetries) failed, waiting \(delay / 1_000_000_000)s before next attempt...")
+                DebugLogger.shared.info("LEVEL CONFIG: Retry \(attempt)/\(maxRetries) failed, waiting \(delay / 1_000_000_000)s before next attempt...")
+                try? await Task.sleep(nanoseconds: delay)
+            }
         }
         
-        levelConfig = serverConfig 
-        print("⚙️ LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
-        DebugLogger.shared.info("LEVEL CONFIG: Loaded from server - \(serverConfig.skillLevels.count) skill levels")
+        fatalError("❌ LEVEL CONFIG: Cannot load level configuration from server after \(maxRetries) retries - check server connection and rate limits!")
     }
     
     /// Fetch level config from server endpoint
@@ -769,9 +782,21 @@ class GameModel: ObservableObject {
             
             let (data, response) = try await URLSession.shared.data(from: url)
             
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                print("❌ LEVEL CONFIG: Server request failed with status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
-                DebugLogger.shared.error("LEVEL CONFIG: Server request failed with status \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ LEVEL CONFIG: Invalid HTTP response")
+                DebugLogger.shared.error("LEVEL CONFIG: Invalid HTTP response")
+                return nil
+            }
+            
+            if httpResponse.statusCode == 429 {
+                print("⏳ LEVEL CONFIG: Rate limited (429) - will retry...")
+                DebugLogger.shared.error("LEVEL CONFIG: Rate limited (429) - will retry...")
+                return nil
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                print("❌ LEVEL CONFIG: Server request failed with status \(httpResponse.statusCode)")
+                DebugLogger.shared.error("LEVEL CONFIG: Server request failed with status \(httpResponse.statusCode)")
                 return nil
             }
             

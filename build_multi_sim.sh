@@ -3,29 +3,33 @@
 # Build and launch Anagram Game with multi-device configuration
 # 
 # USAGE:
-#   ./build_multi_sim.sh [aws|local] [--clean]
+#   ./build_multi_sim.sh [local|staging|aws] [--clean] [--physical]
 #
 # ARGUMENTS:
 #   local   - Deploy to iPhone 15 devices with local backend (default)
+#   staging - Deploy to iPhone 15 devices with Pi staging server  
 #   aws     - Deploy to iPhone SE with AWS backend
 #   --clean - Force clean build (removes cache, slower but reliable)
+#   --physical - Deploy to physical device instead of simulator
 #
 # EXAMPLES:
 #   ./build_multi_sim.sh                    # Local development (iPhone 15s)
 #   ./build_multi_sim.sh local              # Local development (iPhone 15s)
+#   ./build_multi_sim.sh staging            # Pi staging server (iPhone 15s)
 #   ./build_multi_sim.sh aws                # AWS production (iPhone SE)
-#   ./build_multi_sim.sh local --clean      # Local with clean build
-#   ./build_multi_sim.sh aws --clean        # AWS with clean build
+#   ./build_multi_sim.sh staging --clean    # Pi staging with clean build
 #
 # DEVICE CONFIGURATION:
-# - AWS MODE: iPhone SE for production testing
-# - LOCAL MODE: iPhone 15 & iPhone 15 Pro for local development
+# - LOCAL MODE: iPhone 15 & iPhone 15 Pro for local development (fixed IP)
+# - STAGING MODE: iPhone 15 & iPhone 15 Pro for Pi staging server (tunnel URL changes on reboot)
+# - AWS MODE: iPhone SE for production testing (stable URL)
 
 set -e
 
 # Parse command line arguments
 ENV_MODE="LOCAL"  # Default
 FORCE_CLEAN="0"
+PHYSICAL_FLAG=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -37,13 +41,21 @@ while [[ $# -gt 0 ]]; do
       ENV_MODE="LOCAL" 
       shift
       ;;
+    staging)
+      ENV_MODE="STAGING"
+      shift
+      ;;
     --clean)
       FORCE_CLEAN="1"
       shift
       ;;
+    --physical|--device)
+      PHYSICAL_FLAG="--physical"
+      shift
+      ;;
     *)
       echo "Unknown argument: $1"
-      echo "Usage: $0 [aws|local] [--clean]"
+      echo "Usage: $0 [local|staging|aws] [--clean] [--physical]"
       exit 1
       ;;
   esac
@@ -66,6 +78,14 @@ if [ "$ENV_MODE" = "LOCAL" ]; then
     SIM1_NAME="iPhone 15"
     SIM2_NAME="iPhone 15 Pro"
     USE_MULTI_SIM=true
+elif [ "$ENV_MODE" = "STAGING" ]; then
+    ENV_DESC="Pi staging server (tunnel URL - changes on reboot)"
+    # Staging uses same iPhone 15 devices as local development
+    SIM1_UUID="AF307F12-A657-4D6A-8123-240CBBEC5B31"  # iPhone 15
+    SIM2_UUID="86355D8A-560E-465D-8FDC-3D037BCA482B"  # iPhone 15 Pro
+    SIM1_NAME="iPhone 15"
+    SIM2_NAME="iPhone 15 Pro"
+    USE_MULTI_SIM=true
 else
     ENV_DESC="AWS cloud infrastructure"
     # AWS production uses iPhone SE (reserved for AWS production)
@@ -75,18 +95,22 @@ else
 fi
 
 if [ "$USE_MULTI_SIM" = true ]; then
-    echo "🚀 Building Anagram Game for local development (multi-simulator)..."
+    if [ "$ENV_MODE" = "STAGING" ]; then
+        echo "🚀 Building Wordshelf for Pi staging server (multi-simulator)..."
+    else
+        echo "🚀 Building Wordshelf for local development (multi-simulator)..."
+    fi
     echo "📱 Devices: $SIM1_NAME + $SIM2_NAME"
 else
-    echo "🚀 Building Anagram Game for AWS production (single simulator)..."
+    echo "🚀 Building Wordshelf for AWS production (single simulator)..."
     echo "📱 Device: $SIM_NAME"
 fi
 echo "🌐 Environment: $ENV_DESC"
 
 # Configuration
-APP_NAME="Anagram Game"
-SCHEME="Anagram Game"
-PROJECT_FILE="Anagram Game.xcodeproj"
+APP_NAME="Wordshelf"
+SCHEME="Wordshelf"
+PROJECT_FILE="Wordshelf.xcodeproj"
 DERIVED_DATA_PATH="$HOME/Library/Developer/Xcode/DerivedData"
 
 # Colors for output
@@ -96,6 +120,67 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Function to check server health
+check_server_health() {
+    local server_url=$1
+    local server_name=$2
+    local timeout=${3:-10}
+    
+    echo -e "${YELLOW}🔍 Checking ${server_name} server health at ${server_url}${NC}"
+    
+    if curl -s --connect-timeout $timeout "${server_url}/api/status" > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ ${server_name} server is healthy${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ ${server_name} server is not responding${NC}"
+        return 1
+    fi
+}
+
+# Function to get Pi tunnel URL
+get_pi_tunnel_url() {
+    local pi_ip="192.168.1.222"
+    echo -e "${YELLOW}🔍 Getting current Pi tunnel URL...${NC}" >&2
+    
+    # Try to get Cloudflare tunnel URL from Pi
+    if ssh pi@${pi_ip} "test -f ~/cloudflare-tunnel-url.txt" 2>/dev/null; then
+        local tunnel_url=$(ssh pi@${pi_ip} "cat ~/cloudflare-tunnel-url.txt" 2>/dev/null)
+        if [ -n "$tunnel_url" ]; then
+            echo -e "${GREEN}✅ Found Cloudflare tunnel URL: ${tunnel_url}${NC}" >&2
+            echo "$tunnel_url"
+            return 0
+        fi
+    fi
+    
+    echo -e "${RED}❌ Could not get Cloudflare tunnel URL from Pi${NC}" >&2
+    echo -e "${YELLOW}💡 Make sure cloudflare-tunnel service is running on Pi${NC}" >&2
+    return 1
+}
+
+# Function to show server startup instructions
+show_server_startup_guide() {
+    local env=$1
+    
+    case $env in
+        "LOCAL")
+            echo -e "${YELLOW}📋 To start local development servers:${NC}"
+            echo -e "   docker-compose -f docker-compose.services.yml up -d"
+            echo -e "   ${BLUE}Wait ~30 seconds for services to initialize${NC}"
+            ;;
+        "STAGING")
+            echo -e "${YELLOW}📋 To start Pi staging servers:${NC}"
+            echo -e "   ssh pi@192.168.1.222"
+            echo -e "   sudo systemctl start cloudflare-tunnel anagram-game"
+            echo -e "   ${BLUE}Cloudflare tunnel URL persists across reboots!${NC}"
+            ;;
+        "AWS")
+            echo -e "${YELLOW}📋 To start AWS production servers:${NC}"
+            echo -e "   See 'AWS Production Server Management' section in CLAUDE.md"
+            echo -e "   ${BLUE}Typical startup time: 2-5 minutes${NC}"
+            ;;
+    esac
+}
+
 echo -e "${BLUE}📱 Using simulator(s):${NC}"
 if [ "$USE_MULTI_SIM" = true ]; then
     echo -e "  $SIM1_NAME ($SIM1_UUID)"
@@ -103,6 +188,78 @@ if [ "$USE_MULTI_SIM" = true ]; then
 else
     echo -e "  $SIM_NAME ($SIM_UUID)"
 fi
+echo ""
+
+# Pre-build server health checks
+echo -e "${BLUE}🔍 Checking server health before building...${NC}"
+
+case $ENV_MODE in
+    "LOCAL")
+        # Get the local network IP address
+        LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "192.168.1.133")
+        
+        if ! check_server_health "http://${LOCAL_IP}:3000" "Local Development" 3; then
+            echo -e "${RED}❌ Local servers are not running!${NC}"
+            echo ""
+            show_server_startup_guide "LOCAL"
+            echo ""
+            read -p "Start servers now? (y/n): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${BLUE}🚀 Starting local services...${NC}"
+                docker-compose -f docker-compose.services.yml up -d
+                
+                echo -e "${YELLOW}⏳ Waiting for services to initialize...${NC}"
+                sleep 15
+                
+                # Re-check health
+                if check_server_health "http://${LOCAL_IP}:3000" "Local Development" 5; then
+                    echo -e "${GREEN}✅ Local servers are now ready!${NC}"
+                else
+                    echo -e "${RED}❌ Local servers failed to start properly${NC}"
+                    exit 1
+                fi
+            else
+                echo -e "${RED}❌ Cannot proceed without servers. Exiting.${NC}"
+                exit 1
+            fi
+        fi
+        ;;
+    
+    "STAGING")
+        # For staging, just verify tunnel URL exists and proceed
+        PI_TUNNEL_URL=$(get_pi_tunnel_url)
+        if [ $? -eq 0 ] && [ -n "$PI_TUNNEL_URL" ]; then
+            echo -e "${GREEN}✅ Pi staging tunnel detected: ${PI_TUNNEL_URL}${NC}"
+            echo -e "${BLUE}💡 Note: Skipping health check for staging build speed${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Could not detect Pi tunnel URL, but proceeding with build${NC}"
+            echo -e "${BLUE}💡 Make sure Pi staging server is running when testing${NC}"
+        fi
+        ;;
+        
+    "AWS")
+        AWS_SERVER_URL="http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com"
+        if ! check_server_health "$AWS_SERVER_URL" "AWS Production" 10; then
+            echo -e "${RED}❌ AWS production servers are not running!${NC}"
+            echo ""
+            show_server_startup_guide "AWS"
+            echo ""
+            echo -e "${YELLOW}⚠️  AWS servers must be started manually via AWS Console/CLI${NC}"
+            echo -e "${BLUE}💡 Check CLAUDE.md for detailed AWS startup instructions${NC}"
+            echo ""
+            read -p "Continue anyway to build app for when servers come online? (y/n): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${RED}❌ Build cancelled. Start AWS servers first.${NC}"
+                exit 1
+            fi
+        fi
+        ;;
+esac
+
+echo ""
+echo -e "${GREEN}✅ Server health checks completed!${NC}"
 echo ""
 
 # Function to boot simulator if not already running
@@ -171,13 +328,20 @@ build_and_install() {
     fi
     
     # Set environment variable for server selection
-    if [ "$ENV_MODE" = "LOCAL" ]; then
-        echo -e "${YELLOW}  • Setting USE_LOCAL_SERVER=true for parallel development${NC}"
-        export USE_LOCAL_SERVER=true
-    else
-        echo -e "${BLUE}  • Setting USE_LOCAL_SERVER=false for AWS production${NC}"
-        export USE_LOCAL_SERVER=false
-    fi
+    case $ENV_MODE in
+        "LOCAL")
+            echo -e "${YELLOW}  • Setting USE_LOCAL_SERVER=local for parallel development${NC}"
+            export USE_LOCAL_SERVER=local
+            ;;
+        "STAGING")
+            echo -e "${BLUE}  • Setting USE_LOCAL_SERVER=staging for Pi staging server${NC}"
+            export USE_LOCAL_SERVER=staging
+            ;;
+        "AWS")
+            echo -e "${BLUE}  • Setting USE_LOCAL_SERVER=aws for AWS production${NC}"
+            export USE_LOCAL_SERVER=aws
+            ;;
+    esac
     
     xcodebuild -project "$PROJECT_FILE" \
                -scheme "$SCHEME" \
@@ -222,13 +386,34 @@ if [ "$FORCE_CLEAN" = "1" ]; then
     force_clean_cache
 fi
 
-# Note: Configuration is now embedded in AppConfig struct in NetworkManager.swift
-# No need to generate Config.swift as it's not used anymore
-echo -e "${BLUE}⚙️ Using embedded configuration (AppConfig in NetworkManager.swift)${NC}"
+# Update NetworkConfiguration.swift with current environment
+echo -e "${BLUE}⚙️ Configuring NetworkConfiguration.swift for ${ENV_MODE} environment...${NC}"
+
+# Backup original file
+cp Models/Network/NetworkConfiguration.swift Models/Network/NetworkConfiguration.swift.backup
+
+# Update the static environment configuration using Python script
+if [ "$ENV_MODE" = "STAGING" ]; then
+    # For staging, update both environment and tunnel URL
+    if [ -n "$PI_TUNNEL_URL" ]; then
+        python3 update_network_config.py staging "$PI_TUNNEL_URL"
+    else
+        python3 update_network_config.py staging
+    fi
+elif [ "$ENV_MODE" = "AWS" ]; then
+    python3 update_network_config.py aws
+else
+    # Local mode - ensure it's set to local (it's already the default)
+    python3 update_network_config.py local
+fi
 
 if [ "$USE_MULTI_SIM" = true ]; then
-    # Multi-simulator setup for local development
-    echo -e "${BLUE}🔄 Booting local development simulators...${NC}"
+    # Multi-simulator setup for local development or staging
+    if [ "$ENV_MODE" = "STAGING" ]; then
+        echo -e "${BLUE}🔄 Booting Pi staging simulators...${NC}"
+    else
+        echo -e "${BLUE}🔄 Booting local development simulators...${NC}"
+    fi
     boot_simulator "$SIM1_UUID" "$SIM1_NAME" &
     boot_simulator "$SIM2_UUID" "$SIM2_NAME" &
     wait
@@ -245,7 +430,16 @@ if [ "$USE_MULTI_SIM" = true ]; then
     echo -e "${YELLOW}📝 Next steps:${NC}"
     echo -e "  1. Both iPhone 15 simulators should have the app installed and running"
     echo -e "  2. App is configured for: $ENV_DESC"
-    echo -e "  3. ${YELLOW}Make sure your local server is running on port 3000${NC}"
+    
+    if [ "$ENV_MODE" = "STAGING" ]; then
+        echo -e "  3. ${YELLOW}Pi server accessible via tunnel (URL may change on reboot)${NC}"
+        if [ -n "$PI_TUNNEL_URL" ]; then
+            echo -e "     Current tunnel: $PI_TUNNEL_URL"
+        fi
+    else
+        echo -e "  3. ${YELLOW}Make sure your local server is running on port 3000${NC}"
+    fi
+    
     echo -e "  4. Register different player names on each simulator"
     echo -e "  5. Test multiplayer functionality between simulators"
 else
@@ -269,14 +463,23 @@ fi
 
 echo ""
 echo -e "${BLUE}💡 Tips and Troubleshooting:${NC}"
-echo -e "  • Switch environments: ./build_multi_sim.sh aws  or  ./build_multi_sim.sh local"
-echo -e "  • Force clean build: ./build_multi_sim.sh [local|aws] --clean"
+echo -e "  • Switch environments: ./build_multi_sim.sh [local|staging|aws]"
+echo -e "  • Force clean build: ./build_multi_sim.sh [mode] --clean"
 echo -e "  • Legacy support: LOCAL=1 ./build_multi_sim.sh still works"
 echo -e "  • If app doesn't reflect code changes, try --clean flag"
 echo -e "  • If still having cache issues, manually reset simulator: xcrun simctl erase [UUID]"
 echo -e "  • For complete reset: shutdown simulator, erase, boot, then rebuild"
 echo ""
 echo -e "${YELLOW}🔧 Device Configuration:${NC}"
-echo -e "  • AWS Production: iPhone SE for final testing"
-echo -e "  • Local Development: iPhone 15 + iPhone 15 Pro for parallel testing"
-echo -e "  • Both modes support environment-aware networking configuration"
+echo -e "  • Local Development: iPhone 15 + iPhone 15 Pro (fixed IP: 192.168.1.133)"
+echo -e "  • Pi Staging: iPhone 15 + iPhone 15 Pro (tunnel URL changes on reboot)"
+echo -e "  • AWS Production: iPhone SE (stable URL)"
+echo -e "  • All modes support environment-aware networking configuration"
+
+# Restore original NetworkConfiguration.swift
+if [ -f "Models/Network/NetworkConfiguration.swift.backup" ]; then
+    echo ""
+    echo -e "${BLUE}🔄 Restoring original NetworkConfiguration.swift...${NC}"
+    mv Models/Network/NetworkConfiguration.swift.backup Models/Network/NetworkConfiguration.swift
+    echo -e "${GREEN}✅ Original NetworkConfiguration.swift restored${NC}"
+fi
