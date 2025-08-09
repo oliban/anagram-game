@@ -1,0 +1,100 @@
+{
+  "testRunner": {
+    "version": "1.0.0",
+    "description": "CI/CD Test Configuration for Wordshelf API Testing",
+    "maxRetries": 2,
+    "retryDelay": 5000,
+    "timeout": 300000,
+    "parallel": false,
+    "stopOnFirstFailure": false,
+    "generateReport": true
+  },
+  "testSuites": {
+    "coreApi": {
+      "name": "Core API Tests",
+      "file": "testing/api/test_updated_simple.js",
+      "critical": true,
+      "description": "Essential API endpoints and functionality",
+      "timeout": 60000
+    },
+    "additionalEndpoints": {
+      "name": "Additional Endpoints",
+      "file": "testing/api/test_additional_endpoints.js",
+      "critical": false,
+      "description": "Extended API features and edge cases",
+      "timeout": 120000
+    },
+    "fixedIssues": {
+      "name": "Fixed Issues Validation",
+      "file": "testing/api/test_fixed_issues.js",
+      "critical": false,
+      "description": "Validates previously discovered and fixed issues",
+      "timeout": 90000
+    },
+    "realTime": {
+      "name": "Socket.IO Real-time",
+      "file": "testing/integration/test_socketio_realtime.js",
+      "critical": true,
+      "description": "WebSocket and real-time multiplayer functionality",
+      "timeout": 120000
+    },
+    "userWorkflows": {
+      "name": "User Workflows",
+      "file": "testing/integration/test_user_workflows.js",
+      "critical": true,
+      "description": "End-to-end user journey testing",
+      "timeout": 180000
+    },
+    "performance": {
+      "name": "Performance Suite",
+      "file": "testing/performance/test_performance_suite.js",
+      "critical": false,
+      "description": "Load testing and performance validation",
+      "timeout": 600000,
+      "skipInCI": "SKIP_PERFORMANCE"
+    }
+  },
+  "prerequisites": {
+    "services": {
+      "gameServer": "http://192.168.1.188:3000/api/status",
+      "adminService": "http://192.168.1.188:3003/api/status",
+      "linkGenerator": "http://192.168.1.188:3002/api/status",
+      "webDashboard": "http://192.168.1.188:3001/api/status"
+    },
+    "requirements": [
+      "Docker services must be running",
+      "Database must be accessible",
+      "socket.io-client npm package installed"
+    ]
+  },
+  "reporting": {
+    "formats": ["json", "markdown"],
+    "directory": "testing/reports",
+    "retention": {
+      "days": 30,
+      "maxFiles": 100
+    },
+    "notifications": {
+      "onFailure": true,
+      "onSuccess": false,
+      "webhook": null
+    }
+  },
+  "ci": {
+    "jenkins": {
+      "stage": "test",
+      "publishResults": true,
+      "archiveArtifacts": "testing/reports/*"
+    },
+    "github": {
+      "workflowFile": ".github/workflows/api-tests.yml",
+      "statusCheck": "api-tests"
+    },
+    "docker": {
+      "testImage": "node:18-alpine",
+      "volumes": ["./:/app"],
+      "workdir": "/app",
+      "command": ["node", "testing/scripts/automated-test-runner.js"]
+    }
+  }
+}

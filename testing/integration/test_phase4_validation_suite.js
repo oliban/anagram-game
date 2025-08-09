@@ -256,7 +256,7 @@ class Phase4ValidationTests {
     const player2 = this.testPlayers[1];
     
     // Create a real phrase
-    const phraseResult = await this.makeRequest('POST', '/api/phrases', {
+    const phraseResult = await this.makeRequest('POST', '/api/phrases/create', {
       content: "test phrase for skip validation",
       senderId: player1.id,
       targetId: player2.id
@@ -280,7 +280,7 @@ class Phase4ValidationTests {
       skipPassed ? `Phrase ${realPhraseId} skipped` : `Error: ${skipResult.error}`, 'RealPhraseID');
     
     // Create another phrase for consume test
-    const phraseResult2 = await this.makeRequest('POST', '/api/phrases', {
+    const phraseResult2 = await this.makeRequest('POST', '/api/phrases/create', {
       content: "test phrase for consume validation",
       senderId: player1.id,
       targetId: player2.id
@@ -350,7 +350,7 @@ class Phase4ValidationTests {
     
     // Phrase creation should return 201
     if (this.testPlayers.length >= 2) {
-      const phraseResult = await this.makeRequest('POST', '/api/phrases', {
+      const phraseResult = await this.makeRequest('POST', '/api/phrases/create', {
         content: "status test phrase",
         senderId: this.testPlayers[0].id,
         targetId: this.testPlayers[1].id

@@ -722,6 +722,7 @@ class DatabasePhrase {
    * Supports global phrases, multi-player targeting, and advanced hint validation
    */
   static async createEnhancedPhrase(options) {
+    console.log(`🚨 UNIQUE_DEBUG: This is the right createEnhancedPhrase method!`);
     const {
       content,
       hint,
@@ -760,7 +761,9 @@ class DatabasePhrase {
     console.log(`🔍 CREATE_PHRASE DEBUG: contributorName = "${contributorName}", senderId = ${senderId}`);
 
     try {
+      console.log(`🔍 BEFORE_TRANSACTION: About to call transaction function`);
       return await transaction(async (client) => {
+        console.log(`🔍 TRANSACTION_START: Starting phrase creation transaction`);
         // Create the phrase
         const phraseResult = await client.query(`
           INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme, contributor_name, source)
@@ -770,6 +773,8 @@ class DatabasePhrase {
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
 
+        console.log(`🔍 PHRASE_CREATED: About to check senderId = ${senderId}`);
+        
         // Fetch sender name if we have a senderId
         if (senderId) {
           const senderResult = await client.query(`
@@ -826,6 +831,8 @@ class DatabasePhrase {
       });
     } catch (error) {
       console.error('❌ DATABASE: Error creating enhanced phrase:', error.message);
+      console.error('❌ DATABASE: Full error stack:', error.stack);
+      console.error('❌ DATABASE: This error occurred after CREATE_PHRASE DEBUG log');
       throw error;
     }
   }

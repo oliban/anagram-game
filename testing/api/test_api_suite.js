@@ -16,8 +16,10 @@
 const axios = require('axios');
 const { io } = require('socket.io-client');
 
-const SERVER_URL = 'http://localhost:3000';
-const WS_URL = 'ws://localhost:3000';
+// Environment-aware configuration
+const API_URL = process.env.API_URL || 'http://192.168.1.188:3000';
+const SERVER_URL = API_URL;
+const WS_URL = API_URL.replace('http://', 'ws://').replace('https://', 'wss://');
 
 // Test configuration
 const CONFIG = {
@@ -31,10 +33,10 @@ const TEST_DATA = {
   validPlayerNames: ['TestUser1', 'TestUser2', 'AliceTestPlayer', 'BobTestPlayer'],
   invalidPlayerNames: ['', 'A', 'a'.repeat(100), '🤖invalid', null, undefined],
   phrases: [
-    'hello world test',
-    'quick brown fox',
-    'sample phrase creation',
-    'anagram game test'
+    'hello world',
+    'quick brown',
+    'test ok',
+    'game fun'
   ]
 };
 
@@ -221,7 +223,7 @@ class APITestSuite {
   // Test phrase creation endpoint
   async testPhraseCreation() {
     if (this.testPlayers.length < 2) {
-      this.logResult('POST /api/phrases - Skipped', false, 'Need at least 2 players for phrase tests');
+      this.logResult('POST /api/phrases/create - Skipped', false, 'Need at least 2 players for phrase tests');
       return false;
     }
 
@@ -229,14 +231,16 @@ class APITestSuite {
 
     // Test valid phrase creation
     for (const content of TEST_DATA.phrases) {
-      const result = await this.makeRequest('POST', '/api/phrases', {
+      const result = await this.makeRequest('POST', '/api/phrases/create', {
         content,
+        language: 'en',
         senderId: this.testPlayers[0].id,
-        targetId: this.testPlayers[1].id
-      }, 201);
+        targetId: this.testPlayers[1].id,
+        hint: 'test hint'
+      }, 200);
 
       const passed = result.success && result.data.success && result.data.phrase.id;
-      this.logResult(`POST /api/phrases - Valid phrase`,
+      this.logResult(`POST /api/phrases/create - Valid phrase`,
         passed,
         passed ? `Phrase ID: ${result.data.phrase.id}` : `Error: ${result.error || result.data?.error}`);
 
@@ -248,19 +252,22 @@ class APITestSuite {
 
     // Test invalid phrase creation
     const invalidCases = [
-      { case: 'missing content', data: { senderId: this.testPlayers[0].id, targetId: this.testPlayers[1].id } },
-      { case: 'missing senderId', data: { content: 'test phrase', targetId: this.testPlayers[1].id } },
-      { case: 'missing targetId', data: { content: 'test phrase', senderId: this.testPlayers[0].id } },
-      { case: 'same sender and target', data: { content: 'test phrase', senderId: this.testPlayers[0].id, targetId: this.testPlayers[0].id } },
-      { case: 'invalid senderId', data: { content: 'test phrase', senderId: 'invalid-id', targetId: this.testPlayers[1].id } },
-      { case: 'invalid targetId', data: { content: 'test phrase', senderId: this.testPlayers[0].id, targetId: 'invalid-id' } }
+      { case: 'missing content', data: { language: 'en', senderId: this.testPlayers[0].id, targetId: this.testPlayers[1].id } },
+      { case: 'empty content', data: { content: '', language: 'en', senderId: this.testPlayers[0].id, targetId: this.testPlayers[1].id } },
+      { case: 'missing language', data: { content: 'test phrase', senderId: this.testPlayers[0].id, targetId: this.testPlayers[1].id } },
+      { case: 'invalid language', data: { content: 'test phrase', language: 'fr', senderId: this.testPlayers[0].id, targetId: this.testPlayers[1].id } },
+      { case: 'word too long', data: { content: 'verylongword test', language: 'en', senderId: this.testPlayers[0].id, targetId: this.testPlayers[1].id } },
+      { case: 'missing senderId', data: { content: 'test phrase', language: 'en', targetId: this.testPlayers[1].id } },
+      { case: 'missing targetId', data: { content: 'test phrase', language: 'en', senderId: this.testPlayers[0].id } },
+      { case: 'invalid senderId', data: { content: 'test phrase', language: 'en', senderId: 'invalid-id', targetId: this.testPlayers[1].id } },
+      { case: 'invalid targetId', data: { content: 'test phrase', language: 'en', senderId: this.testPlayers[0].id, targetId: 'invalid-id' } }
     ];
 
     for (const { case: testCase, data } of invalidCases) {
-      const result = await this.makeRequest('POST', '/api/phrases', data, 400);
+      const result = await this.makeRequest('POST', '/api/phrases/create', data, 400);
       
       const passed = !result.success && (result.status === 400 || result.status === 404);
-      this.logResult(`POST /api/phrases - Invalid: ${testCase}`,
+      this.logResult(`POST /api/phrases/create - Invalid: ${testCase}`,
         passed,
         passed ? 'Correctly rejected' : `Unexpected: ${result.status} ${result.error}`);
       

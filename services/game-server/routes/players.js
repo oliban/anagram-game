@@ -269,7 +269,7 @@ module.exports = (dependencies) => {
           JOIN emoji_catalog ec ON pec.emoji_id = ec.id
           WHERE pec.player_id = $1
           ORDER BY ec.drop_rate_percentage ASC
-          LIMIT 5
+          LIMIT 16
         `;
         
         const emojiResult = await pool.query(rarestEmojisQuery, [row.id]);

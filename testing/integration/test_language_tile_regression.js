@@ -67,7 +67,7 @@ async function createTestPlayer(name) {
 
 async function createTestPhrase(senderId, targetId, content, clue, language) {
   try {
-    const response = await axios.post(`${SERVER_URL}/api/phrases`, {
+    const response = await axios.post(`${SERVER_URL}/api/phrases/create`, {
       content: content,
       senderId: senderId,
       targetId: targetId,
@@ -311,7 +311,7 @@ async function testBackwardCompatibility() {
     const receiver = await createTestPlayer('BackwardCompatReceiver');
     
     // Create phrase with no language field
-    const response = await axios.post(`${SERVER_URL}/api/phrases`, {
+    const response = await axios.post(`${SERVER_URL}/api/phrases/create`, {
       content: 'backward compatibility test phrase',
       senderId: sender.id,
       targetId: receiver.id,
