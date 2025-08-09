@@ -84,7 +84,7 @@ jobs:
           docker compose -f docker-compose.services.yml up -d --wait --wait-timeout 120
           
           # Wait for services to be fully ready
-          sleep 20
+          sleep 40
           
           # Comprehensive health checks
           curl -f http://localhost:3000/api/status || exit 1
