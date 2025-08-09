@@ -4,10 +4,11 @@
 
 ### ⚠️ IMPORTANT: Environment Configuration
 **The app MUST be configured for STAGING environment before archiving:**
-- Staging server: Cloudflare tunnel (https://unfortunately-versions-assumed-threat.trycloudflare.com)
+- Staging server: Cloudflare tunnel (URL changes on Pi reboot - check current URL first)
 - Configuration file: `Models/Network/NetworkConfiguration.swift`
 - Line 90 should read: `let env = "staging" // DEFAULT_ENVIRONMENT`
-- Line 65 should read: `let stagingConfig = EnvironmentConfig(host: "unfortunately-versions-assumed-threat.trycloudflare.com", description: "Pi Staging Server (Cloudflare tunnel)")`
+- Line 65 should contain current Cloudflare tunnel URL: `let stagingConfig = EnvironmentConfig(host: "[current-tunnel-url].trycloudflare.com", ...)`
+- **IMPORTANT**: Tunnel URL changes when Pi reboots - always verify current URL before archiving
 - NOT "local" or "aws" - specifically "staging" for TestFlight/App Store builds
 
 ### Prerequisites
@@ -15,6 +16,16 @@
 2. Verify team settings in Xcode project (Signing & Capabilities tab)
 3. Ensure the project version and build number are updated
 4. **VERIFY**: NetworkConfiguration.swift is set to "staging" environment
+5. **UPDATE TUNNEL URL**: Get current Cloudflare tunnel URL and update NetworkConfiguration.swift
+
+#### Getting Current Tunnel URL
+```bash
+# Check current Pi server tunnel (if Pi is running)
+curl -s http://192.168.1.188:3000/api/status | grep -o 'tunnel.*\.trycloudflare\.com' || echo "Pi server not responding"
+
+# Or check build script output
+./build_multi_sim.sh staging 2>&1 | grep "tunnel detected" | grep -o 'https://[^"]*\.trycloudflare\.com'
+```
 
 ### Command Line Archive Creation
 
@@ -24,9 +35,10 @@
 grep 'let env = ' Models/Network/NetworkConfiguration.swift
 # Should output: let env = "staging" // DEFAULT_ENVIRONMENT
 
-# Check staging server configuration
+# Check staging server configuration (URL will vary - changes on Pi reboot)
 grep 'stagingConfig.*host' Models/Network/NetworkConfiguration.swift
-# Should output: let stagingConfig = EnvironmentConfig(host: "unfortunately-versions-assumed-threat.trycloudflare.com", ...)
+# Should output: let stagingConfig = EnvironmentConfig(host: "[some-tunnel-name].trycloudflare.com", ...)
+# Note: The exact tunnel URL changes when Pi server reboots
 ```
 
 #### Create a signed archive for STAGING distribution:
@@ -84,7 +96,7 @@ xcodebuild -exportArchive \
 - **Team ID**: 5XR7USWXMZ
 - **Development Team**: 5XR7USWXMZ
 - **Encryption Exemption**: Configured (ITSAppUsesNonExemptEncryption = false)
-- **Target Environment**: STAGING (Cloudflare tunnel: https://unfortunately-versions-assumed-threat.trycloudflare.com)
+- **Target Environment**: STAGING (Cloudflare tunnel - URL changes on Pi reboot)
 - **Environment Config**: NetworkConfiguration.swift line 90
 
 ### Encryption Documentation
@@ -146,9 +158,9 @@ Custom archive (recommended for staging/production releases):
 grep 'let env = ' Models/Network/NetworkConfiguration.swift
 # Must show: let env = "staging"
 
-# Also verify staging uses Cloudflare tunnel
+# Also verify staging uses Cloudflare tunnel (URL will vary)
 grep 'stagingConfig.*host' Models/Network/NetworkConfiguration.swift
-# Must show: host: "unfortunately-versions-assumed-threat.trycloudflare.com"
+# Must show: host: "[tunnel-name].trycloudflare.com" (exact URL varies)
 
 # STEP 2: Build signed archive for STAGING
 ./scripts/archive-for-release.sh staging
