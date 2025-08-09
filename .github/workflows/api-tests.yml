@@ -147,10 +147,10 @@ jobs:
       - name: Start services
         run: |
           echo "Starting Docker services..."
-          docker compose -f docker-compose.services.yml up -d --wait --wait-timeout 60
+          docker compose -f docker-compose.services.yml up -d --wait --wait-timeout 180
           
           # Wait for services to be fully ready
-          sleep 10
+          sleep 30
           
           # Health check all services
           curl -f http://localhost:3000/api/status || exit 1
