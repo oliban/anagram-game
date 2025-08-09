@@ -100,9 +100,13 @@ class PlayerService: PlayerServiceDelegate {
                 let source: NetworkError.RateLimitSource = cfRayHeader != nil ? .cloudflare : .wordshelfServer
                 
                 print("⚠️ REGISTER: Rate limited by \(source.description). Retry after: \(retryAfter ?? 0) seconds")
+                DebugLogger.shared.error("REGISTER: Rate limited by \(source.description). Retry after: \(retryAfter ?? 0) seconds")
+                
+                // Clear stored player data when rate limited during registration
+                UserDefaults.standard.removeObject(forKey: "playerName")
                 
                 let rateLimitError = NetworkError.rateLimited(source: source, retryAfter: retryAfter)
-                return .failure(message: rateLimitError.errorDescription ?? "Rate limited")
+                return .failure(message: "Too many connection attempts. Please wait a few minutes before trying to register again.")
                 
             default:
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
