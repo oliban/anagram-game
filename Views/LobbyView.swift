@@ -130,7 +130,7 @@ struct LobbyView: View {
     private var titleSection: some View {
         VStack(spacing: 12) {
             // Main title
-            Text("Anagram Game")
+            Text("Wordshelf")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
