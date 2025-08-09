@@ -63,7 +63,7 @@ class ConnectionService: ObservableObject {
             .reconnectAttempts(-1), // Keep trying forever
             .reconnectWait(3),     // Wait 3 seconds before reconnecting
             .reconnectWaitMax(10), // Max wait 10 seconds
-            // Remove forceWebsockets for Cloudflare tunnel compatibility
+            // Allow fallback but prefer WebSocket for tunnel compatibility
             .secure(isSecure)      // Auto-detect based on URL scheme
         ]
         
