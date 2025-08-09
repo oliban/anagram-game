@@ -130,5 +130,52 @@ module.exports = (dependencies) => {
 
   // REMOVED: /api/scores/refresh - Admin-only feature, no consumers (Phase 3 cleanup)
 
+  // Get player statistics - required by iOS PlayerService.swift:226 (fetched from git commit 77f1e0c)
+  router.get('/api/scores/player/:playerId', async (req, res) => {
+    try {
+      if (!getDatabaseStatus()) {
+        return res.status(503).json({
+          error: 'Database connection required for scoring system'
+        });
+      }
+
+      const { playerId } = req.params;
+
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(playerId)) {
+        return res.status(400).json({
+          error: 'Invalid player ID format'
+        });
+      }
+
+      // Verify player exists
+      const DatabasePlayer = require('../../shared/database/models/DatabasePlayer');
+      const player = await DatabasePlayer.getPlayerById(playerId);
+      if (!player) {
+        return res.status(404).json({
+          error: 'Player not found'
+        });
+      }
+
+      // Get player score summary
+      const scores = await ScoringSystem.getPlayerScoreSummary(playerId);
+
+      res.json({
+        success: true,
+        playerId,
+        playerName: player.name,
+        scores,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('❌ SCORES: Error getting player scores:', error.message);
+      res.status(500).json({
+        error: 'Failed to get player scores'
+      });
+    }
+  });
+
   return router;
 };
