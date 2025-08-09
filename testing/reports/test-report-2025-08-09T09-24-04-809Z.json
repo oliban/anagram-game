@@ -1,0 +1,83 @@
+{
+  "metadata": {
+    "generatedAt": "2025-08-09T09:24:04.808Z",
+    "projectRoot": "/Users/fredriksafsten/Workprojects/anagram-game",
+    "testDuration": 38658,
+    "environment": "development",
+    "apiUrl": "http://192.168.1.188:3000"
+  },
+  "summary": {
+    "totalSuites": 5,
+    "passedSuites": 4,
+    "failedSuites": 1,
+    "totalTests": 85,
+    "passedTests": 80,
+    "failedTests": 5
+  },
+  "testSuites": [
+    {
+      "name": "Core API Tests",
+      "success": true,
+      "passedTests": 12,
+      "failedTests": 0,
+      "totalTests": 12,
+      "successRate": 100,
+      "retryCount": 0,
+      "timestamp": "2025-08-09T09:23:26.250Z",
+      "hasOutput": true,
+      "hasErrors": false
+    },
+    {
+      "name": "Additional Endpoints",
+      "success": true,
+      "passedTests": 14,
+      "failedTests": 1,
+      "totalTests": 15,
+      "successRate": 93.3,
+      "retryCount": 0,
+      "timestamp": "2025-08-09T09:23:27.378Z",
+      "hasOutput": true,
+      "hasErrors": false
+    },
+    {
+      "name": "Fixed Issues Validation",
+      "success": false,
+      "passedTests": 15,
+      "failedTests": 2,
+      "totalTests": 17,
+      "successRate": 88.2,
+      "retryCount": 2,
+      "timestamp": "2025-08-09T09:23:38.773Z",
+      "hasOutput": true,
+      "hasErrors": false
+    },
+    {
+      "name": "Socket.IO Real-time",
+      "success": true,
+      "passedTests": 11,
+      "failedTests": 0,
+      "totalTests": 11,
+      "successRate": 100,
+      "retryCount": 0,
+      "timestamp": "2025-08-09T09:23:59.938Z",
+      "hasOutput": true,
+      "hasErrors": false
+    },
+    {
+      "name": "User Workflows",
+      "success": true,
+      "passedTests": 28,
+      "failedTests": 2,
+      "totalTests": 30,
+      "successRate": 93.3,
+      "retryCount": 0,
+      "timestamp": "2025-08-09T09:24:03.807Z",
+      "hasOutput": true,
+      "hasErrors": false
+    }
+  ],
+  "recommendations": [
+    "Fix 1 failing test suite(s) to improve reliability",
+    "Investigate test suite failures - success rate below 90%"
+  ]
+}

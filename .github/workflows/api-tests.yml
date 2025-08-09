@@ -45,6 +45,21 @@ on:
 env:
   NODE_VERSION: '18'
   API_URL: 'http://localhost:3000'
+  # Docker Compose Environment Variables
+  NODE_ENV: 'development'
+  DB_USER: 'postgres'
+  DB_PASSWORD: 'postgres123'
+  DB_NAME: 'anagram_game'
+  DB_SSL: 'false'
+  GAME_SERVER_PORT: '3000'
+  WEB_DASHBOARD_PORT: '3001'
+  LINK_GENERATOR_PORT: '3002'
+  ADMIN_SERVICE_PORT: '3003'
+  DATABASE_PORT: '5432'
+  ADMIN_API_KEY: 'test-admin-key-123'
+  SECURITY_RELAXED: 'true'
+  LOG_SECURITY_EVENTS: 'true'
+  SKIP_RATE_LIMITS: 'false'
 
 jobs:
   # Pre-flight checks

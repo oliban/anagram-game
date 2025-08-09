@@ -101,7 +101,8 @@ class SimpleAPITester {
   async testPlayerRegistration() {
     console.log('\n👤 Testing Player Registration');
     
-    const testNames = ['TestUser1', 'TestUser2'];
+    const timestamp = Date.now();
+    const testNames = [`TestUser${timestamp}1`, `TestUser${timestamp}2`];
     
     for (const name of testNames) {
       try {
