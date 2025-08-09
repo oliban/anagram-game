@@ -104,9 +104,9 @@ class FixedIssuesTest {
     console.log('\n🔍 Testing Difficulty Analysis (Corrected)');
     
     const testCases = [
-      'hello',
+      'hello world',  // Fixed: 2 words, each ≤7 chars
       'quick brown fox', 
-      'complex sentence structure'
+      'simple test case'  // Fixed: 3 words, each ≤7 chars
     ];
 
     for (const phrase of testCases) {
