@@ -131,7 +131,7 @@ jobs:
       - name: Start services for production-level testing
         run: |
           echo "🐳 Starting services for production-level testing"
-          docker-compose -f docker-compose.services.yml up -d --wait --wait-timeout 180
+          docker compose -f docker-compose.services.yml up -d --wait --wait-timeout 180
           
           # Extended wait for production-level stability
           sleep 30
@@ -146,7 +146,7 @@ jobs:
             
             if [[ $i -eq 5 ]]; then
               echo "❌ Services failed to start properly"
-              docker-compose -f docker-compose.services.yml logs
+              docker compose -f docker-compose.services.yml logs
               exit 1
             fi
             
@@ -219,7 +219,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker-compose -f docker-compose.services.yml down
+        run: docker compose -f docker-compose.services.yml down
 
     outputs:
       deployment_ready: ${{ steps.validate_results.outputs.deployment_ready }}

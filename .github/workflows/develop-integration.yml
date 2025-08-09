@@ -81,7 +81,7 @@ jobs:
       - name: Start services for integration testing
         run: |
           echo "🐳 Starting all services for comprehensive testing"
-          docker-compose -f docker-compose.services.yml up -d --wait --wait-timeout 120
+          docker compose -f docker-compose.services.yml up -d --wait --wait-timeout 120
           
           # Wait for services to be fully ready
           sleep 20
@@ -154,7 +154,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker-compose -f docker-compose.services.yml down
+        run: docker compose -f docker-compose.services.yml down
 
   # Check if develop is ready for release
   release-readiness:

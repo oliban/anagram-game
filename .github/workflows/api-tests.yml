@@ -147,7 +147,7 @@ jobs:
       - name: Start services
         run: |
           echo "Starting Docker services..."
-          docker-compose -f docker-compose.services.yml up -d --wait --wait-timeout 60
+          docker compose -f docker-compose.services.yml up -d --wait --wait-timeout 60
           
           # Wait for services to be fully ready
           sleep 10
@@ -272,7 +272,7 @@ jobs:
 
       - name: Start services
         run: |
-          docker-compose -f docker-compose.services.yml up -d --wait
+          docker compose -f docker-compose.services.yml up -d --wait
           sleep 15  # Extra time for performance testing setup
 
       - name: Run performance tests
