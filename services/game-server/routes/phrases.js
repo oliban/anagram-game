@@ -737,6 +737,30 @@ module.exports = (dependencies) => {
         });
       }
       
+      // Validate phrase follows game rules (2-4 words, max 7 chars per word)
+      const words = phrase.trim().split(/\s+/);
+      
+      if (words.length < 2) {
+        return res.status(400).json({
+          error: 'Phrase must contain at least 2 words'
+        });
+      }
+      
+      if (words.length > 4) {
+        return res.status(400).json({
+          error: 'Phrase cannot contain more than 4 words'
+        });
+      }
+      
+      // Check each word length (max 7 characters)
+      for (let word of words) {
+        if (word.length > 7) {
+          return res.status(400).json({
+            error: `Word "${word}" is too long (maximum 7 characters per word)`
+          });
+        }
+      }
+      
       // Validate language
       const { LANGUAGES, calculateScore, getDifficultyLabel } = require('../shared/services/difficultyScorer');
       const validLanguages = Object.values(LANGUAGES);
