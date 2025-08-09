@@ -366,9 +366,9 @@ class UserWorkflowTest {
     
     // Step 1: Test phrase creation with analysis
     const contributionPhrases = [
-      'quick test phrase',
-      'more complex test phrase structure',
-      'simple'
+      'quick test phrase',  
+      'short test words',  // Fixed: 3 words, each ≤7 chars
+      'good game'  // Fixed: 2 words, each ≤7 chars
     ];
     
     for (const phraseContent of contributionPhrases) {
