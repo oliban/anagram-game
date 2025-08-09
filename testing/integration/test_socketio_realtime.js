@@ -81,7 +81,8 @@ class SocketIORealTimeTest {
   async setupTestPlayers() {
     console.log('\n🔧 Setting up test players');
     
-    const playerNames = ['SocketPlayer1', 'SocketPlayer2'];
+    const timestamp = Date.now();
+    const playerNames = [`SocketPlayer${timestamp}1`, `SocketPlayer${timestamp}2`];
     
     for (const name of playerNames) {
       const result = await this.makeRequest('POST', '/api/players/register', {

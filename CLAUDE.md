@@ -148,9 +148,11 @@ node testing/performance/test_performance_suite.js         # Load testing
 - **Main releases**: Production-level tests (25+ min) + staging deployment
 
 **Quality Standards:**
-- **Feature branches**: >90% success rate required
-- **Develop integration**: >95% success rate required  
-- **Main releases**: >98% success rate required for production deployment
+- **🚨 ZERO TOLERANCE FOR FAILING TESTS** - All test failures must be investigated and fixed immediately
+- **Feature branches**: 100% success rate required for critical tests, investigate any failures
+- **Develop integration**: 100% success rate required - failing tests block PR merges
+- **Main releases**: 100% success rate required - no exceptions for production deployment
+- **Test failures are ALWAYS bugs** - Either fix the code or fix the test, never ignore failures
 
 ### Microservices Architecture (Local Development)
 **Docker Services Management:**
