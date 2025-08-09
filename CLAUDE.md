@@ -112,10 +112,14 @@ feature/* branches ──→ develop ──→ main ──→ production
 
 ### Build Script Usage
 ```bash
-# Main build script (includes server health checks)
-./build_multi_sim.sh local             # Local development
+# Primary build script - Use this for all builds
+./build_multi_sim.sh local             # Local development 
+./build_multi_sim.sh staging           # Pi staging server
 ./build_multi_sim.sh aws               # AWS production
-./build_multi_sim.sh local --clean     # Clean build (AVOID - requires re-associating players)
+./build_multi_sim.sh [mode] --clean    # Clean build (AVOID - requires re-associating players)
+
+# Archive for App Store release
+./scripts/archive-for-release.sh       # Creates signed archive for distribution
 ```
 
 ### 🧪 AUTOMATED TESTING INFRASTRUCTURE
@@ -334,6 +338,9 @@ docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d 
 # Phrase Generation & Import
 ./server/scripts/generate-and-preview.sh "25-75:50" sv
 node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
+
+# App Store Release Archive (creates signed .xcarchive)
+./scripts/archive-for-release.sh
 ```
 
 ### App Store Archive & Distribution

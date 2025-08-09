@@ -48,10 +48,10 @@ private func loadSharedConfig() -> SharedAppConfig {
     
     // Environment-aware configuration
     // Note: host values here are not used - actual hosts come from developmentConfig/productionConfig
-    let gameServerConfig = ServiceInfo(port: 3000, host: "192.168.1.188")
-    let webDashboardConfig = ServiceInfo(port: 3001, host: "192.168.1.188") 
-    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "192.168.1.188")
-    let databaseConfig = ServiceInfo(port: 5432, host: "192.168.1.188")
+    let gameServerConfig = ServiceInfo(port: 3000, host: "localhost")
+    let webDashboardConfig = ServiceInfo(port: 3001, host: "localhost") 
+    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "localhost")
+    let databaseConfig = ServiceInfo(port: 5432, host: "localhost")
     
     let services = ServiceConfig(
         gameServer: gameServerConfig,
@@ -62,7 +62,7 @@ private func loadSharedConfig() -> SharedAppConfig {
     
     // Environment configurations
     let developmentConfig = EnvironmentConfig(host: "192.168.1.188", description: "Local Development Server")
-    let stagingConfig = EnvironmentConfig(host: "http://192.168.1.188:3000", description: "Pi Staging Server (Cloudflare reverse proxy)")
+    let stagingConfig = EnvironmentConfig(host: "unfortunately-versions-assumed-threat.trycloudflare.com", description: "Pi Staging Server (Cloudflare tunnel)")
     let productionConfig = EnvironmentConfig(host: "anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com", description: "AWS Production Server")
     
     let config = SharedAppConfig(
@@ -116,18 +116,22 @@ struct AppConfig {
         let config = environmentConfig
         let host = config.host
         
-        // Determine URL format based on host type
+        // Determine URL format based on host type and environment
         let url: String
         if host.contains("amazonaws.com") {
+            // AWS ELB - no port needed
             url = "http://\(host)"
         } else if host.contains("trycloudflare.com") {
+            // Cloudflare tunnel - HTTPS, no port needed
             url = "https://\(host)"
         } else if host == "STAGING_PLACEHOLDER" {
             // Staging placeholder - this means tunnel URL wasn't set
             url = "http://192.168.1.222:3000"  // Fallback to Pi local IP
             print("⚠️ CONFIG: Staging tunnel URL not set, falling back to Pi local IP")
         } else {
-            url = "http://\(host):\(serverPort)"
+            // Local or Pi staging server - needs port
+            let port = sharedConfig.services.gameServer.port
+            url = "http://\(host):\(port)"
         }
         
         print("🔧 CONFIG: Using \(currentEnvironment.uppercased()) server: \(url)")
