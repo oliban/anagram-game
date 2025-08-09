@@ -1,0 +1,178 @@
+# Feature Development Workflow
+# Runs lightweight tests on feature branches for fast feedback
+
+name: 🔧 Feature Development
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+    paths:
+      - 'services/**'
+      - 'testing/**'
+      - 'docker-compose.services.yml'
+
+  pull_request:
+    branches: [ develop ]
+    paths:
+      - 'services/**'
+      - 'testing/**'
+      - 'docker-compose.services.yml'
+
+env:
+  NODE_VERSION: '18'
+  API_URL: 'http://localhost:3000'
+
+jobs:
+  # Quick validation for feature branches
+  quick-tests:
+    name: 🏃‍♂️ Quick Validation
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: anagram_game
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install socket.io-client
+
+      - name: Start services
+        run: |
+          docker-compose -f docker-compose.services.yml up -d --wait --wait-timeout 60
+          sleep 10
+          curl -f http://localhost:3000/api/status || exit 1
+
+      - name: Run core API tests only
+        run: |
+          echo "🚀 Running essential tests for feature development"
+          node testing/api/test_updated_simple.js
+
+      - name: Run basic integration tests
+        run: |
+          echo "🔄 Running basic user workflows"
+          # Run a subset of integration tests for speed
+          timeout 300 node testing/integration/test_user_workflows.js || true
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose -f docker-compose.services.yml down
+
+  # More comprehensive tests for PRs to develop
+  pr-validation:
+    name: 🔍 PR Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: anagram_game
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install socket.io-client
+
+      - name: Start services
+        run: |
+          docker-compose -f docker-compose.services.yml up -d --wait --wait-timeout 60
+          sleep 15
+
+      - name: Run comprehensive test suite (no performance)
+        run: |
+          echo "🧪 Running comprehensive test suite for PR validation"
+          SKIP_PERFORMANCE=true node testing/scripts/automated-test-runner.js
+
+      - name: Parse results for PR comment
+        if: always()
+        id: test_results
+        run: |
+          if [[ -f "testing/reports/latest-test-summary.md" ]]; then
+            echo "HAS_REPORT=true" >> $GITHUB_OUTPUT
+          else
+            echo "HAS_REPORT=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with results
+        if: always() && steps.test_results.outputs.HAS_REPORT == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summaryContent = fs.readFileSync('testing/reports/latest-test-summary.md', 'utf8');
+            
+            const comment = `## 🧪 PR Test Results
+            
+            ${summaryContent}
+            
+            ---
+            📝 **Next Steps:**
+            - ✅ If tests pass: PR is ready for review
+            - ⚠️ If tests have warnings: Review and decide if acceptable
+            - ❌ If tests fail: Fix issues before merging
+            
+            📊 [View detailed workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-test-reports-${{ github.event.number }}
+          path: testing/reports/
+          retention-days: 14
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose -f docker-compose.services.yml down

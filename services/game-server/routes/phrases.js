@@ -209,19 +209,24 @@ module.exports = (dependencies) => {
       console.log(`📝 Enhanced phrase created: "${content}" from ${sender.name}${phraseIsGlobal ? ' (global)' : ` to ${targetCount} players`}`);
 
       // Send real-time notifications to target players
+      console.log(`🔍 DEBUG: validTargets count = ${validTargets.length}`);
+      validTargets.forEach((t, i) => console.log(`🔍 DEBUG: target[${i}] = ${t.name}, socketId = ${t.socketId}`));
       const notifications = [];
       for (const target of validTargets) {
         if (target.socketId) {
           const phraseData = phrase.getPublicInfo();
           // Ensure targetId is set for iOS client priority queue
           phraseData.targetId = target.id;
-          // The senderName should now be correct from getPublicInfo() due to contributorName support
+          // Override senderName with actual sender from player lookup
+          console.log(`🔍 DEBUG: sender object =`, sender);
+          console.log(`🔍 DEBUG: sender.name = "${sender?.name}", sender.id = "${sender?.id}"`);
+          const actualSenderName = sender?.name || 'Unknown Player';
           
-          console.log(`🔧 WEBSOCKET: Sending phrase to ${target.name} - targetId = ${phraseData.targetId}, senderName = ${phraseData.senderName}, contributorName = ${phrase.contributorName || 'null'}`);
+          console.log(`🔧 WEBSOCKET: Sending phrase to ${target.name} - targetId = ${phraseData.targetId}, senderName = ${actualSenderName}, contributorName = ${phrase.contributorName || 'null'}`);
           
           io.to(target.socketId).emit('new-phrase', {
             phrase: phraseData,
-            senderName: phraseData.senderName, // Use the senderName from getPublicInfo()
+            senderName: actualSenderName, // Use actual sender name from player lookup
             timestamp: new Date().toISOString()
           });
           notifications.push(target.name);

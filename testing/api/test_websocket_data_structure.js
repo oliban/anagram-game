@@ -171,7 +171,7 @@ class WebSocketDataStructureTest {
       });
 
       // Create a phrase to trigger the WebSocket event
-      const phraseResponse = await fetch(`${BASE_URL}/api/phrases`, {
+      const phraseResponse = await fetch(`${BASE_URL}/api/phrases/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -277,7 +277,7 @@ class WebSocketDataStructureTest {
     console.log('  ✅ Enhanced phrase object with targetId and senderName');
     console.log('  ✅ CreatedAt field in phrase data');
     console.log('  ✅ Top-level senderName and timestamp');
-    console.log('  ✅ Data validation for both /api/phrases and /api/phrases/create endpoints');
+    console.log('  ✅ Data validation for both /api/phrases/create and /api/phrases/create endpoints');
     console.log('  ✅ Field presence and value correctness');
     
     console.log('='.repeat(60));
@@ -291,7 +291,7 @@ class WebSocketDataStructureTest {
       await this.setupTestPlayers();
       await this.setupWebSocketConnections();
       
-      await this.runTest('WebSocket Phrase Data Structure (/api/phrases)', () => this.testWebSocketPhraseDataStructure());
+      await this.runTest('WebSocket Phrase Data Structure (/api/phrases/create)', () => this.testWebSocketPhraseDataStructure());
       // Note: Create endpoint global phrases don't trigger WebSocket events to other players
       console.log('ℹ️ Create endpoint global phrase WebSocket events are not sent to other players by design');
       

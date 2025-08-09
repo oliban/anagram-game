@@ -120,7 +120,7 @@ async function testPhraseSystem(testPlayer) {
   
   try {
     // Test phrase creation (current PhraseStore system)
-    const phraseResponse = await axios.post(`${SERVER_URL}/api/phrases`, {
+    const phraseResponse = await axios.post(`${SERVER_URL}/api/phrases/create`, {
       content: "test phrase for migration",
       senderId: testPlayer.id,
       targetId: testPlayer.id

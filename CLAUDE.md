@@ -20,17 +20,40 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 - **Example**: `DebugLogger.shared.network("🔍 DEBUG: Variable = \(value)")` instead of `print("🔍 DEBUG: Variable = \(value)")`
 
 ## 🚨 CORE WORKFLOW - ALWAYS FOLLOW
-1. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
-2. **Plan**: Create detailed implementation plan, verify with me before coding
-3. **Implement**: Write production-quality Swift code following all best practices
-4. **Test**: Deploy with `build_multi_sim.sh` (includes server health checks), await my feedback
-5. **Commit when requested** - "commit and push" is explicit approval
+
+### 🌊 NEW GITFLOW WORKFLOW (MANDATORY)
+**❌ NEVER COMMIT DIRECTLY TO MAIN** - Use proper GitFlow with automated testing and quality gates.
+
+**Branch Structure:**
+```
+feature/* branches ──→ develop ──→ main ──→ production
+    (daily work)      (integration)  (releases)  (deployment)
+```
+
+**Daily Development Process:**
+1. **Start Feature**: `git checkout develop && git pull && git checkout -b feature/my-feature`
+2. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
+3. **Plan**: Create detailed implementation plan, verify with me before coding
+4. **Implement**: Write production-quality Swift code following all best practices
+5. **Push Feature**: `git push origin feature/my-feature` (triggers 5min quick tests)
+6. **Test**: Deploy with `build_multi_sim.sh` (includes server health checks), await my feedback
+7. **Create PR**: `gh pr create --base develop --title "feat: my feature"` (triggers 15min comprehensive tests)
+8. **Release**: When ready, create `develop → main` PR (triggers 25min production tests + staging deployment)
+
+**Quality Gates:**
+- **Feature Branches**: ⚡ Quick API tests (5 min) - Safe to iterate
+- **Develop Integration**: 🧪 Comprehensive tests (15 min) - Must pass to merge
+- **Main Releases**: 🔒 Production tests + staging + manual approval (25+ min)
+
+**Setup Command**: `./scripts/setup-gitflow.sh` (run once to initialize)
 
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
 
 ## DEPLOYMENT GUIDELINES
+- **🚨 NEW RULE: NO DIRECT COMMITS TO MAIN** - Always use feature branches
 - Always build new apps using the build script and wait for feedback before proceeding
-- When user says "commit and push", that constitutes explicit approval to commit
+- When user says "commit and push", create feature branch and PR as outlined above
+- **Production deployments ONLY via main branch** after full testing and approval
 - **🚨 LOG MONITORING: For debugging, use device-specific logs via `./Scripts/tail-logs.sh` to find path, then `grep`/`head`/`tail` on specific device log files. Do NOT use tail in blocking mode.**
 
 ## CODE QUALITY REQUIREMENTS
@@ -94,6 +117,40 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 ./build_multi_sim.sh aws               # AWS production
 ./build_multi_sim.sh local --clean     # Clean build (AVOID - requires re-associating players)
 ```
+
+### 🧪 AUTOMATED TESTING INFRASTRUCTURE
+**Comprehensive test suite with CI/CD integration:**
+
+```bash
+# Run full automated test suite (recommended)
+node testing/scripts/automated-test-runner.js
+
+# Quick validation during development
+SKIP_PERFORMANCE=true node testing/scripts/automated-test-runner.js
+
+# Individual test suites
+node testing/api/test_updated_simple.js                    # Core API tests
+node testing/integration/test_socketio_realtime.js         # WebSocket/multiplayer
+node testing/integration/test_user_workflows.js            # End-to-end workflows
+node testing/performance/test_performance_suite.js         # Load testing
+```
+
+**Test Categories:**
+- ✅ **API Tests**: Core endpoints, security, error handling (37 tests updated)
+- ✅ **Real-time Tests**: Socket.IO multiplayer functionality 
+- ✅ **Integration Tests**: Complete user journeys (onboarding → multiplayer → progression)
+- ✅ **Performance Tests**: Load testing, memory monitoring, concurrent users
+- ✅ **Regression Tests**: Previously fixed issues validation
+
+**GitHub Actions Integration:**
+- **Feature branches**: Quick tests (5 min) on every push
+- **Develop integration**: Comprehensive tests (15 min) on PR merge
+- **Main releases**: Production-level tests (25+ min) + staging deployment
+
+**Quality Standards:**
+- **Feature branches**: >90% success rate required
+- **Develop integration**: >95% success rate required  
+- **Main releases**: >98% success rate required for production deployment
 
 ### Microservices Architecture (Local Development)
 **Docker Services Management:**
@@ -318,3 +375,10 @@ xcodebuild -exportArchive \
 - **AWS ECS**: Always use `docker build --platform linux/amd64`
 - **MCP Tools**: iOS Simulator control, IDE diagnostics available
 - **Docs**: `docs/device-user-association-guide.md`, `docs/aws-production-server-management.md`
+
+### 📚 WORKFLOW & TESTING DOCUMENTATION
+- **GitFlow Workflow**: `docs/IMPROVED_WORKFLOW_GUIDE.md` - Complete guide to new branch-based workflow
+- **Workflow Comparison**: `docs/WORKFLOW_COMPARISON.md` - Current vs improved workflow benefits
+- **CI/CD Execution**: `testing/docs/CI_CD_EXECUTION_GUIDE.md` - When and how tests run
+- **Testing Strategy**: `testing/docs/TESTING_STRATEGY.md` - Complete testing approach
+- **Setup Script**: `./scripts/setup-gitflow.sh` - One-command GitFlow initialization

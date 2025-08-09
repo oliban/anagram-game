@@ -249,7 +249,7 @@ class ComprehensiveTestSuite {
           if (player1Result.success && player2Result.success) {
             // Create a phrase to trigger new-phrase event
             setTimeout(async () => {
-              await this.makeRequest('POST', '/api/phrases', {
+              await this.makeRequest('POST', '/api/phrases/create', {
                 content: 'websocket test phrase',
                 senderId: player1Result.data.player.id,
                 targetId: player2Result.data.player.id
@@ -314,7 +314,7 @@ class ComprehensiveTestSuite {
     }
 
     // Test 3: Very long payloads
-    const longPayloadResult = await this.makeRequest('POST', '/api/phrases', {
+    const longPayloadResult = await this.makeRequest('POST', '/api/phrases/create', {
       content: TEST_DATA.longPhrase,
       senderId: this.testPlayers[0]?.id || 'test-id',
       targetId: this.testPlayers[1]?.id || 'test-id'
@@ -327,7 +327,7 @@ class ComprehensiveTestSuite {
     // Test 4: Special character phrases
     for (const specialPhrase of TEST_DATA.specialCharPhrases) {
       if (this.testPlayers.length >= 2) {
-        const result = await this.makeRequest('POST', '/api/phrases', {
+        const result = await this.makeRequest('POST', '/api/phrases/create', {
           content: specialPhrase,
           senderId: this.testPlayers[0].id,
           targetId: this.testPlayers[1].id
@@ -399,7 +399,7 @@ class ComprehensiveTestSuite {
         `Found ${onlineCheck.data?.players?.length} online players`, 'Integration');
 
       // Step 3: Create phrase between players
-      const phraseResult = await this.makeRequest('POST', '/api/phrases', {
+      const phraseResult = await this.makeRequest('POST', '/api/phrases/create', {
         content: 'integration test phrase',
         senderId: player1.data.player.id,
         targetId: player2.data.player.id
@@ -531,7 +531,7 @@ class ComprehensiveTestSuite {
         phraseData.language = test.language;
       }
 
-      const result = await this.makeRequest('POST', '/api/phrases', phraseData, 201);
+      const result = await this.makeRequest('POST', '/api/phrases/create', phraseData, 201);
       
       if (result.success) {
         testPhraseIds.push(result.data.phrase.id);
@@ -623,7 +623,7 @@ class ComprehensiveTestSuite {
 
     // Test 5: Testing backward compatibility with existing phrases
     // Create a phrase using the old API structure (without language field)
-    const backwardCompatResult = await this.makeRequest('POST', '/api/phrases', {
+    const backwardCompatResult = await this.makeRequest('POST', '/api/phrases/create', {
       content: 'backward compatibility test',
       senderId: this.testPlayers[0]?.id,
       targetId: this.testPlayers[1]?.id
@@ -656,7 +656,7 @@ class ComprehensiveTestSuite {
     ];
 
     for (const test of invalidLanguageTests) {
-      const invalidResult = await this.makeRequest('POST', '/api/phrases', {
+      const invalidResult = await this.makeRequest('POST', '/api/phrases/create', {
         content: 'invalid language test',
         senderId: this.testPlayers[0]?.id,
         targetId: this.testPlayers[1]?.id,

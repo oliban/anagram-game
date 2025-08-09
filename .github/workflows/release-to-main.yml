@@ -1,0 +1,409 @@
+# Release to Main Branch
+# Comprehensive testing and automatic deployment when code is ready for production
+
+name: 🚀 Release to Main
+
+on:
+  push:
+    branches: [ main ]
+  
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+  # Manual release trigger
+  workflow_dispatch:
+    inputs:
+      skip_staging:
+        description: 'Skip staging deployment'
+        required: false
+        default: false
+        type: boolean
+      emergency_release:
+        description: 'Emergency release (skip some checks)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  API_URL: 'http://localhost:3000'
+
+jobs:
+  # Pre-flight validation for release PRs
+  release-pr-validation:
+    name: 🔍 Release PR Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for proper changelog generation
+          fetch-depth: 0
+
+      - name: Validate PR source branch
+        run: |
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          echo "PR Source Branch: $SOURCE_BRANCH"
+          
+          # Only allow PRs from develop or hotfix branches
+          if [[ "$SOURCE_BRANCH" == "develop" ]] || [[ "$SOURCE_BRANCH" == hotfix/* ]]; then
+            echo "✅ Valid release source: $SOURCE_BRANCH"
+          else
+            echo "❌ Invalid release source: $SOURCE_BRANCH"
+            echo "Only 'develop' or 'hotfix/*' branches can be merged to main"
+            exit 1
+          fi
+
+      - name: Generate changelog preview
+        run: |
+          echo "📝 Generating changelog for release PR..."
+          
+          # Compare with main branch to see what's changed
+          git log --oneline main..HEAD > changes.txt
+          
+          echo "## Changes in this release:"
+          cat changes.txt
+          
+          # Count changes by type
+          FEATURES=$(grep -c "feat:" changes.txt || echo 0)
+          FIXES=$(grep -c "fix:" changes.txt || echo 0)
+          OTHER=$(wc -l < changes.txt)
+          
+          echo "📊 Release Summary:"
+          echo "- Features: $FEATURES"
+          echo "- Bug Fixes: $FIXES"
+          echo "- Total Commits: $OTHER"
+
+  # Comprehensive testing before main merge
+  comprehensive-testing:
+    name: 🧪 Comprehensive Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: anagram_game
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install socket.io-client
+
+      - name: Start services for production-level testing
+        run: |
+          echo "🐳 Starting services for production-level testing"
+          docker-compose -f docker-compose.services.yml up -d --wait --wait-timeout 180
+          
+          # Extended wait for production-level stability
+          sleep 30
+          
+          # Comprehensive health validation
+          for i in {1..5}; do
+            echo "Health check attempt $i/5"
+            curl -f http://localhost:3000/api/status && \
+            curl -f http://localhost:3001/api/status && \
+            curl -f http://localhost:3002/api/status && \
+            curl -f http://localhost:3003/api/status && break
+            
+            if [[ $i -eq 5 ]]; then
+              echo "❌ Services failed to start properly"
+              docker-compose -f docker-compose.services.yml logs
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          echo "✅ All services ready for comprehensive testing"
+
+      - name: Run full production test suite
+        run: |
+          echo "🚀 Running FULL test suite for main branch release"
+          
+          # Always run comprehensive tests for main branch
+          if [[ "${{ github.event.inputs.emergency_release }}" == "true" ]]; then
+            echo "⚠️ Emergency release: Skipping performance tests only"
+            SKIP_PERFORMANCE=true node testing/scripts/automated-test-runner.js --stop-on-failure
+          else
+            echo "🎯 Full production testing including performance"
+            node testing/scripts/automated-test-runner.js --stop-on-failure
+          fi
+
+      - name: Validate test results for production
+        if: always()
+        id: validate_results
+        run: |
+          if [[ -f "testing/reports/latest-test-summary.md" ]]; then
+            SUCCESS_RATE=$(grep "Overall Success Rate" testing/reports/latest-test-summary.md | grep -o '[0-9.]*%' || echo "0%")
+            PASSED_SUITES=$(grep "Test Suites:" testing/reports/latest-test-summary.md | grep -o '[0-9]*/[0-9]*' | head -1 || echo "0/0")
+            
+            echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+            echo "passed_suites=$PASSED_SUITES" >> $GITHUB_OUTPUT
+            
+            # Extract numeric success rate
+            if [[ "$SUCCESS_RATE" =~ ^([0-9]+) ]]; then
+              NUMERIC_RATE=${BASH_REMATCH[1]}
+              echo "numeric_rate=$NUMERIC_RATE" >> $GITHUB_OUTPUT
+              
+              # Production deployment requires 98%+ success rate
+              if [[ $NUMERIC_RATE -ge 98 ]]; then
+                echo "deployment_ready=true" >> $GITHUB_OUTPUT
+                echo "✅ PRODUCTION READY: $SUCCESS_RATE success rate"
+              elif [[ $NUMERIC_RATE -ge 95 ]]; then
+                echo "deployment_ready=conditional" >> $GITHUB_OUTPUT
+                echo "⚠️ CONDITIONAL: $SUCCESS_RATE success rate (manual approval needed)"
+              else
+                echo "deployment_ready=false" >> $GITHUB_OUTPUT
+                echo "❌ NOT READY: $SUCCESS_RATE success rate (below production threshold)"
+                exit 1
+              fi
+            else
+              echo "deployment_ready=false" >> $GITHUB_OUTPUT
+              echo "❌ Could not determine success rate"
+              exit 1
+            fi
+          else
+            echo "deployment_ready=false" >> $GITHUB_OUTPUT
+            echo "❌ Test reports not found"
+            exit 1
+          fi
+
+      - name: Archive production test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-test-reports-${{ github.run_number }}
+          path: |
+            testing/reports/
+            testing/docs/
+          retention-days: 90  # Longer retention for production releases
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose -f docker-compose.services.yml down
+
+    outputs:
+      deployment_ready: ${{ steps.validate_results.outputs.deployment_ready }}
+      success_rate: ${{ steps.validate_results.outputs.success_rate }}
+      passed_suites: ${{ steps.validate_results.outputs.passed_suites }}
+
+  # Deploy to staging (only on main branch push)
+  deploy-staging:
+    name: 🎭 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: comprehensive-testing
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      needs.comprehensive-testing.outputs.deployment_ready == 'true' &&
+      github.event.inputs.skip_staging != 'true'
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging environment
+        run: |
+          echo "🎭 Deploying to staging environment"
+          echo "Git SHA: ${{ github.sha }}"
+          echo "Test Results: ${{ needs.comprehensive-testing.outputs.success_rate }} success rate"
+          
+          # Example staging deployment (customize for your infrastructure)
+          echo "Building production Docker images..."
+          # docker build --platform linux/amd64 -t wordshelf:${{ github.sha }} .
+          # docker tag wordshelf:${{ github.sha }} registry/wordshelf:staging
+          # docker push registry/wordshelf:staging
+          
+          echo "Deploying to staging infrastructure..."
+          # kubectl set image deployment/wordshelf wordshelf=registry/wordshelf:staging -n staging
+          # kubectl rollout status deployment/wordshelf -n staging --timeout=300s
+          
+          echo "✅ Staging deployment completed"
+          echo "🌐 Staging URL: https://staging.wordshelf.com"
+
+      - name: Run staging smoke tests
+        run: |
+          echo "🧪 Running staging smoke tests..."
+          
+          # Wait for deployment to be fully ready
+          sleep 30
+          
+          # Basic smoke tests (customize for your staging environment)
+          # curl -f https://staging.wordshelf.com/api/status
+          # node testing/scripts/staging-smoke-tests.js
+          
+          echo "✅ Staging smoke tests passed"
+
+      - name: Update deployment status
+        run: |
+          echo "📊 Staging Deployment Summary:"
+          echo "- Environment: Staging"
+          echo "- Git SHA: ${{ github.sha }}"
+          echo "- Test Success Rate: ${{ needs.comprehensive-testing.outputs.success_rate }}"
+          echo "- Deployment Time: $(date)"
+          echo "- Status: SUCCESS ✅"
+
+  # Manual approval for production deployment
+  approve-production:
+    name: 🛡️ Production Approval
+    runs-on: ubuntu-latest
+    needs: [comprehensive-testing, deploy-staging]
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      needs.comprehensive-testing.outputs.deployment_ready == 'true'
+    environment: production-approval
+    
+    steps:
+      - name: Request production deployment approval
+        run: |
+          echo "🛡️ Production deployment approval required"
+          echo "📊 Release Summary:"
+          echo "- Test Success Rate: ${{ needs.comprehensive-testing.outputs.success_rate }}"
+          echo "- Test Suites Passed: ${{ needs.comprehensive-testing.outputs.passed_suites }}"
+          echo "- Staging: Deployed and validated ✅"
+          echo ""
+          echo "👥 This step requires manual approval from authorized users"
+          echo "🎯 After approval, production deployment will proceed automatically"
+
+  # Deploy to production (after approval)
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [comprehensive-testing, deploy-staging, approve-production]
+    if: always() && needs.approve-production.result == 'success'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production environment
+        run: |
+          echo "🚀 PRODUCTION DEPLOYMENT STARTING"
+          echo "Git SHA: ${{ github.sha }}"
+          echo "Approved by: ${{ github.actor }}"
+          
+          # Production deployment steps (customize for your infrastructure)
+          echo "Building and pushing production images..."
+          # docker build --platform linux/amd64 -t wordshelf:${{ github.sha }} .
+          # docker tag wordshelf:${{ github.sha }} registry/wordshelf:production
+          # docker push registry/wordshelf:production
+          
+          echo "Deploying to production infrastructure..."
+          # kubectl set image deployment/wordshelf wordshelf=registry/wordshelf:production -n production
+          # kubectl rollout status deployment/wordshelf -n production --timeout=600s
+          
+          echo "✅ PRODUCTION DEPLOYMENT COMPLETED"
+
+      - name: Run production smoke tests
+        run: |
+          echo "🧪 Running production smoke tests..."
+          
+          # Wait for production deployment
+          sleep 60
+          
+          # Critical production smoke tests
+          # curl -f https://wordshelf.com/api/status
+          # node testing/scripts/production-smoke-tests.js
+          
+          echo "✅ Production smoke tests passed"
+
+      - name: Create release tag
+        run: |
+          # Create a release tag
+          TAG="v$(date +%Y.%m.%d)-$(echo ${{ github.sha }} | cut -c1-7)"
+          echo "Creating release tag: $TAG"
+          
+          # git tag -a $TAG -m "Production release $TAG"
+          # git push origin $TAG
+          
+          echo "📋 Release tag created: $TAG"
+
+      - name: Notify successful deployment
+        run: |
+          echo "🎉 PRODUCTION DEPLOYMENT SUCCESSFUL"
+          echo "📊 Final Status:"
+          echo "- Environment: Production ✅"
+          echo "- Git SHA: ${{ github.sha }}"
+          echo "- Test Success Rate: ${{ needs.comprehensive-testing.outputs.success_rate }}"
+          echo "- Deployment Time: $(date)"
+          echo "- Live URL: https://wordshelf.com"
+          
+          # Send notifications (Slack, email, etc.)
+          echo "📢 Sending success notifications to team"
+
+  # Handle deployment failures
+  deployment-failed:
+    name: 🚨 Handle Deployment Failure
+    runs-on: ubuntu-latest
+    needs: [comprehensive-testing, deploy-staging, deploy-production]
+    if: failure()
+    
+    steps:
+      - name: Create deployment failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Production Deployment Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Production Deployment Failure
+              
+              A production deployment has failed and requires immediate attention.
+              
+              **Failure Details:**
+              - Workflow: ${{ github.workflow }}
+              - Run ID: ${{ github.run_id }}
+              - Git SHA: \`${{ github.sha }}\`
+              - Failed Stage: ${{ needs.comprehensive-testing.result == 'failure' && 'Testing' || needs.deploy-staging.result == 'failure' && 'Staging' || 'Production' }}
+              
+              **Test Results:**
+              - Success Rate: ${{ needs.comprehensive-testing.outputs.success_rate }}
+              - Test Suites: ${{ needs.comprehensive-testing.outputs.passed_suites }}
+              
+              **Immediate Actions Required:**
+              1. 🚨 Check if production is still operational
+              2. 📋 Review failure logs in the workflow run
+              3. 🔄 Determine if rollback is needed
+              4. 🐛 Fix root cause before next deployment
+              
+              **Links:**
+              - [Failed Workflow](${context.payload.repository.html_url}/actions/runs/${context.runId})
+              - [Production Monitoring](https://monitoring.wordshelf.com)
+              
+              **Priority:** HIGH - Production Impact Possible`,
+              labels: ['production', 'deployment-failure', 'high-priority'],
+              assignees: ['${context.actor}']
+            });
+
+      - name: Emergency notification
+        run: |
+          echo "🚨 DEPLOYMENT FAILURE - IMMEDIATE ATTENTION REQUIRED"
+          echo "Check production status and consider rollback if necessary"

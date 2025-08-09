@@ -91,7 +91,7 @@ class Phase3FeatureTests {
     }
 
     // Test 1: Create phrase without hint - should auto-generate
-    const result1 = await this.makeRequest('POST', '/api/phrases', {
+    const result1 = await this.makeRequest('POST', '/api/phrases/create', {
       content: 'hello world test',
       senderId: this.testPlayers[0].id,
       targetId: this.testPlayers[1].id
@@ -106,7 +106,7 @@ class Phase3FeatureTests {
       hasAutoHint ? `Generated hint: "${result1.data.phrase.hint}"` : 'No hint generated');
 
     // Test 2: Create phrase with custom hint
-    const result2 = await this.makeRequest('POST', '/api/phrases', {
+    const result2 = await this.makeRequest('POST', '/api/phrases/create', {
       content: 'quick brown fox',
       senderId: this.testPlayers[0].id,
       targetId: this.testPlayers[1].id,
@@ -136,7 +136,7 @@ class Phase3FeatureTests {
     }
 
     // Create a test phrase first to ensure we have data to test
-    await this.makeRequest('POST', '/api/phrases', {
+    await this.makeRequest('POST', '/api/phrases/create', {
       content: 'hint response test',
       senderId: this.testPlayers[0].id,
       targetId: this.testPlayers[1].id,
@@ -190,7 +190,7 @@ class Phase3FeatureTests {
       return false;
     }
 
-    const createResult = await this.makeRequest('POST', '/api/phrases', {
+    const createResult = await this.makeRequest('POST', '/api/phrases/create', {
       content: 'persistence test phrase',
       senderId: this.testPlayers[0].id,
       targetId: this.testPlayers[1].id,
@@ -233,7 +233,7 @@ class Phase3FeatureTests {
     }
 
     // Create targeted phrase from player 0 to player 1
-    const targetResult = await this.makeRequest('POST', '/api/phrases', {
+    const targetResult = await this.makeRequest('POST', '/api/phrases/create', {
       content: 'targeted test phrase',
       senderId: this.testPlayers[0].id,
       targetId: this.testPlayers[1].id,
@@ -308,7 +308,7 @@ class Phase3FeatureTests {
 
         // Create phrase after short delay to ensure socket is ready
         setTimeout(async () => {
-          await this.makeRequest('POST', '/api/phrases', {
+          await this.makeRequest('POST', '/api/phrases/create', {
             content: 'websocket hint test',
             senderId: this.testPlayers[0].id,
             targetId: this.testPlayers[1].id,
@@ -338,7 +338,7 @@ class Phase3FeatureTests {
     }
 
     // Create phrase
-    const createResult = await this.makeRequest('POST', '/api/phrases', {
+    const createResult = await this.makeRequest('POST', '/api/phrases/create', {
       content: 'lifecycle test phrase',
       senderId: this.testPlayers[0].id,
       targetId: this.testPlayers[1].id,

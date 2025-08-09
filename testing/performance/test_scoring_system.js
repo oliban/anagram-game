@@ -5,7 +5,7 @@
  * Tests Phase 4.9 scoring, leaderboards, and aggregation functionality
  */
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.API_URL || 'http://192.168.1.188:3000';
 
 class ScoringSystemTester {
   constructor() {
