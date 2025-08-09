@@ -53,6 +53,9 @@ class ConnectionService: ObservableObject {
             return
         }
         
+        // Detect if we need secure connection based on URL
+        let isSecure = baseURL.hasPrefix("https://")
+        
         let config: SocketIOClientConfiguration = [
             .log(true),
             .compress,
@@ -60,9 +63,11 @@ class ConnectionService: ObservableObject {
             .reconnectAttempts(-1), // Keep trying forever
             .reconnectWait(3),     // Wait 3 seconds before reconnecting
             .reconnectWaitMax(10), // Max wait 10 seconds
-            .forceWebsockets(true),// Use WebSockets only, no long-polling fallback
-            .secure(false)         // Set to true for https
+            // Remove forceWebsockets for Cloudflare tunnel compatibility
+            .secure(isSecure)      // Auto-detect based on URL scheme
         ]
+        
+        DebugLogger.shared.network("🔌 SOCKET: Configuring for \(baseURL) - secure: \(isSecure)")
         
         manager = SocketManager(socketURL: url, config: config)
         socket = manager?.defaultSocket

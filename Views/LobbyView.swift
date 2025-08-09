@@ -108,16 +108,17 @@ struct LobbyView: View {
             LegendsView(gameModel: gameModel)
         }
         .alert("Connection Issue", isPresented: $gameModel.showRateLimitAlert) {
-            Button("OK") {
+            Button("Log Out") {
                 gameModel.showRateLimitAlert = false
                 gameModel.rateLimitMessage = ""
-            }
-            Button("Retry") {
-                gameModel.showRateLimitAlert = false
-                gameModel.rateLimitMessage = ""
-                // Retry loading level configuration
-                Task {
-                    await gameModel.loadLevelConfig()
+                
+                // Clear user session and force re-login for rate limiting
+                Task { @MainActor in
+                    UserDefaults.standard.removeObject(forKey: "playerName")
+                    NetworkManager.shared.currentPlayer = nil
+                    NetworkManager.shared.isConnected = false
+                    NetworkManager.shared.connectionStatus = .disconnected
+                    print("🔴 RATE LIMIT LOGOUT: Cleared player session, should trigger registration screen")
                 }
             }
         } message: {

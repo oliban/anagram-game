@@ -777,7 +777,7 @@ class GameModel: ObservableObject {
         // Show user-friendly error message
         await MainActor.run {
             self.showRateLimitAlert = true
-            self.rateLimitMessage = "Unable to connect to game server. You may be rate limited. The game will continue with default settings."
+            self.rateLimitMessage = "Unable to connect to game server. You may be rate limited. Please log out and try again later."
         }
         
         // Use fallback config

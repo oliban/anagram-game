@@ -6,6 +6,12 @@ struct PlayerRegistrationView: View {
     @State private var playerName: String = ""
     @State private var isRegistering: Bool = false
     @State private var errorMessage: String? = nil
+    let initialMessage: String?
+    
+    init(isPresented: Binding<Bool>, message: String? = nil) {
+        self._isPresented = isPresented
+        self.initialMessage = message
+    }
     @State private var nameSuggestions: [String] = []
     @State private var showSuggestions: Bool = false
     
@@ -153,6 +159,12 @@ struct PlayerRegistrationView: View {
                     Button("Cancel") {
                         isPresented = false
                     }
+                }
+            }
+            .onAppear {
+                // Set initial error message if provided
+                if let message = initialMessage {
+                    errorMessage = message
                 }
             }
         }
