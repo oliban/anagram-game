@@ -196,6 +196,7 @@ class GameModel: ObservableObject {
         case completed
         case loading
         case error
+        case noPhrasesAvailable
     }
     
     init() {
@@ -380,11 +381,18 @@ class GameModel: ObservableObject {
                     // Set phraseDifficulty for local phrases
                     phraseDifficulty = calculatedDifficulty
                 } else {
-                    // Server is online but has no phrases available
+                    // Server is online but has no phrases available - show information tile
                     print("⚠️ GAME: Server online but no phrases available")
                     DebugLogger.shared.game("NO_PHRASES: Server has no phrases available")
-                    gameState = .error
+                    
+                    // Set game to special "no phrases" state - don't scramble letters
+                    currentSentence = "No more phrases available"  // Shorter message
+                    currentHints = ["Ask friends to send you custom phrases!"]
+                    gameState = .noPhrasesAvailable  // New state instead of .playing
                     isCheckingPhrases = false
+                    
+                    // Information tile will be spawned by PhysicsGameScene when it detects this state
+                    print("🔍 NO_PHRASES: Set state to .noPhrasesAvailable - scene will handle tile spawning")
                     return
                 }
             }
@@ -586,8 +594,43 @@ class GameModel: ObservableObject {
         
         isSkipping = true
         print("🚀 Skip button pressed")
+        DebugLogger.shared.game("SKIP: Button pressed")
         
-        // Simply move to the next phrase in the queue
+        // Debug: Log current sentence state
+        print("🔍 SKIP_DEBUG: currentSentence = '\(currentSentence)'")
+        DebugLogger.shared.game("SKIP_DEBUG: currentSentence = '\(currentSentence)'")
+        
+        // Check if we're already in "no phrases" state
+        if gameState == .noPhrasesAvailable || currentSentence == "No more phrases available" {
+            print("⚠️ SKIP: Already in 'no phrases' state, attempting to fetch new phrases")
+            DebugLogger.shared.game("SKIP_NO_PHRASES_STATE: Already showing 'no phrases' message, attempting refresh")
+            
+            // Force a refresh attempt when skipping the "no phrases" message
+            await refreshPhrasesForLobby()
+            
+            // Check if we got any phrases after refresh
+            if let queuedPhrase = getNextPhraseFromQueue() {
+                await MainActor.run { [self] in
+                    currentCustomPhrase = queuedPhrase
+                    currentSentence = queuedPhrase.content
+                    currentPhraseId = queuedPhrase.id
+                    customPhraseInfo = queuedPhrase.targetId != nil ? "Custom phrase from \(queuedPhrase.senderName)" : ""
+                    
+                    scrambleLetters()
+                    gameState = .playing
+                }
+                await DebugLogger.shared.sendToServer("SKIP_NO_PHRASES_SUCCESS: Found phrase after refresh: \(queuedPhrase.content)")
+                print("✅ SKIP: Found phrase after refresh: '\(queuedPhrase.content)'")
+            } else {
+                await DebugLogger.shared.sendToServer("SKIP_NO_PHRASES_STILL_EMPTY: No phrases available after refresh")
+                print("❌ SKIP: Still no phrases available after refresh")
+            }
+            
+            isSkipping = false
+            return
+        }
+        
+        // Handle normal phrase skipping
         if let customPhrase = currentCustomPhrase {
             print("⏭️ Skipping phrase: \(customPhrase.content)")
             

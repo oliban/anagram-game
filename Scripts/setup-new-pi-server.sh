@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# Code update script for existing Raspberry Pi deployment
-# This script preserves existing database and only updates application code
-# Usage: ./scripts/deploy-to-pi.sh [pi-hostname-or-ip]
-#
-# WARNING: For NEW server setup, use scripts/setup-new-pi-server.sh instead!
+# Initial setup script for Raspberry Pi deployment
+# WARNING: This script will WIPE all existing data and create a fresh installation
+# Usage: ./scripts/setup-new-pi-server.sh [pi-hostname-or-ip]
 
 set -e
 
@@ -12,7 +10,18 @@ PI_HOST=${1:-anagram-pi.local}
 PI_USER="pi"
 REMOTE_DIR="~/anagram-game"
 
-echo "🚀 Deploying to Raspberry Pi at $PI_HOST..."
+echo "🚨 WARNING: This will WIPE all existing data on the Pi server!"
+echo "   This script is for setting up a NEW server installation only."
+echo "   For updates to existing servers, use the regular deployment process."
+echo ""
+read -p "   Are you sure you want to continue and wipe all data? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Setup cancelled"
+    exit 1
+fi
+
+echo "🚀 Setting up NEW Raspberry Pi server at $PI_HOST..."
 
 # Check if we can connect
 echo "📡 Testing connection..."
@@ -26,33 +35,6 @@ if ! ssh -q $PI_USER@$PI_HOST exit; then
 fi
 
 echo "✅ Connection successful"
-
-# Check PostgreSQL version consistency
-echo "🔍 Checking PostgreSQL version consistency..."
-
-# Extract local PostgreSQL version
-LOCAL_PG_VERSION=$(grep -E "image: postgres:" docker-compose.services.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/')
-PI_PG_VERSION=$(grep -E "image: postgres:" docker-compose.pi.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/')
-
-echo "📊 PostgreSQL versions:"
-echo "  Local development: postgres:$LOCAL_PG_VERSION"
-echo "  Pi deployment:     postgres:$PI_PG_VERSION"
-
-if [ "$LOCAL_PG_VERSION" != "$PI_PG_VERSION" ]; then
-    echo "⚠️  WARNING: PostgreSQL version mismatch detected!"
-    echo "   This may cause database compatibility issues."
-    echo "   Consider updating docker-compose.pi.yml to use postgres:$LOCAL_PG_VERSION"
-    echo ""
-    read -p "   Continue deployment anyway? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "❌ Deployment cancelled"
-        exit 1
-    fi
-    echo "⚠️  Proceeding with version mismatch - database volumes will be cleaned"
-else
-    echo "✅ PostgreSQL versions match"
-fi
 
 # Sync files (excluding node_modules, iOS build files, etc)
 echo "📦 Syncing files..."
@@ -79,15 +61,19 @@ rsync -avz --delete \
     --exclude '.swiftlint.yml' \
     ./ $PI_USER@$PI_HOST:$REMOTE_DIR/
 
-echo "🔧 Running code update on Pi (preserving database)..."
+echo "🔧 Running initial setup on Pi..."
 ssh $PI_USER@$PI_HOST << 'EOF'
     cd ~/anagram-game
     
-    echo "🐳 Stopping current services..."
+    echo "🐳 Stopping any existing services..."
     docker-compose -f docker-compose.services.yml down || true
     
-    echo "💾 Database preservation mode - keeping all existing volumes"
-    echo "   To wipe database, use scripts/setup-new-pi-server.sh instead"
+    echo "🗑️ WIPING all existing volumes for fresh installation..."
+    docker volume ls | grep anagram | awk '{print $2}' | xargs -r docker volume rm 2>/dev/null || true
+    docker system prune -f
+    
+    # Store current PostgreSQL version for future deployments
+    grep -E "image: postgres:" docker-compose.services.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/' > .postgres_version
     
     echo "🔨 Building services..."
     docker-compose -f docker-compose.services.yml build
@@ -97,6 +83,13 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     
     echo "⏳ Waiting for services to be healthy..."
     sleep 10
+    
+    echo "🗄️ Initializing database with complete schema..."
+    # Apply complete schema including all tables and functions
+    docker cp services/shared/database/schema.sql anagram-db:/tmp/
+    docker cp services/shared/database/scoring_system_schema.sql anagram-db:/tmp/
+    docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres -d anagram_game -f /tmp/schema.sql || true
+    docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres -d anagram_game -f /tmp/scoring_system_schema.sql || true
     
     echo "🔍 Checking service status..."
     for port in 3000 3001 3002 3003; do
@@ -117,16 +110,16 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     free -h
 EOF
 
-echo "✅ Deployment complete!"
+echo "✅ NEW SERVER SETUP COMPLETE!"
 echo ""
 echo "📱 Update your iOS app configuration:"
-echo "   1. Open ConfigurationManager.swift"
-echo "   2. Add Pi configuration:"
-echo "      case raspberryPi = \"http://$PI_HOST:3000\""
-echo "   3. Build and test with Pi server"
+echo "   1. Update NetworkConfiguration.swift with Pi tunnel URL"
+echo "   2. Build and test with Pi server"
 echo ""
 echo "🌐 Access services:"
 echo "   - Game API: http://$PI_HOST:3000"
 echo "   - Dashboard: http://$PI_HOST:3001"
 echo "   - Link Generator: http://$PI_HOST:3002"
 echo "   - Admin: http://$PI_HOST:3003"
+echo ""
+echo "🔄 For future updates, use the regular deployment script which preserves data."
