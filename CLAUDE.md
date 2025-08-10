@@ -247,9 +247,41 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 - Simple UI components → Test after implementation
 - Performance-critical paths → Add performance tests
 
-## DEPLOYMENT SEQUENCE
-### Local: Start services → Verify health → Update version → Build iOS → Deploy → Monitor
-### AWS: Build linux/amd64 → Deploy → Health check (see `docs/aws-production-server-management.md`)
+## DEPLOYMENT WORKFLOWS
+
+### 🔄 Code Updates (Preserves Database)
+**Use when**: Updating application code, fixing bugs, adding features
+```bash
+# Updates code only, preserves all database data and schema
+./scripts/deploy-to-pi.sh 192.168.1.222
+```
+
+### 🆕 New Server Setup (Wipes Database) 
+**Use when**: Setting up a completely new Pi server from scratch
+```bash
+# WARNING: This WIPES all existing data!
+./scripts/setup-new-pi-server.sh 192.168.1.222
+```
+
+### 📊 Database Schema Updates
+**Use when**: Need to add new tables, columns, or functions to existing deployment
+```bash
+# 1. Connect to Pi and apply schema manually:
+ssh pi@192.168.1.222
+cd ~/anagram-game
+docker cp services/shared/database/schema.sql anagram-db:/tmp/
+docker cp services/shared/database/scoring_system_schema.sql anagram-db:/tmp/
+docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres -d anagram_game -f /tmp/schema.sql
+docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres -d anagram_game -f /tmp/scoring_system_schema.sql
+
+# 2. Then update code with regular deploy:
+./scripts/deploy-to-pi.sh 192.168.1.222
+```
+
+### Deployment Sequence
+- **Local**: Start services → Verify health → Update version → Build iOS → Deploy → Monitor
+- **AWS**: Build linux/amd64 → Deploy → Health check (see `docs/aws-production-server-management.md`)
+- **Pi**: Deploy code → Test tunnel URL → Update iOS config → Build apps
 
 ## ARCHITECTURE & ENVIRONMENT
 
