@@ -91,8 +91,8 @@ const strictLimiter = rateLimit({
 
 console.log('🛡️ Rate Limiting Configuration:', {
   skipRateLimits,
-  apiLimit: isDevelopment ? 120 : 30,
-  strictLimit: isDevelopment ? 30 : 10
+  apiLimit: isDevelopment ? 300 : 30,
+  strictLimit: isDevelopment ? 100 : 10
 });
 
 // WebSocket security configuration

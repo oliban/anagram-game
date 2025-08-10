@@ -15,14 +15,53 @@ struct ContentView: View {
     @StateObject private var networkManager = NetworkManager.shared
     @StateObject private var gameModel = GameModel()
     @State private var showingRegistration = false
+    @State private var showingServerError = false
+    @State private var serverErrorMessage = ""
+    @State private var registrationMessage: String? = nil
     
     // Create os_log for this subsystem
     private let logger = Logger(subsystem: "com.fredrik.anagramgame", category: "ContentView")
     
     var body: some View {
         LobbyView(gameModel: gameModel)
-            .sheet(isPresented: $showingRegistration) {
-                PlayerRegistrationView(isPresented: $showingRegistration)
+            .sheet(isPresented: $showingRegistration, onDismiss: {
+                registrationMessage = nil
+            }) {
+                PlayerRegistrationView(isPresented: $showingRegistration, message: registrationMessage)
+            }
+            .alert("Server Error", isPresented: $showingServerError) {
+                Button("OK") {
+                    showingServerError = false
+                    serverErrorMessage = ""
+                    // If this was a rate limit error, show registration screen
+                    if serverErrorMessage.contains("rate limited") {
+                        showingRegistration = true
+                    }
+                }
+                Button("Try Again") {
+                    showingServerError = false
+                    serverErrorMessage = ""
+                    // For rate limit errors, go to registration screen
+                    if serverErrorMessage.contains("rate limited") {
+                        showingRegistration = true
+                    } else {
+                        // For other errors, retry server connection
+                        Task {
+                            do {
+                                _ = try await networkManager.fetchServerConfig()
+                                await MainActor.run {
+                                    networkManager.connectionStatus = .connected
+                                }
+                            } catch {
+                                await MainActor.run {
+                                    networkManager.connectionStatus = .error("Connection failed")
+                                }
+                            }
+                        }
+                    }
+                }
+            } message: {
+                Text(serverErrorMessage)
             }
             .onAppear {
                 // Initialize gameModel with networkManager immediately
@@ -35,7 +74,28 @@ struct ContentView: View {
                 
                 // First, fetch server configuration
                 Task {
-                    _ = try? await networkManager.fetchServerConfig()
+                    do {
+                        _ = try await networkManager.fetchServerConfig()
+                    } catch {
+                        // Handle server config errors (including rate limiting)
+                        await MainActor.run {
+                            if error.localizedDescription.contains("429") || error.localizedDescription.contains("rate limit") {
+                                networkManager.connectionStatus = .error("Rate limited - please wait before trying again")
+                                
+                                // Clear stored player data and force re-registration
+                                UserDefaults.standard.removeObject(forKey: "playerName")
+                                networkManager.currentPlayer = nil
+                                networkManager.isConnected = false
+                                
+                                // Go directly to registration screen with explanation
+                                registrationMessage = "Connection rate limited. Please wait a few minutes before trying to register again."
+                                showingRegistration = true
+                            } else {
+                                networkManager.connectionStatus = .error("Server connection failed")
+                                // Let GameModel handle the error display - don't show duplicate alerts
+                            }
+                        }
+                    }
                     
                     // Then check if we have a stored player name from previous session
                     if let storedName = UserDefaults.standard.string(forKey: "playerName") {
@@ -109,7 +169,13 @@ struct ContentView: View {
                     DebugLogger.shared.network("Auto-registered with stored name: \(playerName)")
                 } else {
                     print("❌ Failed to register with stored name - showing registration")
-                    networkManager.connectionStatus = .disconnected
+                    // Check if this was due to rate limiting
+                    if UserDefaults.standard.string(forKey: "playerName") == nil {
+                        // PlayerName was cleared, likely due to rate limiting
+                        networkManager.connectionStatus = .error("Rate limited - please wait before trying again")
+                    } else {
+                        networkManager.connectionStatus = .disconnected
+                    }
                     showingRegistration = true
                 }
             }

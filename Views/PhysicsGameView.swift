@@ -26,6 +26,11 @@ struct PhysicsGameView: View {
     @State private var isJolting = false
     @StateObject private var networkManager = NetworkManager.shared
     
+    // Computed property to check if skip should be disabled
+    private var shouldDisableSkip: Bool {
+        return isSkipping || gameModel.gameState == .noPhrasesAvailable || gameModel.currentSentence == "No more phrases available"
+    }
+    
     // Real-time metrics
     @State private var currentFPS: Double = 60.0
     @State private var currentMemoryMB: Double = 100.0
@@ -287,6 +292,9 @@ struct PhysicsGameView: View {
                                     ProgressView()
                                         .scaleEffect(0.8)
                                     Text("Loading...")
+                                } else if gameModel.gameState == .noPhrasesAvailable || gameModel.currentSentence == "No more phrases available" {
+                                    Image(systemName: "pause.circle.fill")
+                                    Text("No Skip")
                                 } else {
                                     Image(systemName: "forward.fill")
                                     Text("Skip")
@@ -300,8 +308,8 @@ struct PhysicsGameView: View {
                             .cornerRadius(20)
                             .shadow(radius: 4)
                         }
-                        .disabled(isSkipping)
-                        .opacity(isSkipping ? 0.6 : 1.0)
+                        .disabled(shouldDisableSkip)
+                        .opacity(shouldDisableSkip ? 0.6 : 1.0)
                         .offset(y: isJolting ? -8 : 0)
                         .animation(.easeInOut(duration: 0.15), value: isJolting)
                         .padding(.trailing, 10)
@@ -1004,6 +1012,18 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             let sequence = SKAction.sequence([delayAction, spawnAction])
             
             run(sequence)
+        }
+        
+        // Handle "no phrases" state - spawn information tile instead
+        if gameModel.gameState == .noPhrasesAvailable {
+            print("📋 NO_PHRASES: Spawning information tile instead of game tiles")
+            
+            // Spawn the "no phrases" information tile
+            let noPhrasesMessage = "No more phrases. Try again later."
+            spawnMessageTile(message: noPhrasesMessage)
+            
+            print("✅ NO_PHRASES: Information tile spawned successfully")
+            return
         }
         
         // Create score tile - rectangular and falls down like other tiles

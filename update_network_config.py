@@ -13,10 +13,10 @@ def update_network_config(mode, tunnel_url=None):
     with open('Models/Network/NetworkConfiguration.swift', 'r') as f:
         content = f.read()
     
-    # Update environment setting
+    # Update environment setting - use flexible regex to match any current value
     if mode == 'staging':
         content = re.sub(
-            r'let env = "local" // DEFAULT_ENVIRONMENT',
+            r'let env = "[^"]*" // DEFAULT_ENVIRONMENT',
             'let env = "staging" // DEFAULT_ENVIRONMENT',
             content
         )
@@ -32,12 +32,11 @@ def update_network_config(mode, tunnel_url=None):
             )
     elif mode == 'aws':
         content = re.sub(
-            r'let env = "local" // DEFAULT_ENVIRONMENT',
+            r'let env = "[^"]*" // DEFAULT_ENVIRONMENT',
             'let env = "aws" // DEFAULT_ENVIRONMENT',
             content
         )
     elif mode == 'local':
-        # Make sure it's set to local (should already be)
         content = re.sub(
             r'let env = "[^"]*" // DEFAULT_ENVIRONMENT',
             'let env = "local" // DEFAULT_ENVIRONMENT',
