@@ -1918,6 +1918,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             bookshelf.zRotation = 0
         }
         
+        // Handle "no phrases" state - spawn information tile instead of letter tiles
+        if gameModel.gameState == .noPhrasesAvailable {
+            print("📋 NO_PHRASES: resetGame() detected noPhrasesAvailable - spawning info tile only")
+            let noPhrasesMessage = "No more phrases. Try again later."
+            spawnMessageTile(message: noPhrasesMessage)
+            print("✅ NO_PHRASES: Information tile spawned in resetGame()")
+            return
+        }
+        
         // Create new tiles with current game model data (don't call startNewGame again)
         createTiles()
         

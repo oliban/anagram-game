@@ -1003,6 +1003,15 @@ class GameModel: ObservableObject {
         
         // Show notification for the new phrase
         showPhraseNotification(senderName: phrase.senderName)
+        
+        // If we were in "no phrases" state, start playing the new phrase immediately
+        if gameState == .noPhrasesAvailable {
+            print("🔄 QUEUE: Was in noPhrasesAvailable state, starting new phrase immediately")
+            DebugLogger.shared.game("NEW_PHRASE_AFTER_NO_PHRASES: Transitioning from noPhrasesAvailable to playing")
+            Task {
+                await startNewGame()
+            }
+        }
     }
     
     private func getNextPhraseFromQueue() -> CustomPhrase? {
