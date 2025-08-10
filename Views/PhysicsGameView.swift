@@ -972,6 +972,12 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         themeTiles.forEach { $0.removeFromParent() }
         themeTiles.removeAll()
         
+        // Don't create tiles if we're in noPhrasesAvailable state or have no letters
+        if gameModel.gameState == .noPhrasesAvailable || gameModel.scrambledLetters.isEmpty {
+            print("⚠️ createTiles: Skipping tile creation - no phrases available or no letters")
+            return
+        }
+        
         // Create tiles for current sentence
         let letters = gameModel.scrambledLetters
         let baseTileSize: CGFloat = 40  // Original tile size
@@ -1918,12 +1924,13 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             bookshelf.zRotation = 0
         }
         
-        // Handle "no phrases" state - spawn information tile instead of letter tiles
+        // Check if we're in "no phrases" state
+        print("🔍 resetGame: gameState = \(gameModel.gameState), scrambledLetters.count = \(gameModel.scrambledLetters.count)")
         if gameModel.gameState == .noPhrasesAvailable {
-            print("📋 NO_PHRASES: resetGame() detected noPhrasesAvailable - spawning info tile only")
+            print("📋 NO_PHRASES: Detected in resetGame - spawning information tile")
             let noPhrasesMessage = "No more phrases. Try again later."
             spawnMessageTile(message: noPhrasesMessage)
-            print("✅ NO_PHRASES: Information tile spawned in resetGame()")
+            print("✅ NO_PHRASES: Information tile spawned in resetGame")
             return
         }
         
@@ -2739,26 +2746,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func startNewGameWithBookshelfDrop() {
-        print("📚 Starting new game with dramatic bookshelf drop!")
+        print("📚 Starting new game after bookshelf drop!")
         
-        // First, prepare the new game content
+        // Just start the new game - bookshelf has already been animated
         Task {
             await gameModel.startNewGame(isUserInitiated: true)
-            
-            // After new game is prepared, animate the entire bookshelf drop
-            DispatchQueue.main.async { [weak self] in
-                self?.animateEntireBookshelfDrop()
-            }
         }
     }
     
-    private func animateEntireBookshelfDrop() {
-        // Mark that bookshelf animation has started
-        hasBookshelfAnimated = true
-        
-        // Use the new physics-based intact bookshelf animation with rotation
-        animateShelvesToFloor()
-    }
     
     private func animateShelvesToFloor() {
         // Look for the bookshelf node - try different possible names

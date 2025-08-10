@@ -388,11 +388,17 @@ class GameModel: ObservableObject {
                     // Set game to special "no phrases" state - don't scramble letters
                     currentSentence = "No more phrases available"  // Shorter message
                     currentHints = ["Ask friends to send you custom phrases!"]
+                    scrambledLetters = []  // Clear any leftover letters
                     gameState = .noPhrasesAvailable  // New state instead of .playing
                     isCheckingPhrases = false
                     
-                    // Information tile will be spawned by PhysicsGameScene when it detects this state
-                    print("🔍 NO_PHRASES: Set state to .noPhrasesAvailable - scene will handle tile spawning")
+                    // Trigger scene reset to spawn the information tile
+                    await MainActor.run {
+                        print("🔍 NO_PHRASES: Triggering scene reset to spawn information tile")
+                        messageTileSpawner?.resetGame()
+                    }
+                    
+                    print("🔍 NO_PHRASES: Set state to .noPhrasesAvailable - scene should spawn tile")
                     return
                 }
             }
@@ -1004,12 +1010,16 @@ class GameModel: ObservableObject {
         // Show notification for the new phrase
         showPhraseNotification(senderName: phrase.senderName)
         
-        // If we were in "no phrases" state, start playing the new phrase immediately
+        // If we were in "no phrases" state, automatically start the new phrase
         if gameState == .noPhrasesAvailable {
-            print("🔄 QUEUE: Was in noPhrasesAvailable state, starting new phrase immediately")
-            DebugLogger.shared.game("NEW_PHRASE_AFTER_NO_PHRASES: Transitioning from noPhrasesAvailable to playing")
-            Task {
-                await startNewGame()
+            print("🔄 QUEUE: Was in noPhrasesAvailable state, auto-starting new phrase")
+            DebugLogger.shared.game("NEW_PHRASE_AFTER_NO_PHRASES: Auto-starting new phrase from \(phrase.senderName)")
+            
+            // Automatically transition to the new phrase
+            Task { @MainActor in
+                // Clear the no-phrases state and start playing the new phrase
+                gameState = .playing
+                await startNewGame(isUserInitiated: false)
             }
         }
     }
