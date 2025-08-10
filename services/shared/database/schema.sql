@@ -30,7 +30,12 @@ CREATE TABLE phrases (
     is_approved BOOLEAN DEFAULT false,
     usage_count INTEGER DEFAULT 0,
     phrase_type VARCHAR(50) DEFAULT 'custom',
-    language VARCHAR(10) DEFAULT 'en'
+    language VARCHAR(10) DEFAULT 'en',
+    theme VARCHAR(100),
+    contributor_name VARCHAR(100),
+    source VARCHAR(20) DEFAULT 'app',
+    contribution_link_id UUID,
+    sender_name VARCHAR(100)
 );
 
 -- Player-specific phrase queue for targeting

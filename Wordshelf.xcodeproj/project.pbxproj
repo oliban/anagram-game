@@ -98,14 +98,14 @@
 			containerPortal = 9EAA08442E192E3A00DB73E7 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 9EAA084B2E192E3A00DB73E7;
-			remoteInfo = "Wordshelf";
+			remoteInfo = Wordshelf;
 		};
 		9EAA086B2E192E3B00DB73E7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9EAA08442E192E3A00DB73E7 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 9EAA084B2E192E3A00DB73E7;
-			remoteInfo = "Wordshelf";
+			remoteInfo = Wordshelf;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -146,7 +146,7 @@
 		9EA4F7222E3CFC4600E6B7D3 /* BaseTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = BaseTile.swift; path = Views/Game/Tiles/BaseTile.swift; sourceTree = "<group>"; };
 		9EA4F7232E3CFC4600E6B7D3 /* TileColorScheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TileColorScheme.swift; path = Views/Game/Tiles/TileColorScheme.swift; sourceTree = "<group>"; };
 		9EA4F7242E3CFC4600E6B7D3 /* ThemeInformationTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ThemeInformationTile.swift; path = Views/Game/Tiles/ThemeInformationTile.swift; sourceTree = "<group>"; };
-		9EAA084C2E192E3A00DB73E7 /* Wordshelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Wordshelf.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EAA084C2E192E3A00DB73E7 /* Wordshelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wordshelf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA084F2E192E3A00DB73E7 /* WordshelfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordshelfApp.swift; sourceTree = "<group>"; };
 		9EAA08512E192E3A00DB73E7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9EAA08532E192E3A00DB73E7 /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
@@ -154,9 +154,9 @@
 		9EAA08582E192E3B00DB73E7 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		9EAA085A2E192E3B00DB73E7 /* Wordshelf.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wordshelf.entitlements; sourceTree = "<group>"; };
 		9EAA085B2E192E3B00DB73E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		9EAA08602E192E3B00DB73E7 /* WordshelfTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WordshelfTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EAA08602E192E3B00DB73E7 /* WordshelfTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordshelfTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA08642E192E3B00DB73E7 /* WordshelfTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordshelfTests.swift; sourceTree = "<group>"; };
-		9EAA086A2E192E3B00DB73E7 /* WordshelfUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WordshelfUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EAA086A2E192E3B00DB73E7 /* WordshelfUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordshelfUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EAA086E2E192E3B00DB73E7 /* WordshelfUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordshelfUITests.swift; sourceTree = "<group>"; };
 		9EAA08702E192E3B00DB73E7 /* WordshelfUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordshelfUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		9EAA08A62E192E3A00DB73E7 /* GameModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModel.swift; sourceTree = "<group>"; };
@@ -265,7 +265,7 @@
 				9EAA08642E192E3B00DB73E7 /* WordshelfTests.swift */,
 				9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */,
 			);
-			path = "WordshelfTests";
+			path = WordshelfTests;
 			sourceTree = "<group>";
 		};
 		9EAA086D2E192E3B00DB73E7 /* WordshelfUITests */ = {
@@ -274,7 +274,7 @@
 				9EAA086E2E192E3B00DB73E7 /* WordshelfUITests.swift */,
 				9EAA08702E192E3B00DB73E7 /* WordshelfUITestsLaunchTests.swift */,
 			);
-			path = "WordshelfUITests";
+			path = WordshelfUITests;
 			sourceTree = "<group>";
 		};
 		9EAA08A02E192E3A00DB73E7 /* Models */ = {
@@ -328,11 +328,11 @@
 			);
 			dependencies = (
 			);
-			name = "Wordshelf";
+			name = Wordshelf;
 			packageProductDependencies = (
 				9EE850512E1AA6970012700E /* SocketIO */,
 			);
-			productName = "Wordshelf";
+			productName = Wordshelf;
 			productReference = 9EAA084C2E192E3A00DB73E7 /* Wordshelf.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -349,8 +349,8 @@
 			dependencies = (
 				9EAA08622E192E3B00DB73E7 /* PBXTargetDependency */,
 			);
-			name = "WordshelfTests";
-			productName = "WordshelfTests";
+			name = WordshelfTests;
+			productName = WordshelfTests;
 			productReference = 9EAA08602E192E3B00DB73E7 /* WordshelfTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -367,8 +367,8 @@
 			dependencies = (
 				9EAA086C2E192E3B00DB73E7 /* PBXTargetDependency */,
 			);
-			name = "WordshelfUITests";
-			productName = "WordshelfUITests";
+			name = WordshelfUITests;
+			productName = WordshelfUITests;
 			productReference = 9EAA086A2E192E3B00DB73E7 /* WordshelfUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -797,7 +797,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Wordshelf";
+				TEST_TARGET_NAME = Wordshelf;
 			};
 			name = Debug;
 		};
@@ -815,7 +815,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Wordshelf";
+				TEST_TARGET_NAME = Wordshelf;
 			};
 			name = Release;
 		};

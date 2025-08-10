@@ -21,7 +21,30 @@ iOS multiplayer word game built with SwiftUI + SpriteKit. Players drag letter ti
 
 ## 🚨 CORE WORKFLOW - ALWAYS FOLLOW
 
-### 🌊 NEW GITFLOW WORKFLOW (MANDATORY)
+### 🚨 CRITICAL: GIT-FIRST DEVELOPMENT (MANDATORY)
+**❌ NEVER CREATE CUSTOM IMPLEMENTATIONS** - Always use git as the source of truth for all functionality.
+
+**🔴 FUNDAMENTAL RULE: FETCH FROM GIT BEFORE ANY WORK**
+```bash
+# MANDATORY: Start every session with this command
+git pull origin main
+```
+
+**🚨 IMPLEMENTATION RECOVERY PROTOCOL:**
+When any functionality is missing, broken, or incomplete:
+1. **NEVER write custom implementations**
+2. **ALWAYS search git history first**: `git log --grep="missing_feature" --oneline`
+3. **Extract from git**: `git show COMMIT:path/to/file.js > temp_file.js`
+4. **Replace with git version**: Copy the exact git implementation
+5. **Deploy git version**: Test the original implementation before making any changes
+
+**🔥 EXAMPLES OF CRITICAL MISTAKES TO AVOID:**
+- ❌ Writing new endpoint implementations when they exist in git
+- ❌ Recreating database functions instead of applying git versions
+- ❌ Custom scoring logic when git has the working version
+- ❌ Any "quick fix" that bypasses git history
+
+### 🌊 GITFLOW WORKFLOW (MANDATORY)
 **❌ NEVER COMMIT DIRECTLY TO MAIN** - Use proper GitFlow with automated testing and quality gates.
 
 **Branch Structure:**
@@ -31,14 +54,15 @@ feature/* branches ──→ develop ──→ main ──→ production
 ```
 
 **Daily Development Process:**
-1. **Start Feature**: `git checkout develop && git pull && git checkout -b feature/my-feature`
-2. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
-3. **Plan**: Create detailed implementation plan, verify with me before coding
-4. **Implement**: Write production-quality Swift code following all best practices
-5. **Push Feature**: `git push origin feature/my-feature` (triggers 5min quick tests)
-6. **Test**: Deploy with `build_multi_sim.sh` (includes server health checks), await my feedback
-7. **Create PR**: `gh pr create --base develop --title "feat: my feature"` (triggers 15min comprehensive tests)
-8. **Release**: When ready, create `develop → main` PR (triggers 25min production tests + staging deployment)
+1. **🚨 MANDATORY: Start with Git**: `git checkout develop && git pull origin develop`
+2. **Start Feature**: `git checkout -b feature/my-feature`
+3. **Research First**: Start with `code_map.swift` - check freshness (`head -n 1`), search with `grep -n`, then read specific sections **IMPORTANT** If the file is older than 1 hour - run `python3 code_map_generator.py . --output code_map.swift` from project root.
+4. **Plan**: Create detailed implementation plan, verify with me before coding
+5. **Implement**: Write production-quality Swift code following all best practices
+6. **Push Feature**: `git push origin feature/my-feature` (triggers 5min quick tests)
+7. **Test**: Deploy with `build_multi_sim.sh` (includes server health checks), await my feedback
+8. **Create PR**: `gh pr create --base develop --title "feat: my feature"` (triggers 15min comprehensive tests)
+9. **Release**: When ready, create `develop → main` PR (triggers 25min production tests + staging deployment)
 
 **Quality Gates:**
 - **Feature Branches**: ⚡ Quick API tests (5 min) - Safe to iterate
@@ -50,7 +74,31 @@ feature/* branches ──→ develop ──→ main ──→ production
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
 
 ## DEPLOYMENT GUIDELINES
+
+### 🚨 GIT-FIRST DEPLOYMENT (CRITICAL)
+**MANDATORY PRE-DEPLOYMENT CHECKLIST:**
+```bash
+# 1. ALWAYS start with git sync
+git pull origin main
+
+# 2. Verify we have the latest implementations
+git log --oneline --graph -10
+
+# 3. If anything is missing, extract from git
+git show WORKING_COMMIT:path/to/missing/file.js > current/path/file.js
+
+# 4. NEVER deploy custom implementations without git verification
+```
+
+**🔥 DEPLOYMENT FAILURES TO AVOID:**
+- ❌ Deploying without `git pull` - causes implementation drift
+- ❌ Manual fixes instead of git-based solutions - creates technical debt
+- ❌ Custom endpoints when git has working versions - breaks consistency
+- ❌ Database patches not from git history - schema divergence
+
+### STANDARD DEPLOYMENT PROCESS
 - **🚨 NEW RULE: NO DIRECT COMMITS TO MAIN** - Always use feature branches
+- **🚨 CRITICAL: Start every deployment with `git pull origin main`**
 - Always build new apps using the build script and wait for feedback before proceeding
 - When user says "commit and push", create feature branch and PR as outlined above
 - **Production deployments ONLY via main branch** after full testing and approval
@@ -67,6 +115,29 @@ feature/* branches ──→ develop ──→ main ──→ production
 - **Guard statements** for early returns and unwrapping
 
 **Recovery Protocol**: When interrupted by code quality issues, maintain awareness of your original task. After fixing patterns and ensuring quality, continue where you left off. Use todo list to track both the fix and your original task.
+
+**🚨 MISSING FUNCTIONALITY RECOVERY PROTOCOL:**
+When encountering "missing" endpoints, functions, or features:
+1. **STOP** - Do not write custom implementations
+2. **Search git history**: `git log --grep="endpoint\|function_name" --oneline -20`
+3. **Find working commit**: Look for commits that mention the missing functionality
+4. **Extract original**: `git show COMMIT:path/to/file > /tmp/original.js`
+5. **Replace current**: Copy the git version exactly, no modifications
+6. **Test git version**: Verify the original implementation works
+7. **Only then modify**: If changes are needed, start with the working git version
+
+**Example Commands:**
+```bash
+# Find when an endpoint was added
+git log --grep="scores/player" --oneline
+git log --grep="statistics" --oneline
+
+# Extract the original implementation
+git show 77f1e0c:server/server.js | sed -n '/api\/scores\/player/,/^});$/p' > /tmp/endpoint.js
+
+# Replace with git version
+cp /tmp/endpoint.js services/game-server/routes/leaderboards.js
+```
 
 **Code is complete when**:
 - ✅ Follows Swift/iOS best practices
@@ -112,10 +183,14 @@ feature/* branches ──→ develop ──→ main ──→ production
 
 ### Build Script Usage
 ```bash
-# Main build script (includes server health checks)
-./build_multi_sim.sh local             # Local development
+# Primary build script - Use this for all builds
+./build_multi_sim.sh local             # Local development 
+./build_multi_sim.sh staging           # Pi staging server
 ./build_multi_sim.sh aws               # AWS production
-./build_multi_sim.sh local --clean     # Clean build (AVOID - requires re-associating players)
+./build_multi_sim.sh [mode] --clean    # Clean build (AVOID - requires re-associating players)
+
+# Archive for App Store release
+./scripts/archive-for-release.sh       # Creates signed archive for distribution
 ```
 
 ### 🧪 AUTOMATED TESTING INFRASTRUCTURE
@@ -174,9 +249,41 @@ docker-compose -f docker-compose.services.yml exec [service] wget -q -O - http:/
 - Simple UI components → Test after implementation
 - Performance-critical paths → Add performance tests
 
-## DEPLOYMENT SEQUENCE
-### Local: Start services → Verify health → Update version → Build iOS → Deploy → Monitor
-### AWS: Build linux/amd64 → Deploy → Health check (see `docs/aws-production-server-management.md`)
+## DEPLOYMENT WORKFLOWS
+
+### 🔄 Code Updates (Preserves Database)
+**Use when**: Updating application code, fixing bugs, adding features
+```bash
+# Updates code only, preserves all database data and schema
+./scripts/deploy-to-pi.sh 192.168.1.222
+```
+
+### 🆕 New Server Setup (Wipes Database) 
+**Use when**: Setting up a completely new Pi server from scratch
+```bash
+# WARNING: This WIPES all existing data!
+./scripts/setup-new-pi-server.sh 192.168.1.222
+```
+
+### 📊 Database Schema Updates
+**Use when**: Need to add new tables, columns, or functions to existing deployment
+```bash
+# 1. Connect to Pi and apply schema manually:
+ssh pi@192.168.1.222
+cd ~/anagram-game
+docker cp services/shared/database/schema.sql anagram-db:/tmp/
+docker cp services/shared/database/scoring_system_schema.sql anagram-db:/tmp/
+docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres -d anagram_game -f /tmp/schema.sql
+docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres -d anagram_game -f /tmp/scoring_system_schema.sql
+
+# 2. Then update code with regular deploy:
+./scripts/deploy-to-pi.sh 192.168.1.222
+```
+
+### Deployment Sequence
+- **Local**: Start services → Verify health → Update version → Build iOS → Deploy → Monitor
+- **AWS**: Build linux/amd64 → Deploy → Health check (see `docs/aws-production-server-management.md`)
+- **Pi**: Deploy code → Test tunnel URL → Update iOS config → Build apps
 
 ## ARCHITECTURE & ENVIRONMENT
 
@@ -336,6 +443,9 @@ docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d 
 # Phrase Generation & Import
 ./server/scripts/generate-and-preview.sh "25-75:50" sv
 node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
+
+# App Store Release Archive (creates signed .xcarchive)
+./scripts/archive-for-release.sh
 ```
 
 ### App Store Archive & Distribution
