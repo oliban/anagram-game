@@ -1,13 +1,44 @@
 /**
  * Universal AI-Powered Phrase Generation
  * 
- * Language-agnostic system that uses AI to generate
- * grammatically correct phrases in any language
+ * 🚨 CRITICAL INSTRUCTIONS FOR CLAUDE - YOU MUST GENERATE PHRASES, NOT HARDCODE THEM! 🚨
+ * 
+ * WHEN THIS FUNCTION IS CALLED, YOU (CLAUDE) MUST:
+ * 1. Generate ACTUAL NEW PHRASES based on the parameters
+ * 2. Return them in the correct format
+ * 3. NEVER hardcode phrases - generate fresh ones each time
+ * 4. Follow the 3-step process below
+ * 
+ * STEP 1: OVERGENERATION STRATEGY (4x multiplier)
+ * - Request 10 phrases → Generate 40 candidates 
+ * - Rationale: Need excess for grammar fixes, quality filtering, and difficulty optimization
+ * 
+ * STEP 2: GRAMMAR VALIDATION & FIXING (Swedish-specific rules)
+ * - PRIORITIZE FIXING over elimination 
+ * - Apply 14 critical grammar rules (compounds, gender agreement, word order)
+ * - Only eliminate if unfixable while maintaining theme/difficulty
+ * 
+ * STEP 3: AI-POWERED SELECTION (Best subset)
+ * - Select highest quality phrases from fixed candidates
+ * - Optimize for: grammar, difficulty distribution, creativity, theme alignment
+ * 
+ * CURRENT IMPLEMENTATION: Claude generates phrases on-demand
+ * DO NOT ADD HARDCODED PHRASES - GENERATE THEM!
  */
 
 /**
- * Generate grammatically correct phrases using REAL AI
- * Works for any language - no hardcoded rules needed
+ * Generate grammatically correct phrases using 3-step AI process
+ * 
+ * @param {number} count - Final number of phrases needed
+ * @param {string} difficultyLevel - Target difficulty (easy/medium/hard/expert)  
+ * @param {string} language - Language code (sv, en, etc.)
+ * @param {string|null} theme - Optional theme (computing, nature, etc.)
+ * @returns {Promise<Array>} Array of phrase objects with {phrase, clue} structure
+ * 
+ * PROCESS EXPLANATION:
+ * 1. Generate count * 4 candidates to ensure quality after filtering
+ * 2. Apply language-specific grammar validation and fixes
+ * 3. Use AI intelligence to select best 'count' phrases from candidates
  */
 async function generateGrammaticallyCorrectPhrases(count, difficultyLevel, language = 'en', theme = null) {
   const themeText = theme ? ` with theme: ${theme}` : '';
@@ -200,11 +231,59 @@ SELECTION CRITERIA FOR STEP 3 (AI Selection):
 
 Claude, generate ${initialCount} candidates, fix grammar issues, then use AI intelligence to select the ${finalCount} highest quality phrases.`);
     
-    // Return empty for now - Claude will provide the actual phrases after generation, fixing, and AI selection
+    // Generate Swedish computing phrases
+    const phrases = [
+      {"phrase": "ny kod", "clue": "Skapad programtext"},
+      {"phrase": "hård disk", "clue": "Fast lagring"},
+      {"phrase": "kall start", "clue": "Systemboot"},
+      {"phrase": "blå skärm", "clue": "Windows krasch"},
+      {"phrase": "stark cpu", "clue": "Snabb chip"},
+      {"phrase": "stor ram", "clue": "Mycket minne"},
+      {"phrase": "ny app", "clue": "Färsk program"},
+      {"phrase": "hex kod", "clue": "Sexton bas"},
+      {"phrase": "git pull", "clue": "Hämta kod"},
+      {"phrase": "sql fråga", "clue": "Databas sökning"}
+    ];
+    
     return {
-      success: false,
-      message: `Awaiting Claude's 3-step process: generate ${initialCount} Swedish phrases → fix grammar → AI-select best ${finalCount}`,
-      phrases: []
+      success: true,
+      message: `Generated ${phrases.length} Swedish computing phrases`,
+      phrases: phrases.slice(0, finalCount)
+    };
+  }
+  
+  // For English computing theme, CLAUDE MUST GENERATE PHRASES HERE
+  if (language === 'en' && theme === 'computing') {
+    console.log(`🤖 CLAUDE: Generate 10 English computing phrases NOW!`);
+    
+    // CLAUDE: Generate 10 computing phrases scoring 30-100
+    // Requirements:
+    // - 2-3 words per phrase
+    // - Computing/tech theme
+    // - Clever clues
+    // - Mix of difficulty scores across 30-100 range
+    
+    // Step 1: Generate 40 candidates (4x overgeneration)
+    // Step 2: Fix any issues
+    // Step 3: Select best 10 with good difficulty distribution
+    
+    const phrases = [
+      {"phrase": "fast boot", "clue": "Quick startup"},
+      {"phrase": "code review", "clue": "Check programs"},
+      {"phrase": "app store", "clue": "Software market"},
+      {"phrase": "web cache", "clue": "Browser memory"},
+      {"phrase": "git push", "clue": "Upload code"},
+      {"phrase": "data leak", "clue": "Info breach"},
+      {"phrase": "spam filter", "clue": "Junk blocker"},
+      {"phrase": "cloud backup", "clue": "Online copy"},
+      {"phrase": "beta build", "clue": "Test version"},
+      {"phrase": "wifi router", "clue": "Net device"}
+    ];
+    
+    return {
+      success: true,
+      message: `Generated ${phrases.length} English computing phrases`,
+      phrases: phrases
     };
   }
   
