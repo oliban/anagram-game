@@ -74,32 +74,6 @@ services:
       - ./services/logs:/app/logs
 
 
-  # Admin service - content management and batch operations
-  admin-service:
-    build:
-      context: ./services
-      dockerfile: admin-service/Dockerfile
-    container_name: anagram-admin-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_SSL=${DB_SSL}
-      - ADMIN_SERVICE_PORT=${ADMIN_SERVICE_PORT:-3003}
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
-      - SECURITY_RELAXED=${SECURITY_RELAXED}
-      - LOG_SECURITY_EVENTS=${LOG_SECURITY_EVENTS}
-      - SKIP_RATE_LIMITS=${SKIP_RATE_LIMITS}
-    ports:
-      - "${ADMIN_SERVICE_PORT:-3003}:${ADMIN_SERVICE_PORT:-3003}"
-    volumes:
-      - ./services/logs:/app/logs
 
 volumes:
   postgres_data:

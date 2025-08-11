@@ -312,7 +312,6 @@ docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres 
 **Services:**
 - 🎮 **Game Server** (port 3000): Core multiplayer API + WebSocket + contribution system
 - 📊 **Web Dashboard** (port 3001): Monitoring interface
-- 🔧 **Admin Service** (port 3003): Content management & batch operations
 - 🗄️ **PostgreSQL** (port 5432): Shared database
 
 **Patterns**: MVVM with @Observable GameModel, Socket.IO for multiplayer, URLSession for HTTP
@@ -337,7 +336,6 @@ docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres 
 - **✅ Rate Limiting**: Realistic limits for word game usage patterns
   - Game Server: 120/30 requests per 15min (dev/prod) = ~8-2 per minute
   - Web Dashboard: 300/60 = ~20-4 per minute (dashboard polling)
-  - Admin Service: 30/5 = ~2-0.3 per minute (strictest)
 - **✅ Input Validation**: XSS/SQL injection protection with Joi + express-validator
   - Security patterns: `/^[a-zA-Z0-9\s\-_.,!?'"()åäöÅÄÖ]*$/` for safe text
   - UUID validation for IDs, language code validation
@@ -377,19 +375,14 @@ curl -X POST http://localhost:3000/api/phrases/create \
   -H "Content-Type: application/json" \
   -d '{"content": "<script>alert(\"XSS\")</script>", "language": "en"}'
 
-# Test SQL injection protection (should be blocked)  
-curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
-  -H "Content-Type: application/json" \
-  -d '{"phrases": [{"content": "SELECT * FROM users--"}]}'
+# Admin endpoints removed - use direct database script for testing
+node scripts/phrase-importer.js --input malicious.json --dry-run  # Safe validation test
 
 # Monitor security events
 docker-compose -f docker-compose.services.yml logs | grep -E "(🛡️|🔑|🚫|❌)"
 
-# Test API authentication (should work with key)
-curl -X POST http://localhost:3003/api/admin/phrases/batch-import \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: test-admin-key-123" \
-  -d '{"phrases": [{"content": "valid phrase"}]}'
+# Direct database import (secure replacement)
+node scripts/phrase-importer.js --input valid-phrases.json --import
 ```
 
 #### Production Security Testing (⚠️ Use with caution)
@@ -457,9 +450,79 @@ xcodebuild test -project "Wordshelf.xcodeproj" -scheme "Wordshelf" -destination 
 # Database Access
 docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d anagram_game
 
-# Phrase Generation & Import
-./server/scripts/generate-and-preview.sh "25-75:50" sv
-node server/scripts/phrase-importer.js --input data/phrases-sv-*.json --import
+# Phrase Generation & Import (UPDATED DOCUMENTATION)
+# COMPLETE WORKFLOW FOR CLAUDE (from project root /Users/fredriksafsten/Workprojects/anagram-game):
+./server/scripts/generate-and-preview.sh "0-100:10" sv computing  # Generate 10 Swedish computing phrases
+cd server && node scripts/phrase-importer.js --input data/phrases-sv-*.json --import  # Import to local database
+
+# STAGING IMPORT (3-step process):
+# 1. Copy generated file to staging server:
+scp server/data/phrases-*.json pi@192.168.1.222:~/anagram-game/server/data/
+# 2. Import on staging server:
+ssh pi@192.168.1.222 "cd ~/anagram-game/server && node scripts/phrase-importer.js --input data/phrases-*.json --import"
+
+# WORKING DIRECTORY CONTEXT:
+# - Generation script: Run from PROJECT ROOT (/Users/fredriksafsten/Workprojects/anagram-game) 
+# - Import script: Run from SERVER directory (/Users/fredriksafsten/Workprojects/anagram-game/server)
+# - Deployment scripts: Run from PROJECT ROOT (/Users/fredriksafsten/Workprojects/anagram-game)
+# - Docker commands: Run from PROJECT ROOT
+# - Database files: Located in server/data/ directory
+
+# CRITICAL PATH CORRECTIONS:
+# - Phrase generation: ./server/scripts/generate-and-preview.sh (from project root)
+# - Phrase import: cd server && node scripts/phrase-importer.js (must cd to server first)  
+# - Staging deploy: ./Scripts/deploy-staging.sh (from project root, capital S)
+# - Working directory matters - commands fail if run from wrong directory!
+
+# PROCESS FLOW (8 Steps):
+# 1. Entry: generate-and-preview.sh → phrase-generator.js → ai-phrase-generator.js
+# 2. Overgeneration: Request 10 → Generate 40 candidates (4x quality buffer) 
+# 3. AI Processing: generate → fix Swedish grammar → select best 10 WITH PROPER DIFFICULTY DISTRIBUTION
+# 4. Difficulty Scoring: Each phrase scored using shared/difficulty-algorithm
+# 5. Validation: Word length (≤7 chars), count (2-4 words), theme relevance
+# 6. Output: Structured JSON with metadata + difficulty scores  
+# 7. **🚨 MANDATORY USER REVIEW**: Present phrases to user in table format for approval
+# 8. Import: Database import with staging server support (ONLY after user approval)
+#
+# 🎯 DIFFICULTY DISTRIBUTION REQUIREMENTS (Step 3):
+# For ANY requested range (e.g., 30-100), phrases MUST be distributed across the FULL range:
+# - Divide range into equal buckets (e.g., 30-100 = 7 buckets of ~10 points each)
+# - Select 1-2 phrases from EACH bucket to ensure spread
+# - NEVER cluster >50% of phrases in one narrow band
+# - Example for 30-100 range with 10 phrases:
+#   * 30-39: 1-2 phrases
+#   * 40-49: 1-2 phrases  
+#   * 50-59: 1-2 phrases
+#   * 60-69: 1-2 phrases
+#   * 70-79: 1-2 phrases
+#   * 80-89: 1-2 phrases
+#   * 90-100: 0-1 phrases
+# - ❌ BAD: 8 phrases in 40-49, 1 in 30-39, 1 in 50-59 (80% clustering)
+# - ✅ GOOD: Even distribution across the requested range
+
+# CURRENT IMPLEMENTATION: Hardcoded Swedish phrases in ai-phrase-generator.js
+# WHEN ASKED TO GENERATE: Follow 3-step process documented in code comments
+# 
+# 🚨 CRITICAL: NEVER IMPORT WITHOUT USER APPROVAL
+# - Always present generated phrases in a review table
+# - Wait for explicit user approval before running import commands
+# - User must approve: phrases, clues, difficulty scores, and theme relevance
+# - User will check difficulty distribution quality (no bad clustering)
+#
+# 🎯 SELECTION ALGORITHM REQUIREMENTS:
+# When selecting final phrases from 40 candidates, use intelligent distribution:
+# 1. Calculate target buckets based on requested range
+# 2. Score each candidate phrase for difficulty using difficulty-algorithm
+# 3. Sort candidates into difficulty buckets
+# 4. Select 1-2 best phrases from each bucket (quality + theme + variety)
+# 5. Ensure no bucket is empty and no bucket has >30% of total phrases
+# 6. Prioritize: grammar > theme alignment > difficulty spread > clue creativity
+
+# 🔒 SECURITY UPDATE: Admin API Endpoints Removed
+# - All admin batch import endpoints removed (security update)
+# - Replaced with secure direct database script access
+# - Benefits: No network exposure, better performance, reduced attack surface
+# - Import method: Direct database access only (no HTTP API)
 
 # App Store Release Archive (creates signed .xcarchive)
 ./scripts/archive-for-release.sh
@@ -510,9 +573,11 @@ xcodebuild -exportArchive \
 - `/api/status` - Health check
 - `/api/monitoring/stats` - Real-time statistics
 
-#### Admin Service (Port 3003)
-- `/api/status` - Health check
-- `/api/admin/phrases/batch-import` - Bulk phrase import
+#### Phrase Import System (Security Update)
+- **REMOVED**: Admin Service and all HTTP-based bulk import endpoints
+- **Replacement**: Direct database script access only
+  - `node scripts/phrase-importer.js --input file.json --import`
+  - **Security**: No HTTP exposure, direct database access only
 
 
 

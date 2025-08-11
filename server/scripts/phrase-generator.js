@@ -1,10 +1,29 @@
 #!/usr/bin/env node
 
 /**
- * Phrase Generator Script
+ * Phrase Generator Script - COMPLETE WORKFLOW DOCUMENTATION
  * 
- * Generates anagram game phrases targeting specific difficulty ranges.
- * Uses AI-powered generation for meaningful, coherent phrases.
+ * IMPORTANT FOR CLAUDE: This is the main orchestrator for phrase generation
+ * 
+ * COMPLETE PROCESS FLOW:
+ * 1. ENTRY: generate-and-preview.sh → phrase-generator.js → ai-phrase-generator.js
+ * 2. OVERGENERATION: Request N phrases → Generate N*4 candidates (quality buffer)
+ * 3. AI PROCESSING: 3-step process (generate → fix grammar → select best)
+ * 4. DIFFICULTY SCORING: Each phrase scored using shared/difficulty-algorithm
+ * 5. VALIDATION: Word length (≤7 chars), count (2-4 words), theme relevance
+ * 6. OUTPUT: Structured JSON with metadata + scored phrases ready for import
+ * 7. PREVIEW: Table display + optional database import
+ * 
+ * KEY FILES IN WORKFLOW:
+ * - generate-and-preview.sh: User interface, calls this script
+ * - phrase-generator.js: Main orchestrator (THIS FILE)
+ * - ai-phrase-generator.js: 3-step AI generation process  
+ * - difficulty-algorithm.js: Scoring system (word count, letters, rarity)
+ * - phrase-importer.js: Database import with staging server support
+ * 
+ * USAGE EXAMPLES:
+ * - ./generate-and-preview.sh "0-100:10" sv computing
+ * - node phrase-generator.js --range "0-100" --count 10 --language sv --theme computing
  */
 
 const fs = require('fs');
@@ -465,7 +484,7 @@ async function main() {
   // Generate output filename if not specified
   if (!args.output) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19); // YYYY-MM-DDTHH-MM-SS
-    args.output = path.join(CONFIG.outputDir, `phrases-${args.language}-${minDiff}-${maxDiff}-${args.count}-${timestamp}.json`);
+    args.output = path.join(CONFIG.outputDir, `${timestamp}-phrases-${args.language}-${minDiff}-${maxDiff}-${args.count}.json`);
   } else if (!path.isAbsolute(args.output)) {
     args.output = path.join(CONFIG.outputDir, args.output);
   }
