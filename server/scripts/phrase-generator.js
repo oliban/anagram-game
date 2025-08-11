@@ -57,7 +57,46 @@ function validateWordLength(phrase) {
   return true;
 }
 
-
+/**
+ * Validate that phrases are distributed across the full difficulty range
+ */
+function validateDifficultyDistribution(phrases, minDiff, maxDiff) {
+  if (phrases.length < 5) return true; // Too few phrases to validate distribution
+  
+  const range = maxDiff - minDiff;
+  if (range < 50) return true; // Small range doesn't need distribution check
+  
+  // Divide range into thirds for distribution check
+  const lowerThird = minDiff + (range / 3);
+  const upperThird = maxDiff - (range / 3);
+  
+  let lowerCount = 0;
+  let middleCount = 0;
+  let upperCount = 0;
+  
+  phrases.forEach(phrase => {
+    const diff = phrase.difficulty;
+    if (diff < lowerThird) {
+      lowerCount++;
+    } else if (diff > upperThird) {
+      upperCount++;
+    } else {
+      middleCount++;
+    }
+  });
+  
+  // Good distribution: at least 20% in each section for ranges > 50 points
+  const minPerSection = Math.max(1, Math.floor(phrases.length * 0.2));
+  
+  const hasGoodDistribution = lowerCount >= minPerSection && 
+                             upperCount >= minPerSection;
+  
+  if (!hasGoodDistribution) {
+    console.log(`📊 Distribution check: Lower third (${minDiff}-${Math.round(lowerThird)}): ${lowerCount}, Middle (${Math.round(lowerThird)}-${Math.round(upperThird)}): ${middleCount}, Upper third (${Math.round(upperThird)}-${maxDiff}): ${upperCount}`);
+  }
+  
+  return hasGoodDistribution;
+}
 
 // Static dictionary removed - all clues now generated dynamically by AI
 
@@ -269,6 +308,7 @@ async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language =
         continue;
       }
       
+      
       // Skip if we've seen this phrase before
       if (seenPhrases.has(phrase.toLowerCase())) {
         continue;
@@ -311,6 +351,15 @@ async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language =
   }
   
   console.log(`✅ Generated ${generatedPhrases.length} AI-powered phrases from ${totalProcessed} candidates in ${attempts} attempts`);
+  
+  // Validate difficulty distribution across the full range
+  if (generatedPhrases.length >= 5) {
+    const isGoodDistribution = validateDifficultyDistribution(generatedPhrases, minDiff, maxDiff);
+    if (!isGoodDistribution) {
+      console.warn(`⚠️ Poor difficulty distribution - phrases clustered at one end of ${minDiff}-${maxDiff} range`);
+    }
+  }
+  
   return generatedPhrases;
 }
 
