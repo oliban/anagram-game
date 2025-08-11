@@ -66,8 +66,6 @@ class DatabasePhrase {
       isConsumed: this.isConsumed || false
     };
     
-    // Debug logging to see what targetId is being sent
-    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId || 'null'}, senderName: ${senderName}, contributorName: ${this.contributorName || 'null'}, this.senderName: ${this.senderName || 'null'}, createdByPlayerId: ${this.createdByPlayerId || 'null'}`);
     
     return publicInfo;
   }
@@ -367,19 +365,11 @@ class DatabasePhrase {
 
         console.log(`📋 DATABASE: Found ${phrases.length} global phrases for player ${playerId} (no targeted phrases available)`);
         
-        // Debug: Log difficulty levels of returned phrases if level filtering was applied
-        if (maxDifficulty && phrases.length > 0) {
-          const difficulties = phrases.map(p => p.difficultyLevel || 'NULL').join(', ');
-          console.log(`🔍 DATABASE_DEBUG: Returned phrase difficulties: [${difficulties}] (max allowed: ${maxDifficulty})`);
-        }
+        
       } else {
         console.log(`📋 DATABASE: Found ${phrases.length} targeted phrases for player ${playerId}`);
         
-        // Debug: Log difficulty levels of targeted phrases (no filtering applied)
-        if (phrases.length > 0) {
-          const difficulties = phrases.map(p => p.difficultyLevel || 'NULL').join(', ');
-          console.log(`🎯 TARGETED_DEBUG: Targeted phrase difficulties: [${difficulties}] (no level filtering - all delivered)`);
-        }
+        
       }
 
       return phrases;
@@ -722,7 +712,6 @@ class DatabasePhrase {
    * Supports global phrases, multi-player targeting, and advanced hint validation
    */
   static async createEnhancedPhrase(options) {
-    console.log(`🚨 UNIQUE_DEBUG: This is the right createEnhancedPhrase method!`);
     const {
       content,
       hint,
@@ -738,7 +727,6 @@ class DatabasePhrase {
 
     // Comprehensive validation
     const validation = this.validatePhrase(content, hint);
-    console.log(`🔍 VALIDATION DEBUG: content="${content}", errors=[${validation.errors.join(', ')}], valid=${validation.valid}`);
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
     }
@@ -757,13 +745,10 @@ class DatabasePhrase {
       throw new Error(`Invalid phrase type. Must be one of: ${validTypes.join(', ')}`);
     }
 
-    // Debug logging for contributorName
-    console.log(`🔍 CREATE_PHRASE DEBUG: contributorName = "${contributorName}", senderId = ${senderId}`);
+    
 
     try {
-      console.log(`🔍 BEFORE_TRANSACTION: About to call transaction function`);
       return await transaction(async (client) => {
-        console.log(`🔍 TRANSACTION_START: Starting phrase creation transaction`);
         // Create the phrase
         const phraseResult = await client.query(`
           INSERT INTO phrases (content, hint, difficulty_level, is_global, created_by_player_id, phrase_type, language, is_approved, theme, contributor_name, source)
@@ -772,8 +757,6 @@ class DatabasePhrase {
         `, [cleanContent, cleanHint, difficultyScore, isGlobal, senderId, phraseType, language, true, theme, contributorName, source]);
 
         const phrase = new DatabasePhrase(phraseResult.rows[0]);
-
-        console.log(`🔍 PHRASE_CREATED: About to check senderId = ${senderId}`);
         
         // Fetch sender name if we have a senderId
         if (senderId) {
