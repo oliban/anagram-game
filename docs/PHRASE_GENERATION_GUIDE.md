@@ -24,13 +24,37 @@ cd server && node scripts/phrase-generator.js --range 0-100 --count 10 --languag
 node server/scripts/phrase-importer.js --input server/data/phrases-sv-*.json --import  # Import to local database
 ```
 
-#### Staging Import (3-step process)
-```bash
-# 1. Copy generated file to staging server:
-scp server/data/phrases-*.json pi@192.168.1.222:~/anagram-game/server/data/
+#### Staging Import (Docker Environment)
 
-# 2. Import on staging server:
-ssh pi@192.168.1.222 "cd ~/anagram-game/server && node scripts/phrase-importer.js --input data/phrases-*.json --import"
+**Automated Script (Recommended):**
+```bash
+# Single command to import phrases to staging
+./scripts/import-phrases-staging.sh server/data/imported/phrases-sv.json
+
+# With options:
+./scripts/import-phrases-staging.sh server/data/imported/phrases-en.json --deploy --limit 100
+```
+
+**Manual Steps (if needed):**
+```bash
+# 1. Deploy system to staging (if not already done):
+bash Scripts/deploy-to-pi.sh
+
+# 2. Copy import script and phrase files to Pi:
+scp import-phrases.js pi@192.168.1.222:~/anagram-game/
+scp server/data/imported/*.json pi@192.168.1.222:~/anagram-game/server/data/imported/
+
+# 3. Copy files into Docker container:
+ssh pi@192.168.1.222 "docker cp ~/anagram-game/import-phrases.js anagram-game-server:/app/"
+ssh pi@192.168.1.222 "docker cp ~/anagram-game/server/data/imported/ anagram-game-server:/app/data/"
+
+# 4. Fix permissions in container:
+ssh pi@192.168.1.222 "docker exec -u root anagram-game-server chown -R nodejs:nodejs /app/data"
+
+# 5. Run import inside Docker container:
+ssh pi@192.168.1.222 "docker exec -e DB_HOST=postgres -e DOCKER_ENV=true anagram-game-server node /app/import-phrases.js /app/data/YOUR-FILE.json"
+
+# Note: The import script auto-detects Docker environment and uses correct database host
 ```
 
 ### Critical Path Corrections
@@ -125,15 +149,18 @@ When selecting final phrases from 40 candidates, use intelligent distribution:
 
 ## Current Implementation
 
-### Swedish Language Focus
-- **Current implementation**: Hardcoded Swedish phrases in `ai-phrase-generator.js`
-- **When asked to generate**: Follow 3-step process documented in code comments
-- **Grammar validation**: 3-step AI process for Swedish language rules
+### 🤖 CLAUDE IS THE AI PHRASE GENERATOR
+- **WHO GENERATES**: Claude (the AI assistant) generates all phrases dynamically
+- **NO HARDCODED PHRASES**: All phrases must be freshly generated for each request
+- **NEVER USE**: Hardcoded or pre-written phrase lists
+- **ALWAYS GENERATE**: Fresh, theme-specific phrases for each user request
 
-### 3-Step AI Process
-1. **Generate**: Create initial phrase candidates
-2. **Fix**: Apply Swedish grammar rules and corrections (see critical rules below)
-3. **Select**: Choose best phrases with proper difficulty distribution
+### 3-Step AI Process (CLAUDE PERFORMS THIS)
+1. **🤖 CLAUDE GENERATES**: Create 30 fresh phrase candidates with theme and difficulty
+2. **🤖 CLAUDE FIXES**: Apply Swedish grammar rules and corrections (see critical rules below)  
+3. **🤖 CLAUDE SELECTS**: Choose best phrases with proper difficulty distribution
+
+**🔴 CRITICAL**: When the phrase generation script calls AI functions, CLAUDE must respond with actual generated phrases in the correct JSON format
 
 ### 🚨 CRITICAL SWEDISH GRAMMAR RULES (MANDATORY APPLICATION)
 
@@ -226,6 +253,18 @@ function validateWordLength(phrases) {
 # Direct database access only (no HTTP API)
 node scripts/phrase-importer.js --input file.json --import
 ```
+
+### Import Script Environment Detection
+The `import-phrases.js` script automatically detects the environment:
+- **Local**: Uses `localhost` for database connection
+- **Docker**: Detects Docker environment and uses `postgres` service name
+- **Configurable**: Can override with environment variables:
+  - `DB_HOST` - Database host (auto-detected if not set)
+  - `DB_PORT` - Database port (default: 5432)
+  - `DB_NAME` - Database name (default: anagram_game)
+  - `DB_USER` - Database user (default: postgres)
+  - `DB_PASSWORD` - Database password (default: postgres)
+  - `DOCKER_ENV=true` - Force Docker mode
 
 ### Security Benefits
 - **No network exposure** for admin operations

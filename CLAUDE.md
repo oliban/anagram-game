@@ -143,6 +143,12 @@ cp /tmp/endpoint.js services/game-server/routes/leaderboards.js
 - 📚 **Commands & API**: `docs/REFERENCE_COMMANDS.md`
 - 🏗️ **Architecture**: `docs/ARCHITECTURE_OVERVIEW.md`
 
+## 🚀 DEPLOYMENT COMMANDS
+- **Deploy to Pi Staging**: `bash Scripts/deploy-to-pi.sh` (NOT scripts/deploy-staging.sh)
+- **Check Deployment**: `bash Scripts/check-deployment.sh`
+- **Build for Staging**: `./build_multi_sim.sh staging`
+- **Import Phrases to Staging**: `./scripts/import-phrases-staging.sh <json-file>` (automated Docker import)
+
 ## WORKING MEMORY MANAGEMENT
 - **When context gets long**: Re-read this CLAUDE.md file, summarize progress in PROGRESS.md, document current state before major changes
 - **REMINDER**: If this file hasn't been referenced in 30+ minutes, RE-READ IT!
