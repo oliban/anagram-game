@@ -158,7 +158,7 @@ class ContributionForm {
 
         // Calculate points to next level instead of legend
         const progression = this.linkData.progression;
-        const pointsToNextLevel = progression.isMaxLevel ? 0 : progression.pointsNeeded;
+        const pointsToNextLevel = progression.isMaxLevel ? 0 : progression.pointsToNext;
         
         infoElement.innerHTML = `
             <div class="player-info">
@@ -170,7 +170,7 @@ class ContributionForm {
                     <p><strong>Level:</strong> ${this.linkData.playerLevel} (${this.linkData.playerScore} points)</p>
                     ${progression.isMaxLevel ? 
                         `<p class="max-level-info">🏆 ${this.linkData.requestingPlayerName} has reached the maximum level!</p>` :
-                        `<p class="next-level-info">📈 ${pointsToNextLevel} points needed for <strong>${progression.nextLevel.title.charAt(0).toUpperCase() + progression.nextLevel.title.slice(1).toLowerCase()}</strong> level</p>`
+                        `<p class="next-level-info">📈 ${pointsToNextLevel} points needed for next level</p>`
                     }
                 </div>
             </div>

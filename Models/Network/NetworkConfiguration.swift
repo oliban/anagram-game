@@ -20,7 +20,6 @@ struct SharedAppConfig: Codable {
 struct ServiceConfig: Codable {
     let gameServer: ServiceInfo
     let webDashboard: ServiceInfo
-    let linkGenerator: ServiceInfo
     let database: ServiceInfo
 }
 
@@ -49,20 +48,18 @@ private func loadSharedConfig() -> SharedAppConfig {
     // Environment-aware configuration
     // Note: host values here are not used - actual hosts come from developmentConfig/productionConfig
     let gameServerConfig = ServiceInfo(port: 3000, host: "localhost")
-    let webDashboardConfig = ServiceInfo(port: 3001, host: "localhost") 
-    let linkGeneratorConfig = ServiceInfo(port: 3002, host: "localhost")
+    let webDashboardConfig = ServiceInfo(port: 3001, host: "localhost")
     let databaseConfig = ServiceInfo(port: 5432, host: "localhost")
     
     let services = ServiceConfig(
         gameServer: gameServerConfig,
         webDashboard: webDashboardConfig,
-        linkGenerator: linkGeneratorConfig,
         database: databaseConfig
     )
     
     // Environment configurations
     let developmentConfig = EnvironmentConfig(host: "192.168.1.188", description: "Local Development Server")
-    let stagingConfig = EnvironmentConfig(host: "lake-throwing-aluminium-ol.trycloudflare.com", description: "Pi Staging Server (Cloudflare tunnel)")
+    let stagingConfig = EnvironmentConfig(host: "bras-voluntary-survivor-presidential.trycloudflare.com", description: "Pi Staging Server (Cloudflare tunnel)")
     let productionConfig = EnvironmentConfig(host: "anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com", description: "AWS Production Server")
     
     let config = SharedAppConfig(
@@ -139,26 +136,15 @@ struct AppConfig {
         return url
     }
     
-    // Contribution system URLs (link-generator service) 
+    // Contribution system URLs - consolidated into game-server
     static var contributionBaseURL: String {
-        let config = environmentConfig
-        let host = config.host
-        let port = sharedConfig.services.linkGenerator.port
-        
-        // Use same logic as baseURL for contribution system
-        if host.contains("amazonaws.com") {
-            return "http://\(host)"
-        } else if host.contains("trycloudflare.com") {
-            return "https://\(host)"
-        } else if host == "STAGING_PLACEHOLDER" {
-            return "http://192.168.1.222:\(port)"  // Fallback to Pi local IP
-        } else {
-            return "http://\(host):\(port)"
-        }
+        // All contribution requests now go through game-server (port 3000)
+        return baseURL
     }
     
     static var contributionAPIURL: String {
-        return "\(contributionBaseURL)/api/contribution/request"
+        // Contribution system is now integrated into game-server
+        return "\(baseURL)/api/contribution/request"
     }
     
     // Timing Configuration
