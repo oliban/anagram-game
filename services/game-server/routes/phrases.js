@@ -504,19 +504,44 @@ module.exports = (dependencies) => {
       // Ensure minimum score
       finalScore = Math.max(1, finalScore);
       
-      // Mark phrase as completed/consumed
-      const consumeSuccess = await DatabasePhrase.consumePhrase(phraseId);
-      if (!consumeSuccess) {
-        console.warn(`⚠️ COMPLETE: Could not mark phrase ${phraseId} as consumed`);
-      }
-      
-      // Record completion in scoring system
-      try {
-        const ScoringSystem = require('../shared/services/scoringSystem');
-        await ScoringSystem.recordPhraseCompletion(playerId, phraseId, finalScore, hintsUsed, completionTime);
-      } catch (statsError) {
-        console.warn(`⚠️ COMPLETE: Could not record completion stats: ${statsError.message}`);
-        // Don't fail the request if stats recording fails
+      // Use transaction to ensure atomicity of completion process
+      const { transaction } = require('../shared/database/connection');
+      const completionResult = await transaction(async (client) => {
+        // Mark phrase as completed/consumed within transaction
+        const consumeResult = await client.query(`
+          UPDATE player_phrases 
+          SET is_delivered = true, delivered_at = CURRENT_TIMESTAMP
+          WHERE phrase_id = $1 AND is_delivered = false
+          RETURNING *
+        `, [phraseId]);
+
+        if (consumeResult.rows.length === 0) {
+          console.warn(`⚠️ COMPLETE: Could not mark phrase ${phraseId} as consumed (phrase not found or already consumed)`);
+          return { consumeSuccess: false };
+        }
+        
+        console.log(`✅ DATABASE: Phrase ${phraseId} marked as consumed within transaction`);
+
+        // Record completion in completed_phrases table within same transaction
+        try {
+          await client.query(`
+            INSERT INTO completed_phrases (player_id, phrase_id, score, completion_time_ms)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (player_id, phrase_id) DO NOTHING
+          `, [playerId, phraseId, finalScore, completionTime]);
+          console.log(`✅ DATABASE: Completion recorded for phrase ${phraseId}`);
+        } catch (completionError) {
+          console.warn(`⚠️ COMPLETE: Could not record completion: ${completionError.message}`);
+          // Don't fail transaction for completion recording issues
+        }
+
+        return { consumeSuccess: true };
+      });
+
+      if (!completionResult.consumeSuccess) {
+        return res.status(409).json({
+          error: 'Phrase not available for completion (already completed or not assigned to player)'
+        });
       }
       
       // Process celebration emoji collection
@@ -603,7 +628,7 @@ module.exports = (dependencies) => {
         }
       }
       
-      const completionResult = {
+      const apiResponse = {
         success: true,
         completion: {
           finalScore: finalScore,
@@ -628,7 +653,7 @@ module.exports = (dependencies) => {
         });
       }
       
-      res.status(200).json(completionResult);
+      res.status(200).json(apiResponse);
       
     } catch (error) {
       console.error('❌ Error completing phrase:', error);
