@@ -1,24 +1,27 @@
 class Phrase {
-  constructor(id, content, senderId, targetId, createdAt = new Date()) {
+  constructor(id, content, senderId, targetId, createdAt = new Date(), theme = null) {
     this.id = id;
     this.content = content;
     this.senderId = senderId;
     this.targetId = targetId;
     this.createdAt = createdAt;
     this.isConsumed = false;
+    this.theme = theme;
   }
 
   /**
    * Get public info (safe to send to clients)
    */
   getPublicInfo() {
+    console.log(`🐛 DEBUG: getPublicInfo() for phrase "${this.content}" - targetId: ${this.targetId}, senderName: ${this.senderName || 'undefined'}, contributorName: ${this.contributorName || 'null'}, this.senderName: ${this.senderName || 'undefined'}, createdByPlayerId: ${this.createdByPlayerId || 'null'}`);
     return {
       id: this.id,
       content: this.content,
       senderId: this.senderId,
       targetId: this.targetId,
       createdAt: this.createdAt,
-      isConsumed: this.isConsumed
+      isConsumed: this.isConsumed,
+      theme: this.theme
     };
   }
 

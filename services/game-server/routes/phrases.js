@@ -379,6 +379,13 @@ module.exports = (dependencies) => {
           const phraseEmojis = await getRandomEmojisForPhrase(client);
           
           console.log(`🔍 CLUE DEBUG: Phrase "${phraseInfo.content}" - hint from DB: "${phraseInfo.hint}", mapped to clue: "${phraseInfo.hint || ''}", theme: "${phraseInfo.theme || 'null'}"`);
+          
+          // DEBUG: Show all phraseInfo keys for computing phrases
+          if (['ny kod', 'stark cpu', 'sql fråga'].includes(phraseInfo.content)) {
+            console.log(`🔍 PHRASEINFO KEYS: "${phraseInfo.content}" - keys: ${Object.keys(phraseInfo).join(', ')}`);
+            console.log(`🔍 PHRASEINFO THEME: "${phraseInfo.content}" - theme value: "${phraseInfo.theme}" (type: ${typeof phraseInfo.theme})`);
+          }
+          
           console.log(`🎲 EMOJI: Generated ${phraseEmojis.length} emojis for phrase "${phraseInfo.content}": ${phraseEmojis.map(e => e.emoji_character).join(', ')}`);
           
           return {
