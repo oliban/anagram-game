@@ -324,7 +324,49 @@ docker-compose -f docker-compose.services.yml up -d
 docker-compose -f docker-compose.services.yml exec game-server cat package.json | grep version
 ```
 
-## Automated Test Suites
+## 🧪 AUTOMATED TESTING INFRASTRUCTURE
+
+### Comprehensive Test Suite with CI/CD Integration
+
+```bash
+# Run full automated test suite (recommended)
+node testing/scripts/automated-test-runner.js
+
+# Quick validation during development
+SKIP_PERFORMANCE=true node testing/scripts/automated-test-runner.js
+
+# Individual test suites
+node testing/api/test_updated_simple.js                    # Core API tests
+node testing/integration/test_socketio_realtime.js         # WebSocket/multiplayer
+node testing/integration/test_user_workflows.js            # End-to-end workflows
+node testing/performance/test_performance_suite.js         # Load testing
+```
+
+### Test Categories
+- ✅ **API Tests**: Core endpoints, security, error handling (37 tests updated)
+- ✅ **Real-time Tests**: Socket.IO multiplayer functionality 
+- ✅ **Integration Tests**: Complete user journeys (onboarding → multiplayer → progression)
+- ✅ **Performance Tests**: Load testing, memory monitoring, concurrent users
+- ✅ **Regression Tests**: Previously fixed issues validation
+
+### GitHub Actions Integration
+- **Feature branches**: Quick tests (5 min) on every push
+- **Develop integration**: Comprehensive tests (15 min) on PR merge
+- **Main releases**: Production-level tests (25+ min) + staging deployment
+
+### Quality Standards
+- **🚨 ZERO TOLERANCE FOR FAILING TESTS** - All test failures must be investigated and fixed immediately
+- **Feature branches**: 100% success rate required for critical tests, investigate any failures
+- **Develop integration**: 100% success rate required - failing tests block PR merges
+- **Main releases**: 100% success rate required - no exceptions for production deployment
+- **Test failures are ALWAYS bugs** - Either fix the code or fix the test, never ignore failures
+
+### Testing Strategy
+- Complex game logic → XCTest unit tests first
+- Simple UI components → Test after implementation
+- Performance-critical paths → Add performance tests
+
+## Legacy Server Tests
 
 ### Run All Server Tests
 ```bash
