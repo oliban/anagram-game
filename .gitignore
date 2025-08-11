@@ -158,6 +158,9 @@ server/data/generation-*.json
 server/data/generation-*.log
 server/data/import-*.json
 
+# Phrase import staging area (files moved after import)
+server/data/imported/*.json
+
 # Temporary files
 *.tmp
 *.temp
