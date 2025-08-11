@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-11T19:44:19.096Z",
+    "target_range": "1-100",
+    "requested_count": 30,
+    "actual_count": 30,
+    "language": "sv",
+    "theme": "cooking",
+    "generator_version": "1.0.0"
+  },
+  "phrases": [
+    {"phrase": "het olja", "clue": "Stekande fett", "difficulty": 18, "language": "sv", "source": "ai_generated"},
+    {"phrase": "salt kött", "clue": "Kryddat protein", "difficulty": 22, "language": "sv", "source": "ai_generated"},
+    {"phrase": "ägg gula", "clue": "Gulna mitten", "difficulty": 25, "language": "sv", "source": "ai_generated"},
+    {"phrase": "risskål", "clue": "Asiatisk grundmat", "difficulty": 28, "language": "sv", "source": "ai_generated"},
+    {"phrase": "bröddeg", "clue": "Bakarens grund", "difficulty": 32, "language": "sv", "source": "ai_generated"},
+    {"phrase": "soppgryta", "clue": "Varm matbehållare", "difficulty": 35, "language": "sv", "source": "ai_generated"},
+    {"phrase": "fisk filé", "clue": "Benfritt havsfång", "difficulty": 38, "language": "sv", "source": "ai_generated"},
+    {"phrase": "gräddsås", "clue": "Vit mjölktopping", "difficulty": 42, "language": "sv", "source": "ai_generated"},
+    {"phrase": "kryddträdgård", "clue": "Smakens odlingsplats", "difficulty": 45, "language": "sv", "source": "ai_generated"},
+    {"phrase": "vinflaska", "clue": "Korkad alkohol", "difficulty": 48, "language": "sv", "source": "ai_generated"},
+    {"phrase": "pastavatten", "clue": "Stärkelsekokvatten", "difficulty": 52, "language": "sv", "source": "ai_generated"},
+    {"phrase": "vitlökspress", "clue": "Doftande krossverktyg", "difficulty": 55, "language": "sv", "source": "ai_generated"},
+    {"phrase": "kockkniv", "clue": "Professionell egg", "difficulty": 58, "language": "sv", "source": "ai_generated"},
+    {"phrase": "ugnsplåt", "clue": "Varm metallyta", "difficulty": 62, "language": "sv", "source": "ai_generated"},
+    {"phrase": "kryddhylla", "clue": "Smakförvaring", "difficulty": 65, "language": "sv", "source": "ai_generated"},
+    {"phrase": "träsked", "clue": "Naturens omrörare", "difficulty": 68, "language": "sv", "source": "ai_generated"},
+    {"phrase": "järnpanna", "clue": "Tung stekredskap", "difficulty": 72, "language": "sv", "source": "ai_generated"},
+    {"phrase": "surdeg starter", "clue": "Levande brödkultur", "difficulty": 75, "language": "sv", "source": "ai_generated"},
+    {"phrase": "kokningssås", "clue": "Koncentrerad smak", "difficulty": 78, "language": "sv", "source": "ai_generated"},
+    {"phrase": "köttfonder", "clue": "Djup smakbas", "difficulty": 82, "language": "sv", "source": "ai_generated"},
+    {"phrase": "skärmaskin", "clue": "Precisionsklivare", "difficulty": 85, "language": "sv", "source": "ai_generated"},
+    {"phrase": "molekylkök", "clue": "Vetenskaplig matkonst", "difficulty": 88, "language": "sv", "source": "ai_generated"},
+    {"phrase": "långsam kokning", "clue": "Tålamod gastronomi", "difficulty": 92, "language": "sv", "source": "ai_generated"},
+    {"phrase": "vakuum kokning", "clue": "Förseglas precision", "difficulty": 95, "language": "sv", "source": "ai_generated"},
+    {"phrase": "kaviarkula", "clue": "Konstgjord lyx", "difficulty": 98, "language": "sv", "source": "ai_generated"},
+    {"phrase": "rökkött", "clue": "Ånga behandlad", "difficulty": 85, "language": "sv", "source": "ai_generated"},
+    {"phrase": "knivskära", "clue": "Tårnsticka grönsak", "difficulty": 72, "language": "sv", "source": "ai_generated"},
+    {"phrase": "mjölsmör", "clue": "Förtjocknings grund", "difficulty": 65, "language": "sv", "source": "ai_generated"},
+    {"phrase": "flambera maträtt", "clue": "Eldande presentation", "difficulty": 78, "language": "sv", "source": "ai_generated"},
+    {"phrase": "brynt smör", "clue": "Gulnad mjölkfett", "difficulty": 55, "language": "sv", "source": "ai_generated"}
+  ]
+}

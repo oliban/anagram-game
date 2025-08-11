@@ -2,6 +2,35 @@
 
 This guide covers deployment procedures for all environments: Local, Staging (Pi), and Production (AWS).
 
+## 🚨 GIT-FIRST DEPLOYMENT (CRITICAL)
+
+### MANDATORY PRE-DEPLOYMENT CHECKLIST
+```bash
+# 1. ALWAYS start with git sync
+git pull origin main
+
+# 2. Verify we have the latest implementations
+git log --oneline --graph -10
+
+# 3. If anything is missing, extract from git
+git show WORKING_COMMIT:path/to/missing/file.js > current/path/file.js
+
+# 4. NEVER deploy custom implementations without git verification
+```
+
+### 🔥 DEPLOYMENT FAILURES TO AVOID
+- ❌ Deploying without `git pull` - causes implementation drift
+- ❌ Manual fixes instead of git-based solutions - creates technical debt
+- ❌ Custom endpoints when git has working versions - breaks consistency
+- ❌ Database patches not from git history - schema divergence
+
+### STANDARD DEPLOYMENT PROCESS
+- **🚨 NEW RULE: NO DIRECT COMMITS TO MAIN** - Always use feature branches
+- **🚨 CRITICAL: Start every deployment with `git pull origin main`**
+- Always build new apps using the build script and wait for feedback before proceeding
+- When user says "commit and push", create feature branch and PR as outlined above
+- **Production deployments ONLY via main branch** after full testing and approval
+
 ## 📋 Table of Contents
 - [Quick Start](#quick-start)
 - [Local Development](#local-development)
@@ -9,6 +38,12 @@ This guide covers deployment procedures for all environments: Local, Staging (Pi
 - [AWS Production Deployment](#aws-production-deployment)
 - [Architecture Overview](#architecture-overview)
 - [Troubleshooting](#troubleshooting)
+
+## ⚠️ ESSENTIAL BUILD WARNINGS
+- **Never build the apps with clean flag if there is not a very good reason for it!**
+- **🚨 CRITICAL: If you use --clean flag, you MUST immediately re-associate logged-in players afterward!**
+  - Clean builds reset device IDs, breaking auto-login for existing players
+  - After clean build, run device association commands from `docs/device-user-association-guide.md`
 
 ## Quick Start
 
