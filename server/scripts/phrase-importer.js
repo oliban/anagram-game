@@ -736,8 +736,9 @@ async function main() {
       }
       
       // Filter out phrases that don't meet quality threshold
+      // Accept phrases without quality property (from new AI generation system)
       const qualityPhrases = phrases.filter(p => 
-        p.quality && p.quality.passesThreshold !== false
+        !p.quality || p.quality.passesThreshold !== false
       );
       
       if (qualityPhrases.length < phrases.length) {

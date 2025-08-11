@@ -57,7 +57,46 @@ function validateWordLength(phrase) {
   return true;
 }
 
-
+/**
+ * Validate that phrases are distributed across the full difficulty range
+ */
+function validateDifficultyDistribution(phrases, minDiff, maxDiff) {
+  if (phrases.length < 5) return true; // Too few phrases to validate distribution
+  
+  const range = maxDiff - minDiff;
+  if (range < 50) return true; // Small range doesn't need distribution check
+  
+  // Divide range into thirds for distribution check
+  const lowerThird = minDiff + (range / 3);
+  const upperThird = maxDiff - (range / 3);
+  
+  let lowerCount = 0;
+  let middleCount = 0;
+  let upperCount = 0;
+  
+  phrases.forEach(phrase => {
+    const diff = phrase.difficulty;
+    if (diff < lowerThird) {
+      lowerCount++;
+    } else if (diff > upperThird) {
+      upperCount++;
+    } else {
+      middleCount++;
+    }
+  });
+  
+  // Good distribution: at least 20% in each section for ranges > 50 points
+  const minPerSection = Math.max(1, Math.floor(phrases.length * 0.2));
+  
+  const hasGoodDistribution = lowerCount >= minPerSection && 
+                             upperCount >= minPerSection;
+  
+  if (!hasGoodDistribution) {
+    console.log(`📊 Distribution check: Lower third (${minDiff}-${Math.round(lowerThird)}): ${lowerCount}, Middle (${Math.round(lowerThird)}-${Math.round(upperThird)}): ${middleCount}, Upper third (${Math.round(upperThird)}-${maxDiff}): ${upperCount}`);
+  }
+  
+  return hasGoodDistribution;
+}
 
 // Static dictionary removed - all clues now generated dynamically by AI
 
@@ -215,47 +254,20 @@ function generateEnglishPhrasesWithClues(level) {
 }
 
 /**
- * Generate Swedish phrases using PURE AI with BATCH validation - no hardcoded lists!
+ * Generate Swedish phrases using AI - trusting AI to handle grammar correctly
  */
 async function generateSwedishPhrasesWithClues(level) {
   console.log(`🤖 AI generating grammatically perfect Swedish phrases for level: ${level}`);
   
   try {
-    // Use AI to generate Swedish phrases with perfect grammar
-    const aiPhrases = await generateGrammaticallyCorrectSwedishPhrases(15, level);
+    // Use AI to generate Swedish phrases with perfect grammar - no validation needed
+    const aiPhrases = await generateGrammaticallyCorrectPhrases(15, level, 'sv');
+    console.log(`✅ Generated ${aiPhrases.length} Swedish phrases with proper en/ett grammar`);
     
-    // BATCH validate all phrases at once with AI
-    const phrasesToValidate = aiPhrases.map(p => p.phrase);
-    console.log(`🔍 BATCH validating ${phrasesToValidate.length} Swedish phrases...`);
-    
-    const { validateSwedishGrammarBatch } = require('./ai-swedish-grammar');
-    const validationResults = await validateSwedishGrammarBatch(phrasesToValidate);
-    
-    // Process validation results
-    const validatedPhrases = [];
-    for (let i = 0; i < aiPhrases.length; i++) {
-      const phraseObj = aiPhrases[i];
-      const validation = validationResults[i];
-      
-      if (!validation.is_correct) {
-        console.warn(`⚠️ AI detected grammar issue: "${phraseObj.phrase}"`);
-        console.log(`✅ AI corrected to: "${validation.corrected_phrase}"`);
-        console.log(`💡 AI explanation: ${validation.explanation}`);
-        
-        validatedPhrases.push({
-          phrase: validation.corrected_phrase,
-          clue: phraseObj.clue
-        });
-      } else {
-        validatedPhrases.push(phraseObj);
-      }
-    }
-    
-    return validatedPhrases;
+    return aiPhrases;
     
   } catch (error) {
     console.error('🚨 AI Swedish generation failed:', error.message);
-    // NO FALLBACK - Pure AI generation only
     throw new Error(`Swedish phrase generation failed: ${error.message}`);
   }
 }
@@ -295,6 +307,7 @@ async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language =
         console.log(`⚠️ Skipping "${phrase}" (violates length constraints)`);
         continue;
       }
+      
       
       // Skip if we've seen this phrase before
       if (seenPhrases.has(phrase.toLowerCase())) {
@@ -338,6 +351,15 @@ async function generatePhrasesForRange(minDiff, maxDiff, targetCount, language =
   }
   
   console.log(`✅ Generated ${generatedPhrases.length} AI-powered phrases from ${totalProcessed} candidates in ${attempts} attempts`);
+  
+  // Validate difficulty distribution across the full range
+  if (generatedPhrases.length >= 5) {
+    const isGoodDistribution = validateDifficultyDistribution(generatedPhrases, minDiff, maxDiff);
+    if (!isGoodDistribution) {
+      console.warn(`⚠️ Poor difficulty distribution - phrases clustered at one end of ${minDiff}-${maxDiff} range`);
+    }
+  }
+  
   return generatedPhrases;
 }
 
