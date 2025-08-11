@@ -48,6 +48,11 @@ class DatabasePhrase {
       senderName = 'Unknown Player';
     }
     
+    // Debug theme issue for computing phrases
+    if (['ny kod', 'stark cpu', 'sql fråga'].includes(this.content)) {
+      console.log(`🔍 getPublicInfo DEBUG: "${this.content}" - this.theme: "${this.theme}" (type: ${typeof this.theme})`);
+    }
+    
     const publicInfo = {
       id: this.id,
       content: this.content,
@@ -279,7 +284,7 @@ class DatabasePhrase {
         WHERE pp.target_player_id = $1 
           AND pp.is_delivered = false
           AND p.id NOT IN (SELECT phrase_id FROM skipped_phrases WHERE player_id = $1)
-        ORDER BY p.created_at ASC
+        ORDER BY RANDOM()
         LIMIT 25
       `, [playerId]);
 
