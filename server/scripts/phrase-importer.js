@@ -1,18 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * Phrase Importer Script
+ * Phrase Importer Script - Direct Database Access
  * 
- * Imports analyzed phrases into the database.
+ * Imports analyzed phrases directly into the database.
+ * Replaces admin API endpoints with secure direct database operations.
  * Handles duplicates, validation, and batch processing.
  * Provides dry-run mode for testing imports.
+ * 
+ * SECURITY: Uses direct database access instead of HTTP API endpoints.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { glob } = require('glob');
 const { query, pool } = require('../database/connection');
-// Use built-in fetch (Node.js 18+) for API calls
-const fetch = global.fetch;
+
+// Import DatabasePhrase for direct database operations (replacing API calls)
+const DatabasePhrase = require('../../services/shared/database/models/DatabasePhrase');
 
 // Configuration
 const CONFIG = {
@@ -20,9 +25,55 @@ const CONFIG = {
   duplicateCheck: true,
   validateSchema: true,
   outputDir: path.join(__dirname, '../data'),
-  apiUrl: 'http://localhost:3003',
-  systemUserId: '11111111-1111-1111-1111-111111111111' // SystemImporter for Docker database imports
+  importedDir: path.join(__dirname, '../data/imported')
 };
+
+/**
+ * Expand glob patterns to get list of files
+ */
+function expandFilePatterns(inputPattern) {
+  try {
+    // Check if it's a glob pattern or a simple file path
+    if (inputPattern.includes('*') || inputPattern.includes('?') || inputPattern.includes('[')) {
+      // Use glob to expand the pattern
+      const files = glob.sync(inputPattern, { absolute: false });
+      return files.length > 0 ? files : [inputPattern]; // Return original pattern if no matches
+    } else {
+      // Single file
+      return [inputPattern];
+    }
+  } catch (error) {
+    console.warn(`⚠️ Error expanding file pattern: ${error.message}`);
+    return [inputPattern]; // Return original pattern on error
+  }
+}
+
+/**
+ * Move imported file to imported directory
+ */
+function moveImportedFile(filePath, dryRun = false) {
+  try {
+    // Ensure imported directory exists
+    fs.mkdirSync(CONFIG.importedDir, { recursive: true });
+    
+    const fileName = path.basename(filePath);
+    const destinationPath = path.join(CONFIG.importedDir, fileName);
+    
+    if (dryRun) {
+      console.log(`📁 Would move: ${filePath} → ${destinationPath}`);
+      return destinationPath;
+    }
+    
+    // Move the file
+    fs.renameSync(filePath, destinationPath);
+    console.log(`📁 Moved imported file: ${fileName} → imported/`);
+    return destinationPath;
+    
+  } catch (error) {
+    console.warn(`⚠️ Failed to move imported file: ${error.message}`);
+    return filePath; // Return original path if move fails
+  }
+}
 
 /**
  * Validate phrase data against database schema
@@ -95,9 +146,38 @@ async function checkPhraseExists(phrase) {
 }
 
 /**
+ * Check multiple phrases for duplicates in a single query
+ */
+async function checkPhrasesExistBatch(phrases) {
+  if (phrases.length === 0) return new Map();
+  
+  try {
+    const contents = phrases.map(p => p.phrase.trim().toLowerCase());
+    const placeholders = contents.map((_, i) => `$${i + 1}`).join(',');
+    
+    const result = await query(`
+      SELECT id, LOWER(TRIM(content)) as content_key
+      FROM phrases 
+      WHERE LOWER(TRIM(content)) IN (${placeholders})
+    `, contents);
+    
+    // Create a map of content -> existing record
+    const existingMap = new Map();
+    result.rows.forEach(row => {
+      existingMap.set(row.content_key, { id: row.id });
+    });
+    
+    return existingMap;
+  } catch (error) {
+    console.warn(`⚠️ Error checking phrases existence: ${error.message}`);
+    return new Map();
+  }
+}
+
+/**
  * Insert single phrase into database
  */
-async function insertPhrase(phrase, dryRun = false) {
+async function insertPhrase(phrase, dryRun = false, apiUrl = CONFIG.apiUrl) {
   const validation = validatePhraseData(phrase);
   if (validation.length > 0) {
     return {
@@ -172,9 +252,142 @@ async function insertPhrase(phrase, dryRun = false) {
 }
 
 /**
- * Insert single phrase via API (handles scoring automatically)
+ * Insert batch of phrases in a single query for better performance
+ * Uses VALUES clause to insert multiple rows at once
  */
-async function insertPhraseViaAPI(phrase, dryRun = false) {
+async function insertPhrasesBatch(phrases, dryRun = false) {
+  if (phrases.length === 0) {
+    return [];
+  }
+
+  const results = [];
+  
+  if (dryRun) {
+    // For dry run, do basic validation but skip all database operations
+    const results = [];
+    for (const phrase of phrases) {
+      const validation = validatePhraseData(phrase);
+      if (validation.length > 0) {
+        results.push({
+          success: false,
+          error: `Validation failed: ${validation.join(', ')}`,
+          phrase: phrase.phrase
+        });
+      } else {
+        results.push({
+          success: true,
+          phrase: phrase.phrase,
+          action: 'would_insert_via_batch',
+          dryRun: true
+        });
+      }
+    }
+    return results;
+  }
+
+  try {
+    // Validate all phrases first (fast, in-memory)
+    const validatedPhrases = [];
+    for (const phrase of phrases) {
+      const validation = validatePhraseData(phrase);
+      if (validation.length > 0) {
+        results.push({
+          success: false,
+          error: `Validation failed: ${validation.join(', ')}`,
+          phrase: phrase.phrase
+        });
+        continue;
+      }
+      validatedPhrases.push(phrase);
+    }
+    
+    // Check for duplicates in a single batch query (fast!)
+    let finalPhrases = validatedPhrases;
+    if (CONFIG.duplicateCheck && validatedPhrases.length > 0) {
+      const existingMap = await checkPhrasesExistBatch(validatedPhrases);
+      finalPhrases = [];
+      
+      for (const phrase of validatedPhrases) {
+        const contentKey = phrase.phrase.trim().toLowerCase();
+        if (existingMap.has(contentKey)) {
+          results.push({
+            success: false,
+            error: `Duplicate phrase (existing ID: ${existingMap.get(contentKey).id})`,
+            phrase: phrase.phrase,
+            isDuplicate: true
+          });
+        } else {
+          finalPhrases.push(phrase);
+        }
+      }
+    }
+    
+    if (finalPhrases.length === 0) {
+      return results;
+    }
+    
+    // Build VALUES clause for batch insert
+    const values = [];
+    const params = [];
+    let paramIndex = 1;
+    
+    finalPhrases.forEach(phrase => {
+      values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`);
+      
+      params.push(
+        phrase.phrase.trim(),                    // content
+        phrase.clue?.trim() || '',              // hint
+        Math.round(phrase.difficulty),          // difficulty_level  
+        true,                                   // is_global
+        true,                                   // is_approved
+        null,                                   // created_by_player_id (system generated)
+        'community',                            // phrase_type
+        phrase.language || 'en',               // language
+        phrase.theme || null                   // theme
+      );
+      
+      paramIndex += 9;
+    });
+    
+    const batchQuery = `
+      INSERT INTO phrases (content, hint, difficulty_level, is_global, is_approved, created_by_player_id, phrase_type, language, theme)
+      VALUES ${values.join(', ')}
+      RETURNING id, content, difficulty_level
+    `;
+    
+    console.log(`📥 BATCH INSERT: Inserting ${finalPhrases.length} phrases in single query...`);
+    const result = await query(batchQuery, params);
+    
+    // Create success results for all inserted phrases
+    result.rows.forEach((row, index) => {
+      results.push({
+        success: true,
+        phrase: finalPhrases[index].phrase,
+        id: row.id,
+        difficulty: row.difficulty_level,
+        action: 'inserted_batch'
+      });
+    });
+    
+    console.log(`✅ BATCH INSERT: Successfully inserted ${result.rows.length} phrases`);
+    return results;
+    
+  } catch (error) {
+    console.error(`❌ BATCH INSERT ERROR: ${error.message}`);
+    // If batch insert fails, fall back to individual inserts for error reporting
+    return phrases.map(phrase => ({
+      success: false,
+      error: `Batch insert failed: ${error.message}`,
+      phrase: phrase.phrase
+    }));
+  }
+}
+
+/**
+ * Insert single phrase via direct database access (replacing API calls)
+ * Uses the same logic as admin API but without network overhead
+ */
+async function insertPhraseDirectly(phrase, dryRun = false) {
   const validation = validatePhraseData(phrase);
   if (validation.length > 0) {
     return {
@@ -188,92 +401,84 @@ async function insertPhraseViaAPI(phrase, dryRun = false) {
     return {
       success: true,
       phrase: phrase.phrase,
-      action: 'would_insert_via_api',
+      action: 'would_insert_via_database',
       dryRun: true
     };
   }
   
   try {
-    const response = await fetch(`${CONFIG.apiUrl}/api/admin/phrases/batch-import`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phrases: [{
-          content: phrase.phrase,
-          hint: phrase.clue,
-          language: phrase.language || 'en',
-          theme: phrase.theme || null
-        }],
-        adminId: CONFIG.systemUserId
-      })
+    // Use the exact same creation logic as admin API
+    const result = await DatabasePhrase.createEnhancedPhrase({
+      content: phrase.phrase.trim(),
+      hint: phrase.clue?.trim() || '',
+      senderId: null, // System-generated phrases (same as admin API)
+      targetIds: [], // No targeting for bulk imports
+      isGlobal: true, // Default to global for bulk imports
+      phraseType: 'community', // Default to community for bulk imports
+      language: phrase.language || 'en',
+      theme: phrase.theme || null,
+      source: 'app'  // Direct database imports use 'app' source
     });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: `API error (${response.status}): ${errorText}`,
-        phrase: phrase.phrase
-      };
-    }
-    
-    const result = await response.json();
-    
-    // Extract the first successful import from the batch response
-    if (result.results && result.results.successful && result.results.successful.length > 0) {
-      const importedPhrase = result.results.successful[0];
-      return {
-        success: true,
-        phrase: phrase.phrase,
-        id: importedPhrase.id,
-        difficulty: importedPhrase.difficulty,
-        action: 'inserted_via_api'
-      };
-    } else {
-      // Handle case where import was marked successful but no phrase data returned
-      return {
-        success: false,
-        error: `API returned success but no phrase data found`,
-        phrase: phrase.phrase
-      };
-    }
+
+    const { phrase: createdPhrase, targetCount, isGlobal } = result;
+
+    return {
+      success: true,
+      phrase: phrase.phrase,
+      id: createdPhrase.id,
+      difficulty: createdPhrase.difficultyLevel,
+      action: 'inserted_via_database',
+      isGlobal,
+      targetCount
+    };
     
   } catch (error) {
     return {
       success: false,
-      error: `API request failed: ${error.message}`,
+      error: `Database insertion failed: ${error.message}`,
       phrase: phrase.phrase
     };
   }
 }
 
+// Admin service health check removed - using direct database access only
+
 /**
- * Check if Admin Service is available
+ * Check if database is available and ready
  */
-async function checkAdminServiceHealth() {
+async function checkDatabaseHealth() {
   try {
-    console.log(`🔍 Checking Admin Service health at ${CONFIG.apiUrl}...`);
-    const response = await fetch(`${CONFIG.apiUrl}/api/status`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: AbortSignal.timeout(5000) // 5 second timeout
-    });
+    console.log(`🗄️ Checking database connection...`);
     
-    if (response.ok) {
-      const status = await response.json();
-      console.log(`✅ Admin Service is running (${response.status})`);
-      return { available: true, status };
-    } else {
-      console.log(`⚠️ Admin Service responded with status ${response.status}`);
-      return { available: false, error: `HTTP ${response.status}` };
+    // Test basic connection
+    const result = await query('SELECT 1 as test', []);
+    if (result.rows.length === 0) {
+      throw new Error('Database query returned no results');
     }
+    
+    // Check if phrases table exists and is accessible
+    const tableCheck = await query(`
+      SELECT COUNT(*) as total_phrases 
+      FROM phrases 
+      LIMIT 1
+    `, []);
+    
+    const totalPhrases = parseInt(tableCheck.rows[0].total_phrases);
+    console.log(`✅ Database is ready (${totalPhrases} existing phrases)`);
+    
+    return { 
+      available: true, 
+      totalPhrases: totalPhrases,
+      status: 'ready'
+    };
+    
   } catch (error) {
-    console.log(`❌ Admin Service is not available: ${error.message}`);
-    return { available: false, error: error.message };
+    console.log(`❌ Database is not available: ${error.message}`);
+    return { 
+      available: false, 
+      error: error.message,
+      suggestion: 'Check if PostgreSQL is running and database exists'
+    };
   }
 }
 
@@ -287,15 +492,9 @@ async function importPhrases(phrases, options = {}) {
     onProgress = null
   } = options;
   
-  // Check Admin Service health before proceeding
-  if (!dryRun) {
-    const healthCheck = await checkAdminServiceHealth();
-    if (!healthCheck.available) {
-      throw new Error(`Admin Service is not available: ${healthCheck.error}. Please start the Admin Service on port 3003 before importing.`);
-    }
-  }
+  // Health check is now done once at the start, not per batch
   
-  console.log(`📥 ${dryRun ? 'Simulating' : 'Starting'} import of ${phrases.length} phrases via Admin Service API...`);
+  console.log(`📥 ${dryRun ? 'Simulating' : 'Starting'} import of ${phrases.length} phrases via direct database access...`);
   
   const results = {
     total: phrases.length,
@@ -314,11 +513,12 @@ async function importPhrases(phrases, options = {}) {
     
     console.log(`📦 Processing batch ${batchNum}/${totalBatches} (${batch.length} phrases)...`);
     
-    // Process batch via Admin Service API only
-    for (const phrase of batch) {
-      const result = await insertPhraseViaAPI(phrase, dryRun);
-      results.details.push(result);
-      
+    // Process entire batch in a single query
+    const batchResults = await insertPhrasesBatch(batch, dryRun);
+    results.details.push(...batchResults);
+    
+    // Update counters
+    for (const result of batchResults) {
       if (result.success) {
         results.successful++;
       } else {
@@ -334,7 +534,7 @@ async function importPhrases(phrases, options = {}) {
       
       // Progress callback
       if (onProgress) {
-        onProgress(i + batch.indexOf(phrase) + 1, phrases.length, result);
+        onProgress(results.successful + results.failed, phrases.length, result);
       }
     }
     
@@ -628,6 +828,7 @@ function parseArgs() {
       case '--batch-size':
         parsed.batchSize = parseInt(args[++i]);
         break;
+      // Staging removed - script connects to database based on execution environment
       case '--help':
       case '-h':
         parsed.help = true;
@@ -654,20 +855,23 @@ Actions:
   --stats               Show database statistics
 
 Options:
-  --input FILE          Input JSON file with analyzed phrases
+  --input FILE          Input JSON file with analyzed phrases (supports glob patterns)
   --output FILE         Output report file (default: auto-generated)
   --dry-run            Simulate import without making changes
   --batch-size SIZE     Number of phrases per batch (default: 50)
+  --staging            Import to staging server instead of localhost
   --help, -h           Show this help
 
 Examples:
   node phrase-importer.js --stats
   node phrase-importer.js --input analyzed-phrases.json --dry-run
   node phrase-importer.js --input analyzed-phrases.json --import
+  node phrase-importer.js --input "data/2025-08-11*.json" --import
+  node phrase-importer.js --input analyzed-phrases.json --import --staging
   node phrase-importer.js --clean-duplicates --dry-run
   node phrase-importer.js --clean-duplicates
 
-Note: All imports use the Admin Service API endpoint (port 3003)
+Note: All imports use direct database access (secure, no HTTP exposure)
 `);
 }
 
@@ -710,42 +914,107 @@ async function main() {
       process.exit(1);
     }
     
-    // Check if input file exists
-    if (!fs.existsSync(args.input)) {
-      console.error(`❌ Error: Input file "${args.input}" not found`);
+    // Expand file patterns to get list of files
+    const inputFiles = expandFilePatterns(args.input);
+    
+    // Check if any files exist
+    const existingFiles = inputFiles.filter(file => fs.existsSync(file));
+    if (existingFiles.length === 0) {
+      console.error(`❌ Error: No files found matching "${args.input}"`);
       process.exit(1);
     }
     
     console.log(`🚀 Starting phrase import...`);
-    console.log(`   Input: ${args.input}`);
+    console.log(`   Pattern: ${args.input}`);
+    console.log(`   Files found: ${existingFiles.length} (${existingFiles.join(', ')})`);
     console.log(`   Mode: ${args.dryRun ? 'DRY RUN' : 'LIVE IMPORT'}`);
-    console.log(`   Method: Admin Service API`);
+    console.log(`   Method: Direct Database Access`);
     console.log(`   Batch size: ${args.batchSize}`);
     
-    try {
-      // Load input data
-      const inputData = JSON.parse(fs.readFileSync(args.input, 'utf8'));
-      
-      let phrases = [];
-      if (Array.isArray(inputData)) {
-        phrases = inputData;
-      } else if (inputData.phrases && Array.isArray(inputData.phrases)) {
-        phrases = inputData.phrases;
-      } else {
-        throw new Error('Invalid input format. Expected array of phrases or object with phrases property.');
+    // Single health check at the start (not per batch)
+    if (!args.dryRun) {
+      console.log(`🔍 Checking database health...`);
+      const dbHealthCheck = await checkDatabaseHealth();
+      if (!dbHealthCheck.available) {
+        console.error(`❌ Database is not available: ${dbHealthCheck.error}`);
+        console.error(`💡 Suggestion: ${dbHealthCheck.suggestion}`);
+        process.exit(1);
       }
+      console.log(`✅ Database is ready`);
+    }
+    
+    try {
+      // Collect all phrases from all files
+      let allPhrases = [];
+      let globalTheme = null;
+      const processedFiles = [];
+      
+      for (const inputFile of existingFiles) {
+        console.log(`\n📄 Processing file: ${inputFile}`);
+        
+        try {
+          // Load input data
+          const inputData = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
+          
+          let phrases = [];
+          let defaultTheme = null;
+          
+          if (Array.isArray(inputData)) {
+            phrases = inputData;
+          } else if (inputData.phrases && Array.isArray(inputData.phrases)) {
+            phrases = inputData.phrases;
+            // Extract theme from metadata if available
+            if (inputData.metadata && inputData.metadata.theme) {
+              defaultTheme = inputData.metadata.theme;
+              console.log(`   📚 Using theme from metadata: ${defaultTheme}`);
+              if (!globalTheme) globalTheme = defaultTheme; // Set global theme from first file
+            }
+          } else {
+            console.warn(`   ⚠️ Skipping ${inputFile}: Invalid format. Expected array or object with phrases property.`);
+            continue;
+          }
+          
+          // Apply default theme to phrases that don't have one
+          if (defaultTheme) {
+            phrases = phrases.map(p => ({
+              ...p,
+              theme: p.theme || defaultTheme,
+              _sourceFile: inputFile // Track source file
+            }));
+          } else {
+            phrases = phrases.map(p => ({
+              ...p,
+              _sourceFile: inputFile // Track source file
+            }));
+          }
+          
+          console.log(`   ✅ Loaded ${phrases.length} phrases from ${inputFile}`);
+          allPhrases.push(...phrases);
+          processedFiles.push(inputFile);
+          
+        } catch (fileError) {
+          console.warn(`   ❌ Error processing ${inputFile}: ${fileError.message}`);
+        }
+      }
+      
+      if (allPhrases.length === 0) {
+        console.error('❌ No valid phrases found in any files');
+        process.exit(1);
+      }
+      
+      console.log(`\n📊 Total phrases collected: ${allPhrases.length} from ${processedFiles.length} files`);
       
       // Filter out phrases that don't meet quality threshold
       // Accept phrases without quality property (from new AI generation system)
-      const qualityPhrases = phrases.filter(p => 
+      const qualityPhrases = allPhrases.filter(p => 
         !p.quality || p.quality.passesThreshold !== false
       );
       
-      if (qualityPhrases.length < phrases.length) {
-        console.log(`📊 Filtered to ${qualityPhrases.length} high-quality phrases (${phrases.length - qualityPhrases.length} excluded)`);
+      if (qualityPhrases.length < allPhrases.length) {
+        console.log(`📊 Filtered to ${qualityPhrases.length} high-quality phrases (${allPhrases.length - qualityPhrases.length} excluded)`);
       }
       
-      // Import phrases via Admin Service API only
+      // Import phrases via direct database access
       const results = await importPhrases(qualityPhrases, {
         dryRun: args.dryRun,
         batchSize: args.batchSize
@@ -753,11 +1022,13 @@ async function main() {
       
       // Generate report
       const report = generateImportReport(results, {
-        input_file: args.input,
+        input_files: processedFiles,
+        input_pattern: args.input,
         dry_run: args.dryRun,
         batch_size: args.batchSize,
-        original_count: phrases.length,
-        quality_filtered_count: qualityPhrases.length
+        original_count: allPhrases.length,
+        quality_filtered_count: qualityPhrases.length,
+        processed_files_count: processedFiles.length
       });
       
       // Display summary
@@ -775,36 +1046,47 @@ async function main() {
         });
       }
       
-      // Detailed phrase breakdown
+      // Detailed phrase breakdown in table format
       if (results.details && results.details.length > 0) {
-        console.log(`\n📝 Detailed Phrase Report:`);
+        console.log(`\n📝 Import Results Table:`);
         
-        // Successfully imported phrases
-        const successful = results.details.filter(d => d.success && !d.isDuplicate);
-        if (successful.length > 0) {
-          console.log(`\n   ✅ Successfully imported (${successful.length}):`);
-          successful.forEach(d => {
-            console.log(`      "${d.phrase}" - ${d.clue || 'No clue'} (difficulty: ${d.difficulty || 'N/A'})`);
-          });
-        }
+        // Table format showing all phrases with status
+        console.log(`\n┌─────────────────┬─────────────────┬───────┬──────────┬───────────┬─────────────────────┐`);
+        console.log(`│ Phrase          │ Clue            │ Score │ Language │ Imported  │ Reason              │`);
+        console.log(`├─────────────────┼─────────────────┼───────┼──────────┼───────────┼─────────────────────┤`);
         
-        // Duplicate phrases (rejected)
-        const duplicates = results.details.filter(d => d.isDuplicate);
-        if (duplicates.length > 0) {
-          console.log(`\n   🔄 Rejected as duplicates (${duplicates.length}):`);
-          duplicates.forEach(d => {
-            console.log(`      "${d.phrase}" - Already exists in database`);
-          });
-        }
+        results.details.forEach(detail => {
+          // Find the original phrase data to get clue and language
+          const originalPhrase = qualityPhrases.find(p => p.phrase === detail.phrase);
+          const phrase = (detail.phrase || '').padEnd(15).substring(0, 15);
+          const clue = (originalPhrase?.clue || 'No clue').padEnd(15).substring(0, 15);
+          const score = String(detail.difficulty || 'N/A').padStart(5);
+          const language = (originalPhrase?.language || 'en').padEnd(8).substring(0, 8);
+          
+          // Status and reason
+          let imported, reason;
+          if (detail.success && !detail.isDuplicate) {
+            imported = '    ✅    ';
+            reason = args.dryRun ? 'Simulation mode   ' : 'Successfully added';
+          } else if (detail.isDuplicate) {
+            imported = '    ❌    ';
+            reason = 'Duplicate phrase  ';
+          } else {
+            imported = '    ❌    ';
+            reason = (detail.error || 'Unknown error').padEnd(19).substring(0, 19);
+          }
+          
+          console.log(`│ ${phrase} │ ${clue} │ ${score} │ ${language} │ ${imported} │ ${reason} │`);
+        });
         
-        // Failed phrases (other errors)
-        const failed = results.details.filter(d => !d.success && !d.isDuplicate);
-        if (failed.length > 0) {
-          console.log(`\n   ❌ Failed validation (${failed.length}):`);
-          failed.forEach(d => {
-            console.log(`      "${d.phrase}" - ${d.error}`);
-          });
-        }
+        console.log(`└─────────────────┴─────────────────┴───────┴──────────┴───────────┴─────────────────────┘`);
+        
+        // Summary counts
+        const successful = results.details.filter(d => d.success && !d.isDuplicate).length;
+        const duplicates = results.details.filter(d => d.isDuplicate).length;
+        const failed = results.details.filter(d => !d.success && !d.isDuplicate).length;
+        
+        console.log(`\n📊 Summary: ${successful} imported, ${duplicates} duplicates, ${failed} failed`);
       }
       
       // Show errors if any
@@ -834,6 +1116,16 @@ async function main() {
       
       // Display final readable report
       displayFinalReport(report, args.dryRun);
+      
+      // Move imported files to imported directory if import was successful
+      if (!args.dryRun && report.import.successful > 0) {
+        console.log(`\n📁 Moving ${processedFiles.length} imported files...`);
+        processedFiles.forEach(file => moveImportedFile(file, false));
+      } else if (args.dryRun) {
+        // For dry run, just show what would happen
+        console.log(`\n📁 Would move ${processedFiles.length} files...`);
+        processedFiles.forEach(file => moveImportedFile(file, true));
+      }
       
       console.log(`\n✅ Import ${args.dryRun ? 'simulation' : ''} complete!`);
       
