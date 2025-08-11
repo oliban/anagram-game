@@ -15,7 +15,6 @@ services:
     depends_on:
       - game-server
       - web-dashboard
-      - link-generator
       - admin-service
     restart: unless-stopped
     networks:
@@ -50,7 +49,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # Game Server (Main API)
+  # Game Server (Main API + Contributions)
   game-server:
     build:
       context: ./services
@@ -104,32 +103,6 @@ services:
       retries: 3
       start_period: 15s
 
-  # Link Generator Service
-  link-generator:
-    build:
-      context: ./services
-      dockerfile: link-generator/Dockerfile
-    container_name: anagram-link-generator
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-anagram_game}
-      - DB_SSL=false
-      - ADMIN_API_KEY=${ADMIN_API_KEY:-test-admin-key-123}
-      - SECURITY_RELAXED=false
-      - LOG_SECURITY_EVENTS=true
-      - SKIP_RATE_LIMITS=true
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - anagram-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/api/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
 
   # Admin Service
   admin-service:

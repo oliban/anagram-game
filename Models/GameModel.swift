@@ -902,10 +902,19 @@ class GameModel: ObservableObject {
         networkManager.$justReceivedPhrase
             .compactMap { $0 } // Only proceed if phrase is not nil
             .sink { [weak self] phrase in
+                print("🔥 WEBSOCKET DEBUG: justReceivedPhrase observer triggered!")
+                print("🔥 WEBSOCKET DEBUG: Phrase content: '\(phrase.content)'")
+                print("🔥 WEBSOCKET DEBUG: Sender name: '\(phrase.senderName)'")
+                print("🔥 WEBSOCKET DEBUG: Target ID: '\(phrase.targetId ?? "nil")'")
+                
                 DispatchQueue.main.async {
+                    print("🔥 WEBSOCKET DEBUG: About to call addPhraseToQueue...")
                     self?.addPhraseToQueue(phrase)
+                    print("🔥 WEBSOCKET DEBUG: addPhraseToQueue completed!")
+                    
                     // Clear the trigger so it doesn't fire again
                     networkManager.justReceivedPhrase = nil
+                    print("🔥 WEBSOCKET DEBUG: Cleared justReceivedPhrase")
                 }
             }
             .store(in: &cancellables)

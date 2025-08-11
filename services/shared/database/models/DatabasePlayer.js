@@ -512,7 +512,8 @@ class DatabasePlayer {
           (SELECT COUNT(*) FROM completed_phrases WHERE player_id = p.id) as phrases_completed_detailed,
           (SELECT COUNT(*) FROM skipped_phrases WHERE player_id = p.id) as phrases_skipped,
           (SELECT COUNT(*) FROM phrases WHERE created_by_player_id = p.id) as phrases_created,
-          (SELECT AVG(completion_time_ms) FROM completed_phrases WHERE player_id = p.id) as avg_completion_time
+          (SELECT AVG(completion_time_ms) FROM completed_phrases WHERE player_id = p.id) as avg_completion_time,
+          COALESCE((SELECT total_score FROM player_scores WHERE player_id = p.id AND score_period = 'all_time' LIMIT 1), 0) as total_score
         FROM players p
         WHERE p.id = $1
       `, [playerId]);
