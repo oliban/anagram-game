@@ -280,10 +280,29 @@ docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres 
 ./scripts/deploy-to-pi.sh 192.168.1.222
 ```
 
-### Deployment Sequence
-- **Local**: Start services → Verify health → Update version → Build iOS → Deploy → Monitor
-- **AWS**: Build linux/amd64 → Deploy → Health check (see `docs/aws-production-server-management.md`)
-- **Pi**: Deploy code → Test tunnel URL → Update iOS config → Build apps
+### 🚀 ONE-COMMAND DEPLOYMENT
+
+#### Local Development
+```bash
+./build_multi_sim.sh local              # Builds & deploys to iPhone 15 simulators
+```
+
+#### Pi Staging (with Cloudflare Tunnel)
+```bash
+./scripts/deploy-staging.sh             # Complete staging deployment
+```
+**Staging scripts automatically:**
+- Sync code to Pi
+- Restart services with new tunnel URL
+- Pass `DYNAMIC_TUNNEL_URL` to containers
+- Build iOS apps with correct configuration
+- Handle tunnel URL changes on reboot
+
+#### AWS Production
+```bash
+./build_multi_sim.sh aws                # Deploys to iPhone SE simulator
+# See docs/aws-production-server-management.md for server deployment
+```
 
 ## ARCHITECTURE & ENVIRONMENT
 
@@ -291,9 +310,8 @@ docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres 
 **Client-Server**: iOS SwiftUI + SpriteKit ↔ Docker Services ↔ Shared PostgreSQL
 
 **Services:**
-- 🎮 **Game Server** (port 3000): Core multiplayer API + WebSocket
+- 🎮 **Game Server** (port 3000): Core multiplayer API + WebSocket + contribution system
 - 📊 **Web Dashboard** (port 3001): Monitoring interface
-- 🔗 **Link Generator** (port 3002): Contribution link service + phrase creation web interface
 - 🔧 **Admin Service** (port 3003): Content management & batch operations
 - 🗄️ **PostgreSQL** (port 5432): Shared database
 
@@ -320,7 +338,6 @@ docker-compose -f docker-compose.services.yml exec -T postgres psql -U postgres 
   - Game Server: 120/30 requests per 15min (dev/prod) = ~8-2 per minute
   - Web Dashboard: 300/60 = ~20-4 per minute (dashboard polling)
   - Admin Service: 30/5 = ~2-0.3 per minute (strictest)
-  - Link Generator: 60/15 general, 15/3 link creation
 - **✅ Input Validation**: XSS/SQL injection protection with Joi + express-validator
   - Security patterns: `/^[a-zA-Z0-9\s\-_.,!?'"()åäöÅÄÖ]*$/` for safe text
   - UUID validation for IDs, language code validation
@@ -474,10 +491,28 @@ xcodebuild -exportArchive \
 - Team ID: `5XR7USWXMZ` (configured in project settings)
 
 ### API Endpoints
-- **Game Server (3000)**: `/api/status`, `/api/players`, `/api/phrases/for/:playerId`, `/api/phrases/create`
-- **Web Dashboard (3001)**: `/api/status`, `/api/monitoring/stats`
-- **Link Generator (3002)**: `/api/status`, `/contribute/:token`, `/api/contribution/:token`
-- **Admin Service (3003)**: `/api/status`, `/api/admin/phrases/batch-import`
+
+#### Game Server (Port 3000)
+**Core API:**
+- `/api/status` - Health check
+- `/api/players` - Player management
+- `/api/phrases/for/:playerId` - Get phrases
+- `/api/phrases/create` - Create phrases
+
+**Contribution System (Consolidated):**
+- `/contribute/:token` - Web contribution page
+- `/api/contribution/request` - Generate contribution link
+- `/api/contribution/:token` - Get link details
+- `/api/contribution/:token/submit` - Submit contributed phrase
+- `/api/contribution/status` - Contribution system health
+
+#### Web Dashboard (Port 3001)
+- `/api/status` - Health check
+- `/api/monitoring/stats` - Real-time statistics
+
+#### Admin Service (Port 3003)
+- `/api/status` - Health check
+- `/api/admin/phrases/batch-import` - Bulk phrase import
 
 
 

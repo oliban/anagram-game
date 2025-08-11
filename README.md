@@ -1,6 +1,6 @@
-# 🎯 Anagram Game
+# 🎯 Wordshelf
 
-An immersive iOS anagram puzzle game built with SwiftUI and SpriteKit physics. Players drag and arrange letter tiles in a 3D bookshelf environment to form words from scrambled sentences.
+An immersive iOS multiplayer word game built with SwiftUI and SpriteKit physics. Players drag and arrange letter tiles in a 3D bookshelf environment to form words from scrambled sentences.
 
 ## 🎮 Features
 
@@ -10,34 +10,59 @@ An immersive iOS anagram puzzle game built with SwiftUI and SpriteKit physics. P
 - **Device Tilt Mechanics**: Tilt your iPhone forward to make tiles fall from shelves
 - **Spatial Word Formation**: Arrange tiles physically to spell words left-to-right
 
+### Multiplayer & Social
+- **Real-time Multiplayer**: Play with friends via WebSocket connections
+- **Global Leaderboards**: Daily, weekly, and all-time rankings
+- **Custom Phrase Contributions**: Share puzzles with friends via contribution links
+- **Player Statistics**: Track progress and achievements
+
 ## 📱 Supported Platforms
 
 - **iOS**: iPhone (iOS 17.2+)
 
 ## 🏗️ Architecture
 
-### SwiftUI + SpriteKit Hybrid
+### iOS Client (SwiftUI + SpriteKit)
 ```
 Views/
 ├── ContentView.swift          # Main app entry point
 ├── PhysicsGameView.swift      # Core game with SpriteKit integration
+├── LobbyView.swift           # Multiplayer lobby interface
 └── TileView.swift             # Individual tile components
 
 Models/
 ├── GameModel.swift            # Observable game state and logic
+├── NetworkManager.swift      # API and WebSocket connections
 └── Item.swift                 # Data structures
 
-Resources/
-├── anagrams.txt              # Game phrases (one per line)
-└── Assets.xcassets/          # App icons and images
+Services/
+├── Network/PlayerService.swift    # Player operations
+├── Network/PhraseService.swift    # Phrase operations
+└── shared/DebugLogger.swift       # Cross-service logging
+```
+
+### Backend Services (Docker + Node.js)
+```
+services/
+├── game-server/              # Core API + WebSocket + contributions (port 3000)
+├── web-dashboard/           # Monitoring interface (port 3001)  
+├── admin-service/          # Content management (port 3003)
+└── shared/                 # Database models & utilities
 ```
 
 ### Key Components
 
+**iOS Client:**
 - **`PhysicsGameScene`**: SpriteKit scene handling physics simulation
 - **`LetterTile`**: 3D-rendered physics-enabled tile sprites  
 - **`GameModel`**: SwiftUI-observable game state management
-- **Word Detection Algorithm**: Spatial arrangement validation system
+- **`NetworkManager`**: Real-time multiplayer connectivity
+
+**Backend Services:**
+- **Game Server**: Multiplayer API, WebSocket, phrase contributions
+- **Web Dashboard**: Real-time monitoring and analytics
+- **Admin Service**: Content management and batch operations
+- **PostgreSQL**: Shared database with automated leaderboards
 
 ## 🔧 Development Setup
 
@@ -52,84 +77,69 @@ Resources/
 git clone git@github.com:oliban/anagram-game.git
 cd anagram-game
 
-# Open in Xcode
-open "Anagram Game.xcodeproj"
-
-# Build and run
-⌘+R
+# Build iOS app with backend services
+./build_multi_sim.sh local          # Local development build
 ```
+
 ## 🛠️ Backend Setup
 
-This section guides you through setting up the server environment for the Anagram Game.
+This section guides you through setting up the microservices environment.
 
 ### Prerequisites
 Ensure you have the following installed:
 
-- Node.js 14.x or later
-- PostgreSQL 12.x or later
-- npm version 6.x or later
+- Docker Desktop
+- Node.js 18.x or later  
+- PostgreSQL (via Docker)
 
 ### Quick Setup (Recommended)
 
-**Use the automated setup script located in the server directory:**
+**Start all backend services:**
 ```bash
-git clone git@github.com:oliban/anagram-game.git
-cd anagram-game/server
-./setup.sh
+# Start PostgreSQL + all microservices
+docker-compose -f docker-compose.services.yml up -d
+
+# Verify services are healthy
+docker-compose -f docker-compose.services.yml ps
 ```
 
-The setup script will automatically:
-- Install Node.js dependencies
-- Generate API documentation
-- Create environment file from template
-- Provide database setup instructions
+**Services Available:**
+- **Game Server**: http://localhost:3000 (API + WebSocket + Contributions)
+- **Web Dashboard**: http://localhost:3001 (Monitoring)
+- **Admin Service**: http://localhost:3003 (Content Management)
+- **PostgreSQL**: localhost:5432
 
-### Manual Installation Steps
+### Development Workflow
 
-If you prefer to set up manually:
+```bash
+# One-command deployment
+./build_multi_sim.sh local          # Local development
+./scripts/deploy-staging.sh         # Complete Pi staging deployment
+./build_multi_sim.sh aws            # AWS production
 
-1. **Clone the Repository:**
-   ```bash
-   git clone git@github.com:oliban/anagram-game.git
-   cd anagram-game/server
-   ```
+# Run comprehensive tests
+node testing/scripts/automated-test-runner.js
 
-2. **Install Dependencies:**
-   ```bash
-   npm install
-   ```
+# Monitor services
+docker-compose -f docker-compose.services.yml logs -f
 
-3. **Generate API Documentation:**
-   ```bash
-   npm run docs
-   ```
+# Database access
+docker-compose -f docker-compose.services.yml exec postgres psql -U postgres -d anagram_game
+```
 
-4. **Environment Variables:**
-   - Copy the example environment file:
-     ```bash
-     cp .env.example .env
-     ```
-   - Edit the `.env` file to include your database credentials and configuration options.
+### Environment Configuration
 
-5. **Database Setup:**
-   - Ensure PostgreSQL is running.
-   - Initialize your database with the schema:
-     ```bash
-     psql -U <DB_USER> -d <DB_NAME> -f database/schema.sql
-     ```
+Copy and customize the environment file:
+```bash
+cp .env.example .env
+```
 
-6. **Start the Server:**
-   ```bash
-   npm start
-   # or directly with:
-   node server.js
-   ```
-
-6. **API Documentation:**
-   - Swagger documentation is available at: `http://localhost:<PORT>/api/docs`
-   - Replace `<PORT>` with the port number specified in your `.env` file or default to `3000`.
-
-Make sure to adapt the `<DB_USER>` and `<DB_NAME>` placeholders to your actual database username and name.
+Key environment variables:
+- `GAME_SERVER_PORT=3000`
+- `WEB_DASHBOARD_PORT=3001`  
+- `ADMIN_SERVICE_PORT=3003`
+- `DB_NAME=anagram_game`
+- `SECURITY_RELAXED=true` (development only)
 
 ## 🤝 Contributing
 
