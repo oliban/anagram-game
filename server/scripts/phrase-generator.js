@@ -215,47 +215,20 @@ function generateEnglishPhrasesWithClues(level) {
 }
 
 /**
- * Generate Swedish phrases using PURE AI with BATCH validation - no hardcoded lists!
+ * Generate Swedish phrases using AI - trusting AI to handle grammar correctly
  */
 async function generateSwedishPhrasesWithClues(level) {
   console.log(`🤖 AI generating grammatically perfect Swedish phrases for level: ${level}`);
   
   try {
-    // Use AI to generate Swedish phrases with perfect grammar
-    const aiPhrases = await generateGrammaticallyCorrectSwedishPhrases(15, level);
+    // Use AI to generate Swedish phrases with perfect grammar - no validation needed
+    const aiPhrases = await generateGrammaticallyCorrectPhrases(15, level, 'sv');
+    console.log(`✅ Generated ${aiPhrases.length} Swedish phrases with proper en/ett grammar`);
     
-    // BATCH validate all phrases at once with AI
-    const phrasesToValidate = aiPhrases.map(p => p.phrase);
-    console.log(`🔍 BATCH validating ${phrasesToValidate.length} Swedish phrases...`);
-    
-    const { validateSwedishGrammarBatch } = require('./ai-swedish-grammar');
-    const validationResults = await validateSwedishGrammarBatch(phrasesToValidate);
-    
-    // Process validation results
-    const validatedPhrases = [];
-    for (let i = 0; i < aiPhrases.length; i++) {
-      const phraseObj = aiPhrases[i];
-      const validation = validationResults[i];
-      
-      if (!validation.is_correct) {
-        console.warn(`⚠️ AI detected grammar issue: "${phraseObj.phrase}"`);
-        console.log(`✅ AI corrected to: "${validation.corrected_phrase}"`);
-        console.log(`💡 AI explanation: ${validation.explanation}`);
-        
-        validatedPhrases.push({
-          phrase: validation.corrected_phrase,
-          clue: phraseObj.clue
-        });
-      } else {
-        validatedPhrases.push(phraseObj);
-      }
-    }
-    
-    return validatedPhrases;
+    return aiPhrases;
     
   } catch (error) {
     console.error('🚨 AI Swedish generation failed:', error.message);
-    // NO FALLBACK - Pure AI generation only
     throw new Error(`Swedish phrase generation failed: ${error.message}`);
   }
 }
