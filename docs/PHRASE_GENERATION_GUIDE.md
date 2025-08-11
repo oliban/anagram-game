@@ -73,13 +73,14 @@ ssh pi@192.168.1.222 "cd ~/anagram-game/server && node scripts/phrase-importer.j
 - Creation timestamps
 
 ### 7. 🚨 MANDATORY USER REVIEW (CRITICAL STEP - NEVER SKIP!)
+- **🔴 PRE-VALIDATE**: Run word length validation BEFORE showing phrases to user
+- **🔴 AUTO-REJECT**: Remove any phrases with words >7 characters
+- **🔴 REGENERATE**: Replace rejected phrases with valid alternatives
+- **🔴 PRESENT CLEAN TABLE**: Only show validated phrases to user
 - **🔴 ALWAYS EXTRACT AND SHOW TABLE** from import results to user
-- **🔴 NEVER IMPORT** without showing user the complete table first
-- **🔴 PRESENT TABLE** showing: Phrase | Clue | Score | Language | Import Status | Reason
 - **🔴 WAIT FOR USER APPROVAL** after showing the table
 - **🔴 USER MUST SEE** every phrase, clue, score, and import status before approval
 - **🔴 EXTRACT TABLE FROM OUTPUT** - don't let it get buried in verbose logs
-- **🔴 STOP AND PRESENT TABLE** - even if import already ran, extract and show the table!
 
 ### 8. Import Process (ONLY AFTER USER APPROVAL)
 - Database import with staging server support
@@ -150,15 +151,49 @@ Examples: "ris skål" → "risskål", "grädde sås" → "gräddsås", "kock kni
 2. **Double consonant reduction**: "soppa gryta" → "soppgryta" (remove duplicate consonant)
 3. **Connecting consonants**: Add 's' when needed: "vitlök press" → "vitlökspress"
 4. **Natural compounds**: Only create compounds that Swedish speakers would naturally use
-5. **Word length check**: Each word ≤7 characters after compound formation
+5. **🔴 CRITICAL: Word length validation**: Each word MUST be ≤7 characters after compound formation
+
+#### 🚨 MANDATORY Word Length Validation (≤7 characters)
+**🔴 AUTOMATIC REJECTION**: Any word >7 characters MUST be rejected immediately
+
+**Three-Stage Validation Process:**
+1. **Generate** phrases using AI
+2. **🔴 AUTO-VALIDATE**: Run automatic word length check on ALL phrases
+3. **🔴 PRESENT**: Only show validated phrases to user
+
+**Auto-Rejection Examples:**
+- "kryddträdgård" (13 chars) → AUTO-REJECT → Replace with "örter" (5 chars)
+- "vitlökspress" (12 chars) → AUTO-REJECT → Replace with "vitlök" (6 chars)
+- "molekylkök" (10 chars) → AUTO-REJECT → Replace with "molekyl" (7 chars)
+- "flambera" (8 chars) → AUTO-REJECT → Replace with "flambé" (6 chars)
+
+**🔴 NEVER**: Present phrases with >7 character words to user
+**🔴 ALWAYS**: Pre-validate and fix/replace before user review
 
 #### Validation Checklist for EVERY Swedish Phrase:
+- [ ] **🔴 FIRST**: Each word ≤7 characters (AUTO-REJECT if not)
 - [ ] No spaces in compound words (särskrivning check)
 - [ ] Natural Swedish compound formation
 - [ ] Correct en/ett gender agreement
 - [ ] Proper adjective declension
-- [ ] Each word ≤7 characters
 - [ ] Would a native speaker approve this phrase?
+
+#### Word Length Pre-Validation Function
+```javascript
+function validateWordLength(phrases) {
+  return phrases.filter(phrase => {
+    const words = phrase.phrase.split(' ');
+    const validLength = words.every(word => word.length <= 7);
+    if (!validLength) {
+      console.log(`❌ REJECTED: "${phrase.phrase}" - contains word(s) >7 characters`);
+      return false;
+    }
+    return true;
+  });
+}
+```
+
+**🔴 IMPLEMENTATION REQUIREMENT**: This validation MUST run before presenting phrases to user
 
 ## 🚨 CRITICAL: User Approval Process (MANDATORY STEP)
 
@@ -238,9 +273,11 @@ node scripts/phrase-importer.js --input data/phrases-*.json --dry-run
 ## Quality Assurance
 
 ### Grammar Validation
+- **🚨 CRITICAL**: Word length validation FIRST (≤7 characters per word)
 - **🚨 CRITICAL**: Swedish compound words must be single words (no särskrivning!)
+- **MANDATORY**: Pre-validate word length before user review
 - Swedish grammar rules applied (see mandatory rules section above)
-- 3-step AI correction process
+- 3-step AI correction process with automatic rejection of >7 character words
 - Language-specific patterns
 - **MANDATORY**: Apply särskrivning prevention rules to ALL Swedish phrases
 
