@@ -13,7 +13,7 @@ const DatabasePlayer = require('./shared/database/models/DatabasePlayer');
 const DatabasePhrase = require('./shared/database/models/DatabasePhrase');
 const ScoringSystem = require('./shared/services/scoringSystem');
 const ConfigService = require('./shared/services/config-service');
-const RouteAnalytics = require('./shared/services/routeAnalytics');
+// const RouteAnalytics = require('./shared/services/routeAnalytics'); // DISABLED - causing log errors
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -25,17 +25,17 @@ const path = require('path');
 const app = express();
 const server = createServer(app);
 
-// Initialize configuration service and route analytics
+// Initialize configuration service
 const configService = new ConfigService(pool);
-const routeAnalytics = new RouteAnalytics('game-server');
+// const routeAnalytics = new RouteAnalytics('game-server'); // DISABLED - causing log errors
 
 // CORS configuration - secure but development-friendly
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isSecurityRelaxed = process.env.SECURITY_RELAXED === 'true';
 
-// In development with SECURITY_RELAXED, allow all origins
-const corsOptions = isDevelopment && isSecurityRelaxed ? {
-  origin: true, // Allow all origins in relaxed development mode
+// In development with SECURITY_RELAXED, or when SECURITY_RELAXED is true in staging, allow all origins
+const corsOptions = (isDevelopment && isSecurityRelaxed) || isSecurityRelaxed ? {
+  origin: true, // Allow all origins in relaxed mode
   methods: ["GET", "POST"],
   credentials: true
 } : {
@@ -43,7 +43,7 @@ const corsOptions = isDevelopment && isSecurityRelaxed ? {
     const allowedOrigins = isDevelopment 
       ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 
          'http://192.168.1.133:3000', 'http://192.168.1.133:3001', 'http://192.168.1.133:3002']
-      : ['https://your-production-domain.com', 'https://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com'];
+      : ['https://your-production-domain.com', 'https://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com', 'https://lake-throwing-aluminium-ol.trycloudflare.com'];
     
     // Allow requests with no origin (mobile apps, curl, iOS simulator)
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -63,7 +63,7 @@ const corsOptions = isDevelopment && isSecurityRelaxed ? {
 console.log('🔧 CORS Configuration:', {
   isDevelopment,
   isSecurityRelaxed,
-  corsMode: isDevelopment && isSecurityRelaxed ? 'RELAXED (origin: true)' : 'RESTRICTED'
+  corsMode: (isDevelopment && isSecurityRelaxed) || isSecurityRelaxed ? 'RELAXED (origin: true)' : 'RESTRICTED'
 });
 
 // Rate limiting configuration
@@ -317,8 +317,8 @@ app.use(express.static('public'));
 // Apply rate limiting to API routes
 app.use('/api', apiLimiter);
 
-// Route analytics middleware (only for API routes)
-app.use('/api', routeAnalytics.createMiddleware());
+// Route analytics middleware (only for API routes) - TEMPORARILY DISABLED
+// app.use('/api', routeAnalytics.createMiddleware());
 
 // Swagger API documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
@@ -346,6 +346,13 @@ const contributionRoutesFactory = require('./routes/contributions');
 const leaderboardRoutesFactory = require('./routes/leaderboards');
 const debugRoutesFactory = require('./routes/debug');
 const adminRoutesFactory = require('./routes/admin');
+
+// Serve static assets for contribution pages
+app.use('/contribute', express.static(path.join(__dirname, 'public/contribute')));
+
+
+
+
 
 // Initialize and use route modules after dependencies are ready
 const initializeRoutes = () => {
@@ -460,7 +467,9 @@ io.on('connection', (socket) => {
         console.log(`✅ Found player in database: ${existingPlayer.name} (${playerId})`);
         
         // Update socket ID for existing player
+        console.log(`🔧 SOCKET UPDATE DEBUG: Updating socket for playerId: ${playerId}, socketId: ${socket.id}`);
         const player = await DatabasePlayer.updateSocketId(playerId, socket.id);
+        console.log(`🔧 SOCKET UPDATE DEBUG: Update result - player found: ${!!player}, player name: ${player?.name || 'N/A'}`);
         
         if (player) {
           console.log(`👤 Player connected via socket: ${player.name} (${socket.id})`);

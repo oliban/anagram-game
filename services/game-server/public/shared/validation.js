@@ -13,8 +13,8 @@ class ValidationHelpers {
             errors.push('Phrase must be at least 3 characters long');
         }
         
-        if (trimmed.length > 35) {
-            errors.push('Phrase must be less than 35 characters');
+        if (trimmed.length > 200) {
+            errors.push('Phrase must be less than 200 characters');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-',.!?]+$/.test(trimmed)) {
@@ -22,26 +22,13 @@ class ValidationHelpers {
         }
         
         // Use same word count logic as PhraseCreationView.swift
-        const words = trimmed.split(/\s+/).filter(word => word.length > 0);
-        const wordCount = words.length;
-        
+        const wordCount = trimmed.split(/\s+/).filter(word => word.length > 0).length;
         if (wordCount < 2) {
             errors.push('Phrase must contain at least 2 words');
         }
         
-        if (wordCount > 4) {
-            errors.push('Phrase must contain no more than 4 words');
-        }
-        
-        // Check each word length (max 7 letters per word)
-        const longWords = words.filter(word => {
-            // Remove punctuation and count only letters
-            const letters = word.replace(/[^a-zA-ZåäöÅÄÖ]/g, '');
-            return letters.length > 7;
-        });
-        
-        if (longWords.length > 0) {
-            errors.push('Each word must be 7 letters or less');
+        if (wordCount > 6) {
+            errors.push('Phrase must contain no more than 6 words');
         }
         
         return errors;
@@ -65,8 +52,8 @@ class ValidationHelpers {
             errors.push('Clue must be at least 3 characters long');
         }
         
-        if (trimmed.length > 32) {
-            errors.push('Clue must be 32 characters or less');
+        if (trimmed.length > 500) {
+            errors.push('Clue must be less than 500 characters');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-',.!?0-9]+$/.test(trimmed)) {
@@ -95,8 +82,8 @@ class ValidationHelpers {
         
         const trimmed = name.trim();
         
-        if (trimmed.length > 10) {
-            errors.push('Name must be 10 characters or less');
+        if (trimmed.length > 50) {
+            errors.push('Name must be less than 50 characters');
         }
         
         if (!/^[a-zA-ZåäöÅÄÖ\s\-']+$/.test(trimmed)) {

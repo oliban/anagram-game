@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Core game server - multiplayer API + WebSocket
+  # Core game server - multiplayer API + WebSocket + contribution system
   game-server:
     build:
       context: ./services
@@ -40,6 +40,7 @@ services:
       - SECURITY_RELAXED=${SECURITY_RELAXED}
       - LOG_SECURITY_EVENTS=${LOG_SECURITY_EVENTS}
       - SKIP_RATE_LIMITS=${SKIP_RATE_LIMITS}
+      - DYNAMIC_TUNNEL_URL=${DYNAMIC_TUNNEL_URL}
     ports:
       - "${GAME_SERVER_PORT}:${GAME_SERVER_PORT}"
     volumes:
@@ -72,32 +73,6 @@ services:
     volumes:
       - ./services/logs:/app/logs
 
-  # Link generator service
-  link-generator:
-    build:
-      context: ./services
-      dockerfile: link-generator/Dockerfile
-    container_name: anagram-link-generator
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_SSL=${DB_SSL}
-      - LINK_GENERATOR_PORT=${LINK_GENERATOR_PORT}
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
-      - SECURITY_RELAXED=${SECURITY_RELAXED}
-      - LOG_SECURITY_EVENTS=${LOG_SECURITY_EVENTS}
-      - SKIP_RATE_LIMITS=${SKIP_RATE_LIMITS}
-    ports:
-      - "${LINK_GENERATOR_PORT}:${LINK_GENERATOR_PORT}"
-    volumes:
-      - ./services/logs:/app/logs
 
   # Admin service - content management and batch operations
   admin-service:

@@ -284,8 +284,6 @@ module.exports = (dependencies) => {
               timestamp: new Date().toISOString()
             };
             
-            console.log(`🔧 WEBSOCKET: Sending contribution phrase to ${validation.requestingPlayerName}`);
-            console.log(`🎯 WEBSOCKET TARGET: Socket ID ${player.socketId}`);
             
             // Emit the WebSocket event
             io.to(player.socketId).emit('new-phrase', webSocketPayload);
