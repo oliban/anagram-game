@@ -83,6 +83,10 @@ echo "🔧 Running code update on Pi (preserving database)..."
 ssh $PI_USER@$PI_HOST << 'EOF'
     cd ~/anagram-game
     
+    echo "📁 Copying contribution web files to server/public/..."
+    mkdir -p server/public
+    cp -r services/game-server/public/* server/public/ 2>/dev/null || echo "⚠️  services/game-server/public not found, skipping"
+    
     echo "🐳 Stopping current services..."
     docker-compose -f docker-compose.services.yml down || true
     
