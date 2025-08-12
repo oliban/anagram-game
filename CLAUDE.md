@@ -75,7 +75,7 @@ feature/* branches ──→ develop ──→ main ──→ production
 
 **📏 WORD LENGTH LIMITS:**
 - ❌ **Each word max 7 characters** - "December" (8 chars) = INVALID
-- ❌ **Total 2-4 words only** - Single words or 5+ words = INVALID
+- ❌ **Total 1-4 words only** - 5+ words = INVALID
 
 **🚫 CLUE RESTRICTIONS:**  
 - ❌ **Clue cannot contain ANY word from the phrase** - "test" phrase with "this is a test" clue = INVALID
@@ -88,7 +88,7 @@ feature/* branches ──→ develop ──→ main ──→ production
 
 **📋 VALIDATION CHECKLIST - RUN EVERY TIME:**
 1. Count characters in each word (≤7 each)
-2. Count total words (2-4 total)
+2. Count total words (1-4 total)
 3. Check clue doesn't contain phrase words
 4. Verify language consistency
 5. Confirm theme matches request
@@ -169,6 +169,46 @@ cp /tmp/endpoint.js services/game-server/routes/leaderboards.js
 - **Feature branch** - No backwards compatibility needed
 - **Measure first** - No premature optimization, use Instruments for real bottlenecks
 - **Security minded** - Validate inputs, use Keychain for sensitive data
+
+### 🚨 CRITICAL: COMPREHENSIVE TESTING PROTOCOL (MANDATORY)
+**❌ NEVER CLAIM SOMETHING WORKS WITHOUT TESTING EVERY STEP**
+
+**🔴 FUNDAMENTAL RULE: TEST BEFORE CLAIMING SUCCESS**
+- **NEVER** say "this should work" or "everything is working" without actual verification
+- **ALWAYS** test each component in the flow before moving to the next
+- **MANDATORY** end-to-end testing before declaring completion
+
+**📋 TESTING REQUIREMENTS:**
+1. **Component Testing**: Test each individual piece (API endpoints, database queries, UI components)
+2. **Integration Testing**: Test how components work together
+3. **End-to-End Testing**: Test the complete user flow from start to finish
+4. **Error Scenario Testing**: Test failure cases and error handling
+5. **Cross-Environment Testing**: Test in the actual environment (local/staging/production)
+
+**🧪 TESTING WORKFLOW:**
+```bash
+# Test each step before claiming it works
+1. Test API endpoint: curl -X POST ... | jq '.'
+2. Test database changes: psql -c "SELECT ..." 
+3. Test UI component: Load page and verify functionality
+4. Test complete flow: Simulate actual user interaction
+5. Test error cases: Try invalid inputs, network failures
+```
+
+**✅ EVIDENCE REQUIRED BEFORE COMPLETION:**
+- **HTTP Response Codes**: Show actual 200/201 success responses  
+- **Database Records**: Verify data was actually created/updated
+- **UI Functionality**: Confirm forms submit, pages load, buttons work
+- **Error Handling**: Demonstrate graceful failure modes
+- **Performance**: Verify acceptable response times
+
+**❌ FORBIDDEN CLAIMS:**
+- "The system is now working" (without showing test results)
+- "This should fix it" (test it!)  
+- "The API accepts requests" (show the actual successful response)
+- "Everything is configured correctly" (prove it with tests)
+
+**Recovery Protocol**: When you catch yourself making untested claims, immediately stop and run comprehensive tests for that component before continuing.
 
 ## 📚 QUICK REFERENCE GUIDES
 - 🐛 **Debugging & Logging**: `docs/DEBUGGING_GUIDE.md`
