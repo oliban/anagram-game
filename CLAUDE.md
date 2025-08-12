@@ -57,6 +57,42 @@ feature/* branches ──→ develop ──→ main ──→ production
 
 **When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."**
 
+### 🚨 CRITICAL: CLAUDE IS THE AI PHRASE GENERATOR
+**🔴 NEVER DELEGATE PHRASE GENERATION** - When users request phrases or the system calls for AI generation, CLAUDE must generate the phrases directly!
+
+**❌ CRITICAL MISTAKES:**
+- Waiting for "AI system" to generate phrases when Claude IS the AI
+- Saying "the AI produced wrong themes" instead of generating correct themes
+- Trying to "fix the generator" instead of generating requested phrases
+
+**✅ CORRECT BEHAVIOR:**
+- User requests phrases → Claude immediately generates them
+- System shows "🤖 AI generating..." → Claude provides the generation
+- Wrong theme/difficulty produced → Claude generates correct ones
+
+### 🔍 MANDATORY PHRASE VALIDATION RULES
+**🚨 CLAUDE MUST VERIFY EVERY PHRASE BEFORE PROVIDING:**
+
+**📏 WORD LENGTH LIMITS:**
+- ❌ **Each word max 7 characters** - "December" (8 chars) = INVALID
+- ❌ **Total 2-4 words only** - Single words or 5+ words = INVALID
+
+**🚫 CLUE RESTRICTIONS:**  
+- ❌ **Clue cannot contain ANY word from the phrase** - "test" phrase with "this is a test" clue = INVALID
+- ❌ **No exact phrase words in clue** - "quick fox" with "the quick animal" = INVALID
+
+**🌐 LANGUAGE CONSISTENCY:**
+- ✅ **Pure Swedish OK** - "vit snö" with "kall vinter" = VALID  
+- ✅ **Pure English OK** - "white snow" with "cold winter" = VALID
+- ❌ **Mixed languages** - Only if culturally appropriate (brand names, etc.)
+
+**📋 VALIDATION CHECKLIST - RUN EVERY TIME:**
+1. Count characters in each word (≤7 each)
+2. Count total words (2-4 total)
+3. Check clue doesn't contain phrase words
+4. Verify language consistency
+5. Confirm theme matches request
+
 
 ## CODE QUALITY REQUIREMENTS
 - **Zero tolerance for bad patterns** - Stop and refactor immediately
@@ -142,12 +178,27 @@ cp /tmp/endpoint.js services/game-server/routes/leaderboards.js
 - 📝 **Phrase Generation**: `docs/PHRASE_GENERATION_GUIDE.md`
 - 📚 **Commands & API**: `docs/REFERENCE_COMMANDS.md`
 - 🏗️ **Architecture**: `docs/ARCHITECTURE_OVERVIEW.md`
+- 🗄️ **Database Recovery**: `docs/DATABASE_RECOVERY_PROCEDURES.md`
+- 📊 **Incident Report**: `docs/DATABASE_INCIDENT_REPORT.md`
 
 ## 🚀 DEPLOYMENT COMMANDS
 - **Deploy to Pi Staging**: `bash Scripts/deploy-to-pi.sh` (NOT scripts/deploy-staging.sh)
 - **Check Deployment**: `bash Scripts/check-deployment.sh`
 - **Build for Staging**: `./build_multi_sim.sh staging`
-- **Import Phrases to Staging**: `./scripts/import-phrases-staging.sh <json-file>` (automated Docker import)
+- **Import Phrases to Staging**: `bash Scripts/import-phrases-staging.sh <json-file>` (automated Docker import with safety checks)
+
+## 🛡️ DATABASE SAFETY COMMANDS
+- **Health Monitoring**: `bash Scripts/monitor-database-health.sh [ip]` (comprehensive system check)
+- **Check Database Completeness**: `bash Scripts/check-database-completeness.sh [ip]` (verify all tables)
+- **Create Database Backup**: `bash Scripts/backup-database.sh [ip]` (manual backup creation)
+- **Restore Database Schema**: `bash Scripts/restore-database-schema.sh [ip]` (fix missing tables)
+- **Setup Automated Backups**: `bash Scripts/setup-automated-backups.sh [ip]` (deploy backup system)
+
+**🚨 CRITICAL DATABASE RULES:**
+- **NEVER** make database changes without creating a backup first
+- **ALWAYS** run completeness check before importing phrases  
+- **ALWAYS** use import-phrases-staging.sh (includes all safety checks)
+- **Monitor** backup system health weekly via automated scripts
 
 ## WORKING MEMORY MANAGEMENT
 - **When context gets long**: Re-read this CLAUDE.md file, summarize progress in PROGRESS.md, document current state before major changes
