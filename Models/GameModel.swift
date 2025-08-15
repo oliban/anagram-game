@@ -106,6 +106,7 @@ class GameModel: ObservableObject {
     var currentPhraseId: String? = nil
     var currentHints: [String] = []
     var currentScore: Int = 0
+    var emojiPointsThisPhrase: Int = 0 // Track emoji points for current phrase
     var hintsUsed: Int = 0
     var phraseDifficulty: Int = 0
     
@@ -411,7 +412,8 @@ class GameModel: ObservableObject {
         // Reset hint state for new game
         currentHints = []
         currentScore = 0
-        print("🔍 SCORE RESET: Score reset to 0 in startNewGame()")
+        emojiPointsThisPhrase = 0
+        print("🔍 SCORE RESET: Score and emoji points reset to 0 in startNewGame()")
         hintsUsed = 0
         
         // Set difficulty score based on phrase type
@@ -470,7 +472,8 @@ class GameModel: ObservableObject {
         // Reset hint state
         currentHints = []
         currentScore = 0
-        print("🔍 SCORE RESET: Score reset to 0 in resetGame()")
+        emojiPointsThisPhrase = 0
+        print("🔍 SCORE RESET: Score and emoji points reset to 0 in resetGame()")
         hintsUsed = 0
         
         // Recalculate difficulty for current phrase
@@ -506,12 +509,14 @@ class GameModel: ObservableObject {
         
         // Calculate score immediately based on local data
         currentScore = calculateLocalScore()
-        print("✅ COMPLETION: Calculated local score: \(currentScore) points (difficulty: \(phraseDifficulty), hints: \(hintsUsed))")
+        let totalScoreWithEmojis = getTotalScoreWithEmojis()
+        print("✅ COMPLETION: Calculated local score: \(currentScore) points + \(emojiPointsThisPhrase) emoji points = \(totalScoreWithEmojis) total (difficulty: \(phraseDifficulty), hints: \(hintsUsed))")
         
-        // Update total score immediately for UI feedback
+        // 🎯 TWO-PHASE SCORING: Update score bar with phrase score only, emoji points will animate in separately
         let oldTotalScore = playerTotalScore
-        playerTotalScore += currentScore
-        print("🏆 TOTAL SCORE: Updated from \(oldTotalScore) to \(playerTotalScore) (+\(currentScore))")
+        playerTotalScore += currentScore // Only add phrase score to UI immediately
+        print("🏆 PHASE 1 SCORE: Updated score bar from \(oldTotalScore) to \(playerTotalScore) (+\(currentScore) phrase points only)")
+        print("⏳ PHASE 2 SCORE: \(emojiPointsThisPhrase) emoji points will be animated to score bar individually")
         
         // Complete phrase on server (critical for leaderboard updates)
         if let phraseId = currentPhraseId {
@@ -525,11 +530,10 @@ class GameModel: ObservableObject {
                 if let result = await networkManager.completePhrase(phraseId: phraseId, hintsUsed: hintsUsed, celebrationEmojis: celebrationEmojis) {
                     if result.success {
                         print("✅ SERVER COMPLETION: Success! Server score: \(result.completion.finalScore), client: \(currentScore)")
+                        print("🎯 TWO-PHASE SCORING: Skipping server sync - visual effects will handle score updates")
                         
-                        // Refresh total score to get server's accurate total
-                        Task { @MainActor in
-                            await refreshTotalScoreFromServer()
-                        }
+                        // DON'T refresh from server during two-phase scoring - it would overwrite our visual score updates
+                        // The server has the full score, but we're managing UI updates through emoji effect animations
                     } else {
                         print("❌ SERVER COMPLETION: Server reported failure")
                     }
@@ -550,9 +554,9 @@ class GameModel: ObservableObject {
         guard baseScore > 0 else { return 0 }
         
         var score = baseScore
-        if hintsUsed >= 1 { score = Int(round(Double(baseScore) * 0.90)) }
-        if hintsUsed >= 2 { score = Int(round(Double(baseScore) * 0.70)) }
-        if hintsUsed >= 3 { score = Int(round(Double(baseScore) * 0.50)) }
+        if hintsUsed >= 1 { score = Int(round(Double(baseScore) * 0.8)) } // 20% penalty → 80% remaining
+        if hintsUsed >= 2 { score = Int(round(Double(baseScore) * 0.6)) } // 40% penalty → 60% remaining
+        if hintsUsed >= 3 { score = Int(round(Double(baseScore) * 0.4)) } // 60% penalty → 40% remaining
         
         return score
     }
@@ -573,6 +577,33 @@ class GameModel: ObservableObject {
         print("🔍 SCORE: Using base difficulty: \(baseDifficulty) (hints: \(hintsUsed))")
         print("🔍 SCORE: Final calculated score: \(finalScore) (base: \(baseDifficulty), hints: \(hintsUsed))")
         return finalScore
+    }
+    
+    // MARK: - Emoji Points Management
+    
+    @MainActor
+    func addEmojiPoints(_ points: Int) {
+        emojiPointsThisPhrase += points
+        print("💎 EMOJI POINTS: Added \(points) emoji points (phrase total: \(emojiPointsThisPhrase))")
+        // Note: Don't add to playerTotalScore here - will be added in completeGame() with base score
+        
+        // Notify that emoji points changed so UI can update score display
+        NotificationCenter.default.post(name: NSNotification.Name("EmojiPointsChanged"), object: self, userInfo: ["points": points, "total": emojiPointsThisPhrase])
+    }
+    
+    @MainActor
+    func getTotalScoreWithEmojis() -> Int {
+        return currentScore + emojiPointsThisPhrase
+    }
+    
+    @MainActor
+    func addPointsToScoreBar(_ points: Int) {
+        // 🎯 TWO-PHASE SCORING: Add points directly to score bar (visual effect only)
+        playerTotalScore += points
+        print("🎬 SCORE BAR ANIMATION: Added \(points) points to score bar (new total: \(playerTotalScore))")
+        
+        // Notify UI that total score changed for score bar animation
+        NotificationCenter.default.post(name: NSNotification.Name("ScoreBarPointsAdded"), object: self, userInfo: ["points": points, "newTotal": playerTotalScore])
     }
     
     @MainActor
