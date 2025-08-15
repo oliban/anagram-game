@@ -73,6 +73,19 @@ struct EmojiCatalogItem: Codable, Identifiable, Hashable {
         case createdAt = "created_at"
     }
     
+    // Manual initializer for test creation
+    init(id: UUID, emojiCharacter: String, name: String, rarity: EmojiRarity, dropRatePercentage: Double, pointsReward: Int, unicodeVersion: String?, isActive: Bool, createdAt: Date) {
+        self.id = id
+        self.emojiCharacter = emojiCharacter
+        self.name = name
+        self.rarity = rarity
+        self.dropRatePercentage = dropRatePercentage
+        self.pointsReward = pointsReward
+        self.unicodeVersion = unicodeVersion
+        self.isActive = isActive
+        self.createdAt = createdAt
+    }
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         

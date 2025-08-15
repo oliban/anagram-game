@@ -15,34 +15,44 @@ class EmojiEffectsManager {
     // MARK: - Main Effect Creation
     
     func createEffectForRarity(_ rarity: EmojiRarity, at position: CGPoint, in scene: SKScene) -> SKNode {
-        DebugLogger.shared.ui("🔥 EFFECTS MANAGER: Creating \(rarity.displayName) effect at \(position)")
+        DebugLogger.shared.ui("🎆 EFFECTS_MANAGER: Creating \(rarity.displayName) effect at position \(position) in scene \(scene.name ?? "unnamed")")
+        
         let effectContainer = SKNode()
         effectContainer.position = position
-        effectContainer.zPosition = 1000 // Always on top
+        effectContainer.zPosition = 9999 // MUCH higher than fade overlay (z:200) so new discoveries glow through darkness
         effectContainer.name = "emoji_effect_container"
+        
+        DebugLogger.shared.ui("✅ EFFECTS_MANAGER: Effect container created with z-position \(effectContainer.zPosition)")
         
         switch rarity {
         case .legendary:
+            DebugLogger.shared.ui("👑 EFFECTS_MANAGER: Creating legendary effect")
             createLegendaryEffect(in: effectContainer, scene: scene)
         case .mythic:
+            DebugLogger.shared.ui("🌌 EFFECTS_MANAGER: Creating mythic effect")
             createMythicEffect(in: effectContainer)
         case .epic:
+            DebugLogger.shared.ui("⚡ EFFECTS_MANAGER: Creating epic effect")
             createEpicEffect(in: effectContainer)
         case .rare:
+            DebugLogger.shared.ui("🔥 EFFECTS_MANAGER: Creating rare effect")
             createRareEffect(in: effectContainer)
         case .uncommon:
+            DebugLogger.shared.ui("✨ EFFECTS_MANAGER: Creating uncommon effect")
             createUncommonEffect(in: effectContainer)
         case .common:
+            DebugLogger.shared.ui("💫 EFFECTS_MANAGER: Creating common effect")
             createCommonEffect(in: effectContainer)
         }
         
+        DebugLogger.shared.ui("🎯 EFFECTS_MANAGER: Effect container has \(effectContainer.children.count) child nodes")
         return effectContainer
     }
     
     func createPointsDisplay(points: Int, rarity: EmojiRarity, at position: CGPoint) -> SKNode {
         let pointsContainer = SKNode()
         pointsContainer.position = position
-        pointsContainer.zPosition = 1100 // Above effects
+        pointsContainer.zPosition = 10000 // Above everything, including fade overlay, for glow-through effect
         pointsContainer.name = "points_display"
         
         // Create points label
@@ -237,7 +247,7 @@ class EmojiEffectsManager {
     }
     
     private func createStarParticles(in container: SKNode) {
-        for i in 0..<12 {
+        for _ in 0..<12 {
             let star = SKLabelNode(text: "⭐")
             star.fontSize = 12
             star.position = CGPoint(x: CGFloat.random(in: -60...60), y: CGFloat.random(in: -60...60))
