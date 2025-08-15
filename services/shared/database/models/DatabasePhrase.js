@@ -125,24 +125,24 @@ class DatabasePhrase {
         errors.push('Hint cannot be longer than 32 characters');
       }
       
-      // Check that hint doesn't contain the exact answer words (only words longer than 5 chars)
-      // This prevents giving away the answer while allowing common words like "test", "word", etc.
+      // NEW RULE: Clue cannot contain ANY words from the phrase (case-insensitive)
       if (trimmedHint.length > 0) {  // Only validate if hint is provided
         const contentLower = content.toLowerCase();
         const hintLower = trimmedHint.toLowerCase();
-      const words = contentLower.split(/\s+/);
-      
-      // Skip common words that are reasonable to use in hints
-      const allowedCommonWords = ['test', 'word', 'words', 'phrase', 'message', 'challenge', 'custom', 'global', 'community'];
-      
-      for (let word of words) {
-        if (word.length > 5 && !allowedCommonWords.includes(word) && 
-            (hintLower.includes(` ${word} `) || hintLower.includes(` ${word}`) || hintLower.includes(`${word} `))) {
-          errors.push('Hint should not contain exact words from the phrase');
-          break;
+        const phraseWords = contentLower.split(/\s+/);
+        const hintWords = hintLower.split(/\s+/);
+        
+        // Check if any phrase word appears in the hint
+        for (let phraseWord of phraseWords) {
+          for (let hintWord of hintWords) {
+            if (phraseWord === hintWord) {
+              errors.push(`Clue cannot contain the word "${phraseWord}" from the phrase`);
+              break;
+            }
+          }
+          if (errors.length > 0) break; // Exit outer loop if error found
         }
       }
-    }
     }
 
     return {
@@ -315,8 +315,15 @@ class DatabasePhrase {
       if (phrases.length === 0) {
         // For global phrases, $1 appears 3 times, so difficulty parameter is $2
         // Include NULL check to exclude phrases without difficulty scores
-        const globalDifficultyFilter = maxDifficulty ? `AND p.difficulty_level IS NOT NULL AND p.difficulty_level <= $2` : '';
-        const globalParams = maxDifficulty ? [playerId, maxDifficulty] : [playerId];
+        // Special rule: Players below score 50 can access phrases up to difficulty 75
+        let effectiveMaxDifficulty = maxDifficulty;
+        if (maxDifficulty && maxDifficulty < 50) {
+          effectiveMaxDifficulty = 75;
+          console.log(`🎯 BEGINNER BOOST: Player below score 50, allowing phrases up to difficulty 75 (was ${maxDifficulty})`);
+        }
+        
+        const globalDifficultyFilter = effectiveMaxDifficulty ? `AND p.difficulty_level IS NOT NULL AND p.difficulty_level <= $2` : '';
+        const globalParams = effectiveMaxDifficulty ? [playerId, effectiveMaxDifficulty] : [playerId];
         const globalResult = await query(`
           SELECT 
             p.id,
@@ -420,19 +427,29 @@ class DatabasePhrase {
    */
   static async consumePhrase(phraseId) {
     try {
-      // Mark the phrase as delivered/consumed in player_phrases
-      const result = await query(`
+      // First try to mark targeted phrases as delivered/consumed in player_phrases
+      const targetedResult = await query(`
         UPDATE player_phrases 
         SET is_delivered = true, delivered_at = CURRENT_TIMESTAMP
         WHERE phrase_id = $1 AND is_delivered = false
         RETURNING *
       `, [phraseId]);
 
-      if (result.rows.length > 0) {
-        console.log(`✅ DATABASE: Phrase ${phraseId} marked as consumed`);
+      if (targetedResult.rows.length > 0) {
+        console.log(`✅ DATABASE: Targeted phrase ${phraseId} marked as consumed`);
+        return true;
+      }
+
+      // If not a targeted phrase, check if it's a global phrase that exists
+      const globalResult = await query(`
+        SELECT id FROM phrases WHERE id = $1 AND is_global = true
+      `, [phraseId]);
+
+      if (globalResult.rows.length > 0) {
+        console.log(`✅ DATABASE: Global phrase ${phraseId} marked as consumed (no player_phrases entry needed)`);
         return true;
       } else {
-        console.log(`❌ DATABASE: Phrase ${phraseId} not found or already consumed`);
+        console.log(`❌ DATABASE: Phrase ${phraseId} not found in targeted or global phrases`);
         return false;
       }
     } catch (error) {

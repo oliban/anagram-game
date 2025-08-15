@@ -14,14 +14,28 @@
 
 ### Quick Commands
 
-#### Local Generation and Import
+#### Complete Phrase Generation Workflow
 ```bash
-# COMPLETE WORKFLOW FOR CLAUDE (from project root):
-cd server && node scripts/phrase-generator.js --range 0-100 --count 10 --language sv --theme computing  # Generate 10 Swedish computing phrases
+# Step 1: Generate phrases (CLAUDE IS THE AI - generate directly)
+# If using script: cd server && node scripts/phrase-generator.js --range 50-150 --count 50 --language sv --theme winter
+# If script fails: CLAUDE generates phrases directly and creates JSON file
+
+# Step 2: MANDATORY - Present phrases to user in table format
 # ⚠️ CRITICAL: PRESENT GENERATED PHRASES TO USER IN TABLE FORMAT
-# ⚠️ CRITICAL: WAIT FOR EXPLICIT USER APPROVAL BEFORE IMPORTING
-# ONLY AFTER USER APPROVAL (run from PROJECT ROOT):
-node server/scripts/phrase-importer.js --input server/data/phrases-sv-*.json --import  # Import to local database
+# ⚠️ CRITICAL: WAIT FOR EXPLICIT USER APPROVAL BEFORE ANY IMPORTS
+
+# Step 3: Create JSON file (if missing)
+# Create server/data/imported/YYYY-MM-DD-theme-phrases-LANG-MIN-MAX-COUNT.json
+
+# Step 4: Ask about local import (optional)
+# ONLY AFTER USER APPROVAL:
+# node server/scripts/phrase-importer.js --input server/data/phrases-sv-*.json --import
+
+# Step 5: Ask separately about staging import 
+# 🚨 MANDATORY: Ask "Do you want to import these to staging?"
+# 🚨 WAIT FOR EXPLICIT USER APPROVAL
+# ONLY AFTER USER SAYS YES:
+# bash scripts/import-phrases-staging.sh server/data/imported/filename.json
 ```
 
 #### Staging Import (Docker Environment)
@@ -106,11 +120,52 @@ ssh pi@192.168.1.222 "docker exec -e DB_HOST=postgres -e DOCKER_ENV=true anagram
 - **🔴 USER MUST SEE** every phrase, clue, score, and import status before approval
 - **🔴 EXTRACT TABLE FROM OUTPUT** - don't let it get buried in verbose logs
 
-### 8. Import Process (ONLY AFTER USER APPROVAL)
-- Database import with staging server support
-- **ONLY after user explicitly approves the presented phrases table**
-- Direct database access (no HTTP API)
-- **🚨 DO NOT PROCEED** without user approval from step 7
+### 🚨 CRITICAL AI GENERATION ERROR - NEVER REPEAT!
+**🔴 CLAUDE IS THE AI GENERATOR** - When the phrase generator calls for AI generation, CLAUDE must generate the phrases directly, not delegate to another system!
+
+**❌ CRITICAL MISTAKE TO AVOID:**
+- Generator says "🤖 AI generating phrases..." and Claude waits for external AI
+- Claude says "the AI system produced wrong themes" 
+- Claude tries to "fix the generator" instead of generating phrases
+
+**✅ CORRECT BEHAVIOR:**
+- Generator calls for AI generation → CLAUDE immediately generates the requested phrases
+- User asks for "50 Swedish winter phrases" → CLAUDE creates 50 Swedish winter phrases
+- Theme parameter ignored by system → CLAUDE generates correct theme regardless
+
+**🔴 MANDATORY**: Claude must NEVER delegate phrase generation to external systems - Claude IS the AI that generates the phrases!
+
+### 8. JSON File Creation (IF MISSING)
+If the phrase generator didn't create a proper JSON file:
+- **CREATE JSON FILE** manually with the approved phrases
+- Use proper structure with metadata and phrases array
+- Save to `server/data/imported/YYYY-MM-DD-theme-phrases-LANG-MIN-MAX-COUNT.json`
+- **NEVER proceed to import without the JSON file**
+
+### 9. Import Process (ONLY AFTER EXPLICIT USER APPROVAL)
+**🚨 CRITICAL: NEVER AUTO-IMPORT TO STAGING**
+
+**Local Database Import (Optional):**
+```bash
+# ONLY after user approval:
+node server/scripts/phrase-importer.js --input server/data/phrases-sv-*.json --import
+```
+
+**Staging Import (REQUIRES SEPARATE APPROVAL):**
+- **🔴 MANDATORY**: Ask user "Do you want to import these to staging?" 
+- **🔴 WAIT FOR EXPLICIT "YES"** - do not assume or proceed automatically
+- **🔴 ONLY AFTER USER SAYS YES**: Use staging import script
+```bash
+# ONLY after user explicitly approves staging import:
+bash scripts/import-phrases-staging.sh server/data/imported/filename.json
+```
+
+**🚨 CRITICAL WORKFLOW STEPS:**
+1. Generate phrases → Present table → Get approval for phrases
+2. Create JSON file (if missing)
+3. **ASK SEPARATELY**: "Do you want to import these to staging?"
+4. **WAIT FOR EXPLICIT APPROVAL** before any staging import
+5. Only import after user explicitly says yes
 
 ## 🎯 DIFFICULTY DISTRIBUTION REQUIREMENTS
 

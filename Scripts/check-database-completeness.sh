@@ -30,6 +30,9 @@ REQUIRED_TABLES=(
     "emoji_catalog"
     "player_emoji_collections"
     "emoji_global_discoveries"
+    "player_scores"
+    "leaderboards"
+    "hint_usage"
 )
 
 echo -e "${YELLOW}📊 Checking for ${#REQUIRED_TABLES[@]} required tables...${NC}"

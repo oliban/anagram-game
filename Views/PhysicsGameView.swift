@@ -238,6 +238,28 @@ struct PhysicsGameView: View {
                         
                         Spacer() // Push buttons to the right
                         
+                        // CHEAT TEST BUTTON - Cycles through all rarity effects
+                        #if DEBUG
+                        Button(action: {
+                            testCelebrationEffect()
+                        }) {
+                            HStack {
+                                Image(systemName: "wand.and.stars")
+                                Text("🎆")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.purple.opacity(0.8))
+                            .cornerRadius(20)
+                            .shadow(radius: 4)
+                        }
+                        .offset(y: isJolting ? -8 : 0)
+                        .animation(.easeInOut(duration: 0.15), value: isJolting)
+                        .padding(.trailing, 10)
+                        #endif
+                        
                         // Bottom-right: Skip button (moved from left)
                         Button(action: {
                             print("🔥🔥🔥 SKIP BUTTON TAPPED IN UI 🔥🔥🔥")
@@ -571,10 +593,79 @@ struct PhysicsGameView: View {
             return Color.green.opacity(0.9)
         }
     }
+    
+    // MARK: - Debug Test Functions
+    
+    #if DEBUG
+    private func testCelebrationEffect() {
+        DebugLogger.shared.ui("🚨 CHEAT BUTTON PRESSED: Triggering normal phrase completion")
+        
+        guard let scene = gameScene else { 
+            DebugLogger.shared.error("❌ ERROR: No game scene found")
+            return 
+        }
+        
+        DebugLogger.shared.ui("✅ SCENE FOUND: Game scene is available")
+        
+        // Enable tile preservation mode for emoji effects during celebration
+        scene.disableImmediateEmojiEffects = true
+        DebugLogger.shared.ui("🎭 PRESERVATION: Enabled tile preservation mode - newly dropped tiles will be preserved during new game creation")
+        
+        // Trigger EXACT same sequence as normal phrase completion (lines 2258-2264)
+        scene.animateShelvesToFloor()
+        gameModel.completeGame() // Calculate score immediately
+        
+        // Trigger celebration on next run loop to ensure score is updated
+        DispatchQueue.main.async { [weak scene] in
+            scene?.triggerCelebration() // Celebrate with updated score
+        }
+        
+        DebugLogger.shared.ui("✅ CHEAT: Normal phrase completion sequence triggered")
+    }
+    
+    private func getEmojiForRarity(_ rarity: EmojiRarity) -> String {
+        switch rarity {
+        case .legendary: return "👑"
+        case .mythic: return "🌟"
+        case .epic: return "⚡"
+        case .rare: return "💎"
+        case .uncommon: return "✨"
+        case .common: return "⭐"
+        }
+    }
+    
+    private func getDropRateForRarity(_ rarity: EmojiRarity) -> Double {
+        switch rarity {
+        case .legendary: return 0.1
+        case .mythic: return 0.5
+        case .epic: return 2.0
+        case .rare: return 8.0
+        case .uncommon: return 20.0
+        case .common: return 69.4
+        }
+    }
+    
+    private func getTestPointsForRarity(_ rarity: EmojiRarity) -> Int {
+        switch rarity {
+        case .legendary: return 500
+        case .mythic: return 200
+        case .epic: return 100
+        case .rare: return 25
+        case .uncommon: return 5
+        case .common: return 1
+        }
+    }
+    #endif
 }
 
 // Protocol for tiles that can be respawned when they go off-screen
 class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
+    
+    // MARK: - Emoji Effects Queue for Cleanup Phase
+    private var newlyDroppedEmojiTiles: [EmojiIconTile] = [] // Track tiles from current game only
+    var disableImmediateEmojiEffects = false // Flag to disable immediate effects during cheat test
+    
+    
     // MARK: - Scale Factor for Easy Experimentation
     static let componentScaleFactor: CGFloat = 0.90  // 0.90 = 10% smaller, 1.1 = 10% larger (public for external access)
     
@@ -659,6 +750,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         // Notify GameModel that connection is established (for pending debug tiles)
         gameModel.onMessageTileSpawnerConnected()
         // Scene connection debug logging removed to reduce API calls during startup
+        
+        // Listen for emoji points changes to update score display in real-time
+        NotificationCenter.default.addObserver(
+            self, 
+            selector: #selector(handleEmojiPointsChanged(_:)), 
+            name: NSNotification.Name("EmojiPointsChanged"), 
+            object: gameModel
+        )
         
         // Don't create tiles automatically - wait for setupGame() to call resetGame()
         
@@ -972,9 +1071,17 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         themeTiles.forEach { $0.removeFromParent() }
         themeTiles.removeAll()
         
+        // Clear newly dropped emoji tiles list for new game (unless celebration is running)
+        if !disableImmediateEmojiEffects {
+            newlyDroppedEmojiTiles.removeAll()
+            DebugLogger.shared.ui("🔄 NEW GAME: Cleared newly dropped emoji tiles list for normal game start")
+        } else {
+            DebugLogger.shared.ui("🎭 CELEBRATION: Preserving newly dropped tiles list during celebration (\(newlyDroppedEmojiTiles.count) tiles)")
+        }
+        
         // Don't create tiles if we're in noPhrasesAvailable state or have no letters
         if gameModel.gameState == .noPhrasesAvailable || gameModel.scrambledLetters.isEmpty {
-            print("⚠️ createTiles: Skipping tile creation - no phrases available or no letters")
+            DebugLogger.shared.ui("⚠️ createTiles: Skipping tile creation - no phrases available or no letters")
             return
         }
         
@@ -1090,7 +1197,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     
     private func calculateCurrentScore(hintsUsed: Int? = nil) -> Int {
         let actualHintsUsed = hintsUsed ?? gameModel.hintsUsed
-        return ScoreCalculator.shared.applyHintPenalty(baseScore: gameModel.phraseDifficulty, hintsUsed: actualHintsUsed)
+        let baseScore = ScoreCalculator.shared.applyHintPenalty(baseScore: gameModel.phraseDifficulty, hintsUsed: actualHintsUsed)
+        // Include emoji points for real-time score display
+        return baseScore + gameModel.emojiPointsThisPhrase
     }
     
     private func getCurrentPhraseLanguage() -> String {
@@ -1119,6 +1228,72 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             Task {
                 await DebugLogger.shared.sendToServer("BUG_100_POINTS: '\(gameModel.currentSentence)' showing 100pts but should be \(actualDifficulty)")
             }
+        }
+    }
+    
+    @objc private func handleEmojiPointsChanged(_ notification: Notification) {
+        // Update score tile in real-time when emoji points are added
+        print("🎯 REAL-TIME: Emoji points changed, updating score tile")
+        updateScoreTile()
+    }
+    
+    func queueEmojiEffectForCleanup(rarity: EmojiRarity, points: Int) {
+        let emojiChar = getEmojiForRarity(rarity)
+        DebugLogger.shared.ui("⏰ QUEUE: For cheat test only - creating temporary \(rarity.displayName) \(emojiChar) tile for effects")
+        // Note: Tile preservation will be handled by normal celebration sequence
+        
+        // Create a temporary tile with the requested rarity for cheat testing
+        let baseTileSize: CGFloat = 40
+        let tileSize = CGSize(width: baseTileSize * PhysicsGameScene.componentScaleFactor, 
+                            height: baseTileSize * PhysicsGameScene.componentScaleFactor)
+        let tempTile = EmojiIconTile(emoji: emojiChar, rarity: rarity, size: tileSize)
+        
+        // Position above screen for rain effect (same as other emoji tiles)
+        let spawnY = size.height * 0.9  // High above visible area
+        let spawnWidth = size.width * 0.4  // Center clustering
+        let randomX = CGFloat.random(in: -spawnWidth/2...spawnWidth/2)
+        let baseX = size.width / 2 + randomX
+        let randomYOffset = CGFloat.random(in: -20...20)
+        tempTile.position = CGPoint(x: baseX, y: spawnY + randomYOffset)
+        
+        // Add random rotation for visual variety
+        tempTile.zRotation = CGFloat.random(in: -0.3...0.3)
+        tempTile.name = "cheat_test_tile"
+        addChild(tempTile)
+        newlyDroppedEmojiTiles.append(tempTile)
+        
+        // Give the tile initial downward velocity for falling effect
+        let giveInitialVelocity = SKAction.run {
+            tempTile.physicsBody?.velocity = CGVector(dx: 0, dy: -200)
+            tempTile.physicsBody?.applyImpulse(CGVector(dx: 0, dy: -100))
+        }
+        let delayAction = SKAction.wait(forDuration: 0.1) // Small delay before physics kick-in
+        let dropAction = SKAction.sequence([delayAction, giveInitialVelocity])
+        tempTile.run(dropAction)
+        
+        DebugLogger.shared.ui("🎭 CHEAT: Created temporary \(rarity.displayName) tile for testing effects")
+        DebugLogger.shared.ui("📍 CHEAT TRACK: Added cheat tile to newly dropped list (total: \(newlyDroppedEmojiTiles.count))")
+    }
+    
+    private func getEmojiForRarity(_ rarity: EmojiRarity) -> String {
+        switch rarity {
+        case .legendary: return "👑"
+        case .mythic: return "🌟"
+        case .epic: return "⚡"
+        case .rare: return "💎"
+        case .uncommon: return "✨"
+        case .common: return "⭐"
+        }
+    }
+    
+    private func getPointsForRarity(_ rarity: EmojiRarity) -> Int {
+        switch rarity {
+        case .legendary: return 500
+        case .mythic: return 200
+        case .epic: return 100
+        case .rare: return 25
+        case .uncommon: return 5
+        case .common: return 1
         }
     }
     
@@ -2271,6 +2446,10 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     func triggerCelebration() {
         print("🎊 Starting enhanced celebration sequence!")
         
+        // Preserve emoji tiles during celebration so effects can trigger later
+        disableImmediateEmojiEffects = true
+        DebugLogger.shared.ui("🎭 CELEBRATION: Enabled tile preservation for celebration sequence")
+        
         // Clear old celebration text - no more text displays
         celebrationText = ""
         
@@ -2278,6 +2457,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         let celebrationSequence = SKAction.sequence([
             // Phase 1: Drop celebration tiles, awesome message, and start fireworks immediately
             SKAction.run { [weak self] in
+                DebugLogger.shared.ui("🎬 PHASE 1: Starting celebration sequence")
                 self?.dropCelebrationTiles()
                 self?.dropAwesomeTile()
                 self?.createRocketFireworks()
@@ -2288,12 +2468,17 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             
             // Phase 2: Fade to black (1.0 seconds)
             SKAction.run { [weak self] in
+                DebugLogger.shared.ui("🎬 PHASE 2: Creating fade to black overlay")
                 self?.createFadeToBlackOverlay()
             },
             SKAction.wait(forDuration: 1.0),
             
-            // Phase 3: Wait for fireworks to finish (3.0 seconds)
-            SKAction.wait(forDuration: 3.0),
+            // Phase 3: Trigger new discovery effects DURING darkness for dramatic glow-through effect
+            SKAction.run { [weak self] in
+                DebugLogger.shared.ui("🎬 PHASE 3: Triggering new discovery effects during darkness")
+                self?.triggerNewDiscoveryEffects()
+            },
+            SKAction.wait(forDuration: 2.0), // Let effects play in darkness
             
             // Phase 4: Start new game with dramatic bookshelf drop (2.0 seconds)
             SKAction.run { [weak self] in
@@ -2301,10 +2486,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             },
             SKAction.wait(forDuration: 2.0),
             
-            // Phase 5: Clean up celebration tiles and fade back to normal (1.0 seconds)
+            // Phase 5: Remove overlay (1.5 seconds)
             SKAction.run { [weak self] in
-                self?.cleanupCelebrationTiles()
+                DebugLogger.shared.ui("🎬 PHASE 5: Removing fade overlay")
                 self?.removeFadeOverlay()
+            },
+            SKAction.wait(forDuration: 1.0), // Wait for delayed effects to complete
+            SKAction.run { [weak self] in
+                self?.cleanupCelebrationTiles() // Cleanup after effects are done
             }
         ])
         
@@ -2344,6 +2533,38 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         print("🌑 Fade to black overlay created")
     }
     
+    private func triggerNewDiscoveryEffects() {
+        // Trigger effects DURING darkness for newly discovered emojis to glow through
+        print("🌑🎆 TRIGGERING NEW DISCOVERY EFFECTS DURING DARKNESS for \(newlyDroppedEmojiTiles.count) tiles")
+        DebugLogger.shared.ui("🌑🎆 TRIGGERING NEW DISCOVERY EFFECTS DURING DARKNESS for \(newlyDroppedEmojiTiles.count) tiles")
+        
+        if newlyDroppedEmojiTiles.isEmpty {
+            print("❌ NO EMOJI TILES TO TRIGGER EFFECTS ON!")
+            DebugLogger.shared.ui("❌ NO EMOJI TILES TO TRIGGER EFFECTS ON!")
+        } else {
+            // Only trigger effects for newly discovered emojis, not ones already in collection
+            let newDiscoveryTiles = newlyDroppedEmojiTiles.filter { $0.name == "new_discovery_emoji" }
+            
+            if newDiscoveryTiles.isEmpty {
+                print("🔍 No new discoveries found - skipping effects (have \(newlyDroppedEmojiTiles.count) total tiles, 0 new)")
+                DebugLogger.shared.ui("🔍 No new discoveries found - skipping effects (have \(newlyDroppedEmojiTiles.count) total tiles, 0 new)")
+            } else {
+                print("🌟💫 Triggering GLOW-THROUGH effects for \(newDiscoveryTiles.count) NEW discoveries (out of \(newlyDroppedEmojiTiles.count) total)")
+                DebugLogger.shared.ui("🌟💫 Triggering GLOW-THROUGH effects for \(newDiscoveryTiles.count) NEW discoveries (out of \(newlyDroppedEmojiTiles.count) total)")
+                
+                for (index, emojiTile) in newDiscoveryTiles.enumerated() {
+                    print("🎯💫 NEW DISCOVERY GLOW EFFECT \(index + 1)/\(newDiscoveryTiles.count): \(emojiTile.emoji) (\(emojiTile.rarity?.displayName ?? "unknown"))")
+                    DebugLogger.shared.ui("🎯💫 NEW DISCOVERY GLOW EFFECT \(index + 1)/\(newDiscoveryTiles.count): \(emojiTile.emoji) (\(emojiTile.rarity?.displayName ?? "unknown"))")
+                    // Reset the effects flag so effects can trigger
+                    emojiTile.resetEffectsFlag()
+                    emojiTile.triggerDropEffects(gameModel: gameModel)
+                }
+            }
+        }
+        
+        print("🌑✨ New discovery effects triggered during darkness")
+    }
+    
     private func removeFadeOverlay() {
         guard let overlay = fadeOverlay else { return }
         
@@ -2355,8 +2576,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             self?.fadeOverlay = nil
         }
         
-        print("🌕 Fade overlay removed")
+        print("🌕 Fade overlay started fading")
     }
+    
     
     private func createRocketFireworks() {
         print("🚀 Creating realistic rocket fireworks display!")
@@ -2477,7 +2699,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         
         // Create and drop emoji tiles for each celebration emoji
         for (index, emojiData) in emojis.enumerated() {
-            let isNewDiscovery = false // Will be determined during phrase completion on server
+            // Only mark as new discovery if player hasn't collected this emoji before
+            // For now, simulate proper discovery logic - in real game this comes from server
+            let isNewDiscovery = !hasPlayerCollectedEmoji(emojiData.emojiCharacter)
             createAndDropEmojiTile(
                 emoji: emojiData.emojiCharacter,
                 index: index,
@@ -2530,10 +2754,16 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             emojiTile.name = "collectable_emoji"
         }
         
-        // Position at top of visible screen
-        let randomX = CGFloat.random(in: size.width * 0.2...size.width * 0.8)
-        let startY = size.height - 50
-        emojiTile.position = CGPoint(x: randomX, y: startY)
+        // Position above screen for rain effect (same as letter tiles)
+        let spawnY = size.height * 0.9  // High above visible area
+        let spawnWidth = size.width * 0.4  // Center clustering like letter tiles
+        let randomX = CGFloat.random(in: -spawnWidth/2...spawnWidth/2)
+        let baseX = size.width / 2 + randomX
+        let randomYOffset = CGFloat.random(in: -20...20)
+        emojiTile.position = CGPoint(x: baseX, y: spawnY + randomYOffset)
+        
+        // Add random rotation for visual variety (like letter tiles)
+        emojiTile.zRotation = CGFloat.random(in: -0.3...0.3)
         
         // Set z-position based on rarity - only rare emojis need to be in front of overlay
         if let rarity = rarity {
@@ -2551,6 +2781,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         addSparkleEffect(to: emojiTile, rarity: rarity)
         
         addChild(emojiTile)
+        
+        // Track this as a newly dropped emoji tile from current game
+        newlyDroppedEmojiTiles.append(emojiTile)
+        let rarityName = rarity?.displayName ?? "no rarity"
+        DebugLogger.shared.ui("📍 TRACK: Added \(emoji) (\(rarityName)) to newly dropped tiles (total: \(newlyDroppedEmojiTiles.count))")
+        
+        // Skip immediate effects during celebration - they will be triggered when darkness lifts
+        DebugLogger.shared.ui("🚫 IMMEDIATE EFFECTS: Skipping immediate emoji effects - will trigger when darkness lifts")
         
         // Add to tiles array for cleanup
         (allRespawnableTiles as? NSMutableArray)?.add(emojiTile)
@@ -2714,9 +2952,26 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         print("🎉 DEBUG: Displaying \(fallbackEmojis.count) fallback emojis: \(fallbackEmojis)")
         
         for (index, emoji) in fallbackEmojis.enumerated() {
-            createAndDropEmojiTile(emoji: emoji, index: index, isNewDiscovery: false, rarity: .common)
+            // Only mark as new discovery if player hasn't collected this emoji before
+            let isNewDiscovery = !hasPlayerCollectedEmoji(emoji)
+            createAndDropEmojiTile(emoji: emoji, index: index, isNewDiscovery: isNewDiscovery, rarity: .common)
             print("🎉 DEBUG: Created fallback emoji tile: \(emoji) at index \(index)")
         }
+    }
+    
+    private func hasPlayerCollectedEmoji(_ emoji: String) -> Bool {
+        // Check if this emoji already exists as a collectible tile on the board
+        for child in children {
+            if let emojiTile = child as? EmojiIconTile {
+                if emojiTile.emoji == emoji && 
+                   (emojiTile.name == "collectable_emoji" || emojiTile.name == "rare_collectable_emoji") {
+                    DebugLogger.shared.ui("🔍 DISCOVERY CHECK: \(emoji) already collected (found on board)")
+                    return true
+                }
+            }
+        }
+        DebugLogger.shared.ui("🆕 DISCOVERY CHECK: \(emoji) is a new discovery!")
+        return false
     }
     
     private func dropAwesomeTile() {
@@ -2755,7 +3010,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     
-    private func animateShelvesToFloor() {
+    func animateShelvesToFloor() {
         // Look for the bookshelf node - try different possible names
         var mainBookshelf: SKNode?
         
@@ -2874,13 +3129,35 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     private func cleanupCelebrationTiles() {
         DebugLogger.shared.ui("🧹 Cleaning up celebration tiles!")
         
+        // CLEANUP PHASE: Just clean up tiles (effects already triggered in Phase 3 during darkness)
+        DebugLogger.shared.ui("🧹 CLEANUP PHASE: Cleaning up \(newlyDroppedEmojiTiles.count) tiles (effects already triggered during darkness)")
+        DebugLogger.shared.ui("🔍 DEBUG: cleanupCelebrationTiles() called - cleaning up after effects")
+        
+        // Reset for next game
+        newlyDroppedEmojiTiles.removeAll()
+        disableImmediateEmojiEffects = false
+        DebugLogger.shared.ui("🔄 RESET: Cleared newly dropped tiles list and re-enabled immediate effects")
+        
+        // Reset effects flags on all emoji tiles for the next round
+        children.forEach { node in
+            if let emojiTile = node as? EmojiIconTile {
+                emojiTile.resetEffectsFlag()
+            }
+        }
+        DebugLogger.shared.ui("🔄 RESET: Reset effects flags on all emoji tiles for next round")
+        
         // Remove common emoji tiles but keep rare collectibles
         children.forEach { node in
             if let emojiTile = node as? EmojiIconTile {
                 // Handle different types of emoji tiles
-                if emojiTile.name == "collectable_emoji" || emojiTile.name == "rare_collectable_emoji" || emojiTile.name == "new_discovery_emoji" {
+                if emojiTile.name == "collectable_emoji" || emojiTile.name == "rare_collectable_emoji" {
                     DebugLogger.shared.ui("🌟 Keeping collectible emoji to persist between games: \(emojiTile.emoji)")
                     // Keep ALL collectible emojis from new system - they persist between games
+                } else if emojiTile.name == "new_discovery_emoji" {
+                    DebugLogger.shared.ui("🌟 Converting new discovery to regular collectible: \(emojiTile.emoji)")
+                    // Change name so it won't glow in subsequent games
+                    emojiTile.name = emojiTile.rarity?.triggersGlobalDrop == true ? "rare_collectable_emoji" : "collectable_emoji"
+                    DebugLogger.shared.ui("✅ Converted to: \(emojiTile.name ?? "unknown")")
                 } else if emojiTile.name == "core_celebration_emoji" {
                     // Legacy cleanup for old system
                     DebugLogger.shared.ui("🗑️ Removing legacy celebration emoji: \(emojiTile.emoji)")

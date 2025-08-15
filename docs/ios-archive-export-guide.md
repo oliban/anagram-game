@@ -43,11 +43,15 @@ grep 'stagingConfig.*host' Models/Network/NetworkConfiguration.swift
 
 #### Create a signed archive for STAGING distribution:
 ```bash
+# Create Xcode archives directory for today
+mkdir -p ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)
+
+# Build archive directly to Xcode Organizer location
 xcodebuild -project Wordshelf.xcodeproj \
   -scheme Wordshelf \
   -configuration Release \
   -sdk iphoneos \
-  -archivePath ~/Desktop/Wordshelf-Staging.xcarchive \
+  -archivePath ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Wordshelf-Staging.xcarchive \
   archive \
   -allowProvisioningUpdates
 ```
@@ -82,7 +86,7 @@ Once the archive is created:
 For command-line export (after archive is created):
 ```bash
 xcodebuild -exportArchive \
-  -archivePath ~/Desktop/Wordshelf-Signed.xcarchive \
+  -archivePath ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Wordshelf-Staging.xcarchive \
   -exportPath ~/Desktop/WordshelfExport \
   -exportOptionsPlist ExportOptions.plist \
   -allowProvisioningUpdates
@@ -124,9 +128,9 @@ The app includes `ITSAppUsesNonExemptEncryption = false` in Info.plist, which me
   4. Use `-allowProvisioningUpdates` flag
 
 #### Archive not appearing in Organizer
-- Check the archive location: `~/Library/Developer/Xcode/Archives/[Date]/`
-- Or use custom location like `~/Desktop/Wordshelf-Signed.xcarchive`
-- Open manually with: `open [path-to-archive]`
+- **Automatic appearance**: Archives in `~/Library/Developer/Xcode/Archives/[Date]/` appear automatically
+- **Manual opening**: If using custom location, open with: `open [path-to-archive]`
+- **Alternative method**: Use `Window → Organizer` in Xcode to view archives
 
 ### Version Management
 
@@ -139,17 +143,19 @@ Before creating a release archive:
 
 ### Archive Locations
 
-Default Xcode archives:
+**Recommended**: Use Xcode's default archive location (appears automatically in Organizer):
 ```
-~/Library/Developer/Xcode/Archives/YYYY-MM-DD/
+~/Library/Developer/Xcode/Archives/YYYY-MM-DD/Wordshelf-Staging.xcarchive
+~/Library/Developer/Xcode/Archives/YYYY-MM-DD/Wordshelf-AWS.xcarchive
 ```
 
-Custom archive (recommended for staging/production releases):
+**Alternative**: Custom locations (require manual opening):
 ```
 ~/Desktop/Wordshelf-Staging.xcarchive  # For staging/TestFlight builds
-~/Desktop/Wordshelf-Local.xcarchive     # For local testing only
-~/Desktop/Wordshelf-AWS.xcarchive       # For AWS production (if needed)
+~/Desktop/Wordshelf-AWS.xcarchive       # For AWS production
 ```
+
+**Important**: Archives in the `~/Library/Developer/Xcode/Archives/` directory automatically appear in Xcode Organizer without manual intervention.
 
 ### Quick Commands Reference
 
@@ -166,16 +172,89 @@ grep 'stagingConfig.*host' Models/Network/NetworkConfiguration.swift
 ./scripts/archive-for-release.sh staging
 
 # Or manually for staging:
+mkdir -p ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)
 xcodebuild -project Wordshelf.xcodeproj -scheme Wordshelf \
   -configuration Release -sdk iphoneos \
-  -archivePath ~/Desktop/Wordshelf-Staging.xcarchive \
+  -archivePath ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Wordshelf-Staging.xcarchive \
   archive -allowProvisioningUpdates
 
-# STEP 3: Open in Organizer
-open ~/Desktop/Wordshelf-Staging.xcarchive
+# STEP 3: Archive will appear automatically in Xcode Organizer
+# Or open manually if needed:
+open ~/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Wordshelf-Staging.xcarchive
 ```
+
+## TestFlight Beta Review for External Testing
+
+### Prerequisites for External Test Groups
+
+Before creating external test groups in TestFlight, you must get **Beta Review approval** from Apple.
+
+### Beta Review Submission Process
+
+#### Step 1: Upload Build to App Store Connect
+1. Use **Xcode Organizer** → Select your archive → **"Distribute App"** → **"App Store Connect"**
+2. Wait for build processing to complete (appears in App Store Connect)
+
+#### Step 2: Navigate to TestFlight
+1. Go to [App Store Connect](https://appstoreconnect.apple.com)
+2. Select your app **"Wordshelf"**
+3. Click the **"TestFlight"** tab (not App Store tab)
+
+#### Step 3: Select Your Build
+1. Find your uploaded build in the **"iOS"** section
+2. Click on the **build number** (e.g., "1.16 (3)")
+3. Build details page opens
+
+#### Step 4: Fill Required Beta Information
+**Test Information** (Required):
+```
+What to Test: "Test multiplayer gameplay, word formation, and server connectivity. Focus on game creation, joining matches, and submitting words."
+```
+
+**Test Details** (Recommended):
+```
+Please test:
+- Creating new games and joining existing games
+- Drag-and-drop word formation mechanics
+- Real-time multiplayer functionality
+- Network connectivity with different connection types
+- Statistics and leaderboard features
+```
+
+**App Review Information** (Required):
+- **Contact Email**: your-support@email.com
+- **Phone Number**: Your contact number
+- **Privacy Policy URL**: Add if app collects user data
+
+#### Step 5: Submit for Beta Review
+1. Scroll to bottom of build details page
+2. Click **"Submit for Beta Review"** button
+3. Confirm submission in popup dialog
+
+### Review Timeline
+- **Beta Review**: 24-48 hours (faster than App Store review)
+- **Focus**: Basic functionality, content appropriateness, privacy compliance
+
+### After Beta Approval
+
+Once approved, you can create external test groups:
+
+1. **TestFlight → External Testing** tab
+2. **Create Group** → Name your test group (e.g., "Public Beta Testers")
+3. **Add Testers**:
+   - Individual emails: Add testers one by one
+   - Public link: Generate shareable TestFlight link
+4. **Select Builds** → Choose your approved builds
+5. **Enable Testing** → Group can now access builds
+
+### External Testing Limits
+- **Maximum external testers**: 10,000 per app
+- **Test groups**: Unlimited groups
+- **Build availability**: 90 days per build
 
 ## Notes
 - Always use `-allowProvisioningUpdates` for automatic signing
 - The archive must be signed to upload to App Store Connect
 - Keep archives of released versions for debugging crash reports
+- **Beta Review required** before external TestFlight testing
+- Internal testing (App Store Connect users) doesn't require Beta Review

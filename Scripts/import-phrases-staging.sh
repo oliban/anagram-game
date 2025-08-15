@@ -125,7 +125,39 @@ echo -e "${YELLOW}📁 Preparing remote directories...${NC}"
 ssh ${PI_USER}@${PI_IP} "mkdir -p ~/anagram-game/server/data/imported"
 echo -e "${GREEN}✅ Directories ready${NC}"
 
-# Step 4: Check if Docker services are running
+# Step 4: SAFETY CHECK - Verify database completeness
+echo -e "${YELLOW}🔒 SAFETY: Checking database completeness...${NC}"
+if ! bash Scripts/check-database-completeness.sh ${PI_IP} > /dev/null 2>&1; then
+    echo -e "${RED}❌ CRITICAL: Database is incomplete!${NC}"
+    echo -e "${YELLOW}⚠️  Importing to an incomplete database could cause errors.${NC}"
+    echo ""
+    read -p "Auto-restore database schema? (Y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        echo -e "${YELLOW}🔧 Auto-restoring database schema...${NC}"
+        if bash Scripts/restore-database-schema.sh ${PI_IP}; then
+            echo -e "${GREEN}✅ Database restored successfully${NC}"
+        else
+            echo -e "${RED}❌ Database restoration failed, aborting import${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${RED}❌ Cannot import to incomplete database, aborting${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ Database completeness verified${NC}"
+fi
+
+# Step 4.5: SAFETY - Create database backup before import
+echo -e "${YELLOW}💾 Creating safety backup before import...${NC}"
+if bash Scripts/backup-database.sh ${PI_IP} > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Backup created successfully${NC}"
+else
+    echo -e "${YELLOW}⚠️  Backup failed, but continuing (import is safe)${NC}"
+fi
+
+# Step 5: Check if Docker services are running
 echo -e "${YELLOW}🐳 Checking Docker services...${NC}"
 SERVICE_STATUS=$(ssh ${PI_USER}@${PI_IP} "cd ~/anagram-game && docker-compose -f docker-compose.services.yml ps -q game-server 2>/dev/null" || echo "")
 
