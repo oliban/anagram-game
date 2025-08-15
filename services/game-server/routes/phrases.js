@@ -5,65 +5,75 @@ const router = express.Router();
 
 // Helper function to get weighted random emojis with proper rarity distribution
 async function getRandomEmojisForPhrase(client, numberOfDrops = Math.floor(Math.random() * 2) + 1) {
-    // Get all active emojis with their drop rates
-    const emojisResult = await client.query(`
-        SELECT * FROM emoji_catalog 
-        WHERE is_active = true 
-        ORDER BY id
-    `);
-    
-    const allEmojis = emojisResult.rows;
-    const droppedEmojis = [];
-    
-    // Calculate total weight for proper weighted random selection
-    const totalWeight = allEmojis.reduce((sum, emoji) => sum + parseFloat(emoji.drop_rate_percentage), 0);
-    
-    // Create a Set to track already selected emojis (avoid duplicates in same drop)
-    const selectedEmojiIds = new Set();
-    
-    for (let i = 0; i < numberOfDrops; i++) {
-        let attempts = 0;
-        let selectedEmoji = null;
-        let lastRandomValue = 0;
+    try {
+        // Get all active emojis with their drop rates
+        const emojisResult = await client.query(`
+            SELECT * FROM emoji_catalog 
+            WHERE is_active = true 
+            ORDER BY id
+        `);
         
-        // Try up to 10 times to get a unique emoji (avoid duplicates)
-        while (attempts < 10) {
-            // Generate random number between 0 and totalWeight
-            const randomValue = Math.random() * totalWeight;
-            lastRandomValue = randomValue;
+        const allEmojis = emojisResult.rows;
+        const droppedEmojis = [];
+        
+        // Calculate total weight for proper weighted random selection
+        const totalWeight = allEmojis.reduce((sum, emoji) => sum + parseFloat(emoji.drop_rate_percentage), 0);
+        
+        // Create a Set to track already selected emojis (avoid duplicates in same drop)
+        const selectedEmojiIds = new Set();
+        
+        for (let i = 0; i < numberOfDrops; i++) {
+            let attempts = 0;
+            let selectedEmoji = null;
+            let lastRandomValue = 0;
             
-            // Find the emoji using proper weighted selection
-            let cumulativeWeight = 0;
-            
-            for (const emoji of allEmojis) {
-                cumulativeWeight += parseFloat(emoji.drop_rate_percentage);
-                if (randomValue <= cumulativeWeight) {
-                    // Check if we already selected this emoji
-                    if (numberOfDrops > 1 && selectedEmojiIds.has(emoji.id)) {
-                        attempts++;
-                        break; // Try again
+            // Try up to 10 times to get a unique emoji (avoid duplicates)
+            while (attempts < 10) {
+                // Generate random number between 0 and totalWeight
+                const randomValue = Math.random() * totalWeight;
+                lastRandomValue = randomValue;
+                
+                // Find the emoji using proper weighted selection
+                let cumulativeWeight = 0;
+                
+                for (const emoji of allEmojis) {
+                    cumulativeWeight += parseFloat(emoji.drop_rate_percentage);
+                    if (randomValue <= cumulativeWeight) {
+                        // Check if we already selected this emoji
+                        if (numberOfDrops > 1 && selectedEmojiIds.has(emoji.id)) {
+                            attempts++;
+                            break; // Try again
+                        }
+                        selectedEmoji = emoji;
+                        selectedEmojiIds.add(emoji.id);
+                        break;
                     }
-                    selectedEmoji = emoji;
-                    selectedEmojiIds.add(emoji.id);
-                    break;
                 }
+                
+                if (selectedEmoji) break;
             }
             
-            if (selectedEmoji) break;
+            // Fallback to first unselected emoji if no selection made
+            if (!selectedEmoji) {
+                selectedEmoji = allEmojis.find(e => !selectedEmojiIds.has(e.id)) || allEmojis[0];
+                console.warn('⚠️ EMOJI: Fallback selection used after 10 attempts');
+            }
+            
+            droppedEmojis.push(selectedEmoji);
+            
+            console.log(`🎲 EMOJI SELECTION: Random ${lastRandomValue.toFixed(3)} / ${totalWeight.toFixed(3)} -> ${selectedEmoji.emoji_character} (${selectedEmoji.rarity_tier}, ${selectedEmoji.drop_rate_percentage}%)`);
         }
         
-        // Fallback to first unselected emoji if no selection made
-        if (!selectedEmoji) {
-            selectedEmoji = allEmojis.find(e => !selectedEmojiIds.has(e.id)) || allEmojis[0];
-            console.warn('⚠️ EMOJI: Fallback selection used after 10 attempts');
+        return droppedEmojis;
+        
+    } catch (error) {
+        // If emoji_catalog table doesn't exist, return empty array
+        if (error.code === '42P01') {
+            console.log('📊 EMOJI: emoji_catalog table not found, skipping emoji generation');
+            return [];
         }
-        
-        droppedEmojis.push(selectedEmoji);
-        
-        console.log(`🎲 EMOJI SELECTION: Random ${lastRandomValue.toFixed(3)} / ${totalWeight.toFixed(3)} -> ${selectedEmoji.emoji_character} (${selectedEmoji.rarity_tier}, ${selectedEmoji.drop_rate_percentage}%)`);
+        throw error;
     }
-    
-    return droppedEmojis;
 }
 
 // Phrase routes - CRUD operations, approval, consumption, and analysis
@@ -85,7 +95,7 @@ module.exports = (dependencies) => {
     const queryParams = maxDifficulty ? [playerId, maxDifficulty] : [playerId];
     
     const skippedPhrasesQuery = `
-      SELECT DISTINCT p.* 
+      SELECT DISTINCT p.*, sp.skipped_at 
       FROM phrases p
       INNER JOIN skipped_phrases sp ON p.id = sp.phrase_id
       WHERE sp.player_id = $1
@@ -504,9 +514,9 @@ module.exports = (dependencies) => {
       
       // Apply hint penalties: Level 1 = 20%, Level 2 = 40%, Level 3 = 60%
       let finalScore = baseScore;
-      if (hintsUsed >= 1) finalScore = Math.round(finalScore * 0.8); // Level 1 hint
-      if (hintsUsed >= 2) finalScore = Math.round(finalScore * 0.75); // Level 2 hint (0.8 * 0.75 = 0.6)
-      if (hintsUsed >= 3) finalScore = Math.round(finalScore * 0.67); // Level 3 hint (0.6 * 0.67 = 0.4)
+      if (hintsUsed >= 1) finalScore = Math.round(baseScore * 0.8); // 20% penalty → 80% remaining
+      if (hintsUsed >= 2) finalScore = Math.round(baseScore * 0.6); // 40% penalty → 60% remaining  
+      if (hintsUsed >= 3) finalScore = Math.round(baseScore * 0.4); // 60% penalty → 40% remaining
       
       // Ensure minimum score
       finalScore = Math.max(1, finalScore);
@@ -514,17 +524,38 @@ module.exports = (dependencies) => {
       // Use transaction to ensure atomicity of completion process
       const { transaction } = require('../shared/database/connection');
       const completionResult = await transaction(async (client) => {
-        // Mark phrase as completed/consumed within transaction
-        const consumeResult = await client.query(`
+        // First check if this is a targeted phrase in player_phrases table
+        const targetedResult = await client.query(`
           UPDATE player_phrases 
           SET is_delivered = true, delivered_at = CURRENT_TIMESTAMP
           WHERE phrase_id = $1 AND is_delivered = false
           RETURNING *
         `, [phraseId]);
 
-        if (consumeResult.rows.length === 0) {
-          console.warn(`⚠️ COMPLETE: Could not mark phrase ${phraseId} as consumed (phrase not found or already consumed)`);
-          return { consumeSuccess: false };
+        // If not a targeted phrase, check if it's a global phrase
+        let consumeSuccess = targetedResult.rows.length > 0;
+        
+        if (!consumeSuccess) {
+          // Check if it's a global phrase that exists and hasn't been completed by this player
+          const globalCheck = await client.query(`
+            SELECT p.id 
+            FROM phrases p 
+            WHERE p.id = $1 
+            AND p.is_global = true 
+            AND p.is_approved = true
+            AND NOT EXISTS (SELECT 1 FROM completed_phrases WHERE player_id = $2 AND phrase_id = $1)
+          `, [phraseId, playerId]);
+          
+          consumeSuccess = globalCheck.rows.length > 0;
+          
+          if (!consumeSuccess) {
+            console.warn(`⚠️ COMPLETE: Could not mark phrase ${phraseId} as consumed (phrase not found, not global, or already completed by player)`);
+            return { consumeSuccess: false };
+          } else {
+            console.log(`✅ DATABASE: Global phrase ${phraseId} ready for completion`);
+          }
+        } else {
+          console.log(`✅ DATABASE: Targeted phrase ${phraseId} marked as consumed within transaction`);
         }
         
         console.log(`✅ DATABASE: Phrase ${phraseId} marked as consumed within transaction`);
