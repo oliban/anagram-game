@@ -185,6 +185,32 @@ class BaseTile: SKSpriteNode, RespawnableTile {
         return frontFace
     }
     
+    // MARK: - Abstract Age Management Methods
+    // These provide default implementations that subclasses can override
+    
+    /// Increments the age of this tile by one game (override in subclasses)
+    func incrementAge() {
+        // Default implementation - subclasses should override this
+    }
+    
+    /// Returns true if this tile should be cleaned up (override in subclasses)
+    func shouldCleanup() -> Bool {
+        // Default implementation - never cleanup
+        return false
+    }
+    
+    /// Returns the current age of this tile (override in subclasses)
+    func getCurrentAge() -> Int {
+        // Default implementation - age 0
+        return 0
+    }
+    
+    /// Returns the maximum age for this tile before cleanup (override in subclasses)
+    var maxAge: Int {
+        // Default implementation - never cleanup
+        return -1
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }

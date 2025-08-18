@@ -1071,6 +1071,20 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         themeTiles.forEach { $0.removeFromParent() }
         themeTiles.removeAll()
         
+        // Convert any remaining new_discovery_emoji tiles to collectible_emoji FIRST
+        // This ensures discovery detection works correctly in subsequent games
+        convertNewDiscoveriesToCollectibles()
+        
+        // Age all existing emoji tiles by one game and cleanup old ones
+        incrementEmojiTileAges()
+        cleanupOldEmojiTiles()
+        
+        // Age all existing information tiles by one game and cleanup old ones
+        incrementInformationTileAges()
+        cleanupOldInformationTiles()
+        
+        // Don't apply glow to existing tiles - only to newly dropped ones
+        
         // Clear newly dropped emoji tiles list for new game (unless celebration is running)
         if !disableImmediateEmojiEffects {
             newlyDroppedEmojiTiles.removeAll()
@@ -2748,6 +2762,8 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         if isNewDiscovery {
             emojiTile.name = "new_discovery_emoji"
             DebugLogger.shared.ui("🌟 NEW DISCOVERY: \(emoji) (\(rarity?.displayName ?? "unknown") rarity)")
+            // Add glow effect to new discovery tiles
+            emojiTile.addNewlyDroppedGlowEffect()
         } else if rarity?.triggersGlobalDrop == true {
             emojiTile.name = "rare_collectable_emoji"
         } else {
@@ -2803,9 +2819,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func addSparkleEffect(to emojiTile: EmojiIconTile, rarity: EmojiRarity?) {
-        // Add intense glow effect for rare emojis that cuts through dark backgrounds
+        // Add intense glow effect for ALL emojis that cuts through dark backgrounds
         if let rarity = rarity {
-            // Only add sparkle effect for Epic or rarer (5% drop rate or lower)
+            // Add glow effect for all rarities - each with unique color and intensity
             let shouldSparkle: Bool
             let glowConfig: (scale: CGFloat, duration: TimeInterval, glowRadius: CGFloat, glowColor: UIColor)
             
@@ -2819,9 +2835,15 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             case .epic:
                 shouldSparkle = true
                 glowConfig = (scale: 1.4, duration: 0.5, glowRadius: 15.0, glowColor: UIColor.systemBlue)
-            case .rare, .uncommon, .common:
-                shouldSparkle = false
-                glowConfig = (scale: 1.0, duration: 1.0, glowRadius: 0.0, glowColor: UIColor.clear)
+            case .rare:
+                shouldSparkle = true
+                glowConfig = (scale: 1.3, duration: 0.6, glowRadius: 12.0, glowColor: UIColor.systemRed)
+            case .uncommon:
+                shouldSparkle = true
+                glowConfig = (scale: 1.2, duration: 0.7, glowRadius: 10.0, glowColor: UIColor.systemOrange)
+            case .common:
+                shouldSparkle = true
+                glowConfig = (scale: 1.1, duration: 0.8, glowRadius: 8.0, glowColor: UIColor.white)
             }
             
             if shouldSparkle {
@@ -3190,6 +3212,113 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             }
         }
     }
+    
+    // MARK: - Emoji Age Management
+    
+    /// Converts any remaining new_discovery_emoji tiles to collectible status
+    /// This must run BEFORE discovery detection to prevent duplicate discoveries
+    private func convertNewDiscoveriesToCollectibles() {
+        var conversions = 0
+        
+        for child in children {
+            if let emojiTile = child as? EmojiIconTile {
+                if emojiTile.name == "new_discovery_emoji" {
+                    emojiTile.name = emojiTile.rarity?.triggersGlobalDrop == true ? "rare_collectable_emoji" : "collectable_emoji"
+                    conversions += 1
+                    DebugLogger.shared.ui("🔄 PRE-CONVERT: \(emojiTile.emoji) converted from new_discovery to \(emojiTile.name ?? "unknown") before discovery check")
+                }
+            }
+        }
+        
+        if conversions > 0 {
+            DebugLogger.shared.ui("🔄 PRE-CONVERT: Converted \(conversions) new_discovery tiles to collectible status for proper discovery detection")
+        }
+    }
+    
+    /// Increments the age of all existing emoji tiles by one game
+    private func incrementEmojiTileAges() {
+        var emojiTilesFound = 0
+        var tilesAged = 0
+        
+        for child in children {
+            if let emojiTile = child as? EmojiIconTile {
+                emojiTilesFound += 1
+                emojiTile.incrementAge()
+                tilesAged += 1
+            }
+        }
+        
+        DebugLogger.shared.ui("⏰ AGE INCREMENT: Found \(emojiTilesFound) emoji tiles, aged \(tilesAged) tiles by one game")
+    }
+    
+    /// Removes emoji tiles that have reached their maximum age
+    private func cleanupOldEmojiTiles() {
+        var tilesToRemove: [EmojiIconTile] = []
+        var totalEmojiTiles = 0
+        
+        for child in children {
+            if let emojiTile = child as? EmojiIconTile {
+                totalEmojiTiles += 1
+                if emojiTile.shouldCleanup() {
+                    tilesToRemove.append(emojiTile)
+                }
+            }
+        }
+        
+        DebugLogger.shared.ui("🧹 OLD EMOJI CLEANUP: Found \(totalEmojiTiles) emoji tiles, removing \(tilesToRemove.count) old tiles")
+        
+        // Remove old tiles with fade animation
+        for tile in tilesToRemove {
+            DebugLogger.shared.ui("🗑️ REMOVING OLD: \(tile.emoji) (age: \(tile.getCurrentAge()) games)")
+            let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+            let remove = SKAction.removeFromParent()
+            let cleanup = SKAction.sequence([fadeOut, remove])
+            tile.run(cleanup)
+        }
+    }
+    
+    /// Ages all information tiles by one game
+    private func incrementInformationTileAges() {
+        var infoTilesFound = 0
+        var tilesAged = 0
+        
+        for child in children {
+            if let infoTile = child as? InformationTile {
+                infoTilesFound += 1
+                infoTile.incrementAge()
+                tilesAged += 1
+            }
+        }
+        
+        DebugLogger.shared.ui("⏰ INFO AGE INCREMENT: Found \(infoTilesFound) information tiles, aged \(tilesAged) tiles by one game")
+    }
+    
+    /// Removes information tiles that have reached their maximum age
+    private func cleanupOldInformationTiles() {
+        var tilesToRemove: [InformationTile] = []
+        var totalInfoTiles = 0
+        
+        for child in children {
+            if let infoTile = child as? InformationTile {
+                totalInfoTiles += 1
+                if infoTile.shouldCleanup() {
+                    tilesToRemove.append(infoTile)
+                }
+            }
+        }
+        
+        DebugLogger.shared.ui("🧹 OLD INFO CLEANUP: Found \(totalInfoTiles) information tiles, removing \(tilesToRemove.count) old tiles")
+        
+        // Remove old tiles with fade animation
+        for tile in tilesToRemove {
+            DebugLogger.shared.ui("🗑️ REMOVING OLD INFO: \(type(of: tile)) (age: \(tile.getCurrentAge()) games)")
+            let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+            let remove = SKAction.removeFromParent()
+            let cleanup = SKAction.sequence([fadeOut, remove])
+            tile.run(cleanup)
+        }
+    }
+    
     
     private func createFireworks() {
         // Keep the old method for backward compatibility, but it's now unused

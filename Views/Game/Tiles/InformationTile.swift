@@ -23,6 +23,14 @@ class InformationTile: BaseTile {
     private let tileType: InformationTileType
     private var contentLabels: [SKLabelNode] = []
     
+    // Age tracking for lifetime management
+    private var gamesAge: Int = 0
+    
+    /// Returns the maximum age for this information tile (can be overridden by subclasses)
+    override var maxAge: Int {
+        return 1  // Default: All information tiles cleanup after 1 game
+    }
+    
     // Override abstract properties - color based on type
     override var tileColorScheme: TileColorScheme {
         switch tileType {
@@ -48,6 +56,31 @@ class InformationTile: BaseTile {
         setupInformationPhysics()
         setupContent(content)
     }
+    
+    // MARK: - Age Management
+    
+    /// Increments the age of this information tile by one game
+    override func incrementAge() {
+        gamesAge += 1
+        DebugLogger.shared.ui("⏰ INFO AGE: \(tileType) tile is now \(gamesAge) games old (max: \(maxAge))")
+    }
+    
+    /// Returns true if this information tile should be cleaned up
+    override func shouldCleanup() -> Bool {
+        let shouldClean = gamesAge >= maxAge
+        if shouldClean {
+            DebugLogger.shared.ui("🧹 INFO CLEANUP: \(tileType) tile is \(gamesAge) games old - SHOULD BE CLEANED (max: \(maxAge))")
+        } else {
+            DebugLogger.shared.ui("⏳ INFO CLEANUP: \(tileType) tile is \(gamesAge) games old - keeping (needs \(maxAge - gamesAge) more games)")
+        }
+        return shouldClean
+    }
+    
+    /// Returns the current age of this information tile
+    override func getCurrentAge() -> Int {
+        return gamesAge
+    }
+    
     
     // Legacy initializer for backwards compatibility
     override init(size: CGSize = CGSize(width: 80, height: 60)) {
