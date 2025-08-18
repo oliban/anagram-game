@@ -90,6 +90,11 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     echo "🐳 Stopping current services..."
     docker-compose down || true
     
+    echo "🧹 Cleaning up old containers and images..."
+    docker container prune -f || true
+    docker image prune -f || true
+    echo "   ✅ Cleaned up old containers and dangling images"
+    
     echo "💾 Database preservation mode - keeping all existing volumes"
     echo "   To wipe database, use scripts/setup-new-pi-server.sh instead"
     
