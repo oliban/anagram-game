@@ -19,6 +19,9 @@ const { query, pool } = require('../database/connection');
 // Import DatabasePhrase for direct database operations (replacing API calls)
 const DatabasePhrase = require('../../services/shared/database/models/DatabasePhrase');
 
+// Import difficulty algorithm for score calculation
+const { calculateScore } = require('../../services/shared/difficulty-algorithm');
+
 // Configuration
 const CONFIG = {
   batchSize: 50,
@@ -90,9 +93,7 @@ function validatePhraseData(phrase) {
     errors.push('Missing or invalid clue');
   }
   
-  if (typeof phrase.difficulty !== 'number' || phrase.difficulty < 1) {
-    errors.push('Missing or invalid difficulty score');
-  }
+  // Note: difficulty will be calculated using the shared algorithm, not accepted from input
   
   // Optional field validation
   if (phrase.language && typeof phrase.language !== 'string') {
@@ -210,6 +211,14 @@ async function insertPhrase(phrase, dryRun = false, apiUrl = CONFIG.apiUrl) {
   }
   
   try {
+    // Calculate difficulty using the shared algorithm - NEVER accept pre-calculated scores
+    const calculatedDifficulty = calculateScore({
+      phrase: phrase.phrase,
+      language: phrase.language || 'en'
+    });
+    
+    console.log(`📊 CALCULATED DIFFICULTY: "${phrase.phrase}" (${phrase.language || 'en'}) -> ${calculatedDifficulty}`);
+    
     const result = await query(`
       INSERT INTO phrases (
         content, 
@@ -225,7 +234,7 @@ async function insertPhrase(phrase, dryRun = false, apiUrl = CONFIG.apiUrl) {
     `, [
       phrase.phrase,
       phrase.clue,
-      Math.round(phrase.difficulty),
+      calculatedDifficulty, // Use calculated difficulty, NOT input difficulty
       true, // is_global
       true, // is_approved
       null, // created_by_player_id (system generated)
@@ -334,10 +343,18 @@ async function insertPhrasesBatch(phrases, dryRun = false) {
     finalPhrases.forEach(phrase => {
       values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`);
       
+      // Calculate difficulty using shared algorithm - NEVER accept pre-calculated scores
+      const calculatedDifficulty = calculateScore({
+        phrase: phrase.phrase,
+        language: phrase.language || 'en'
+      });
+      
+      console.log(`📊 BATCH CALCULATED: "${phrase.phrase}" (${phrase.language || 'en'}) -> ${calculatedDifficulty}`);
+      
       params.push(
         phrase.phrase.trim(),                    // content
         phrase.clue?.trim() || '',              // hint
-        Math.round(phrase.difficulty),          // difficulty_level  
+        calculatedDifficulty,                   // Use calculated difficulty, NOT input
         true,                                   // is_global
         true,                                   // is_approved
         null,                                   // created_by_player_id (system generated)
