@@ -78,9 +78,9 @@ if (environment === 'staging') {
         COALESCE(theme, 'null') as theme,
         SUM(CASE WHEN COALESCE(language, 'unknown') = 'en' THEN 1 ELSE 0 END) as english,
         SUM(CASE WHEN COALESCE(language, 'unknown') = 'sv' THEN 1 ELSE 0 END) as swedish,
-        ROUND(AVG(difficulty_level), 1) as avg_difficulty,
-        MIN(difficulty_level) as min_difficulty,
-        MAX(difficulty_level) as max_difficulty
+        ROUND(AVG(difficulty_level), 1) as avg_diff,
+        MIN(difficulty_level) as min_diff,
+        MAX(difficulty_level) as max_diff
       FROM phrases 
       GROUP BY theme 
       ORDER BY COUNT(*) DESC
@@ -151,9 +151,9 @@ if (environment === 'staging') {
     // Overall difficulty stats
     const diffStats = await dbConfig.query(`
       SELECT 
-        ROUND(AVG(difficulty_level), 1) as avg_difficulty,
-        MIN(difficulty_level) as min_difficulty,
-        MAX(difficulty_level) as max_difficulty,
+        ROUND(AVG(difficulty_level), 1) as avg_diff,
+        MIN(difficulty_level) as min_diff,
+        MAX(difficulty_level) as max_diff,
         ROUND(STDDEV(difficulty_level), 1) as std_deviation,
         COUNT(*) as scored_phrases,
         COUNT(CASE WHEN difficulty_level IS NULL THEN 1 END) as unscored_phrases
