@@ -94,8 +94,36 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     echo "   To wipe database, use scripts/setup-new-pi-server.sh instead"
     
     echo "🔨 Building services..."
-    echo "   ⏱️  This may take 2-3 minutes depending on changes..."
-    docker-compose build --no-cache --progress=plain
+    echo "   ⏱️  Using Docker cache for faster builds (30-60 seconds)..."
+    echo "   🚨 If you need clean build, run: docker system prune -f first"
+    
+    # Build with timeout monitoring
+    echo "   🏗️  Starting Docker build..."
+    START_TIME=$(date +%s)
+    docker-compose build --progress=plain &
+    BUILD_PID=$!
+    
+    # Monitor build progress
+    while kill -0 $BUILD_PID 2>/dev/null; do
+        ELAPSED=$(($(date +%s) - START_TIME))
+        echo "   ⏳ Build running for ${ELAPSED}s..."
+        if [ $ELAPSED -gt 180 ]; then
+            echo "   ⚠️  Build taking longer than expected (3+ minutes)"
+            echo "   💡 Consider running 'docker system prune -f' on Pi to clear cache"
+        fi
+        sleep 10
+    done
+    
+    # Check if build succeeded
+    wait $BUILD_PID
+    BUILD_EXIT_CODE=$?
+    if [ $BUILD_EXIT_CODE -ne 0 ]; then
+        echo "   ❌ Build failed with exit code $BUILD_EXIT_CODE"
+        exit 1
+    fi
+    
+    TOTAL_TIME=$(($(date +%s) - START_TIME))
+    echo "   ✅ Build completed in ${TOTAL_TIME}s"
     
     echo "🚀 Starting services..."
     echo "   📊 Current container status before start:"
