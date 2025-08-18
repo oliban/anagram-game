@@ -94,19 +94,30 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     echo "   To wipe database, use scripts/setup-new-pi-server.sh instead"
     
     echo "🔨 Building services..."
-    docker-compose build --no-cache
+    echo "   ⏱️  This may take 2-3 minutes depending on changes..."
+    docker-compose build --no-cache --progress=plain
     
     echo "🚀 Starting services..."
+    echo "   📊 Current container status before start:"
+    docker ps -a
     docker-compose up -d
+    echo "   📊 Container status after start:"
+    docker ps
     
     echo "⏳ Waiting for services to be healthy..."
+    echo "   🕐 Waiting 10 seconds for containers to stabilize..."
     sleep 10
     
     echo "🔍 Checking service status..."
+    echo "   🌐 Testing API endpoint..."
     if curl -s http://localhost:3000/api/status > /dev/null; then
-        echo "✅ Service on port 3000 is healthy"
+        echo "   ✅ Service on port 3000 is healthy"
+        echo "   📡 Testing database connection..."
+        curl -s http://localhost:3000/api/status | grep -q "database" && echo "   ✅ Database connection OK" || echo "   ⚠️  Database status unclear"
     else
-        echo "❌ Service on port 3000 is not responding"
+        echo "   ❌ Service on port 3000 is not responding"
+        echo "   📋 Container logs:"
+        docker logs anagram-server --tail 10 || echo "     No logs available"
     fi
     
     echo "📊 Container status:"
