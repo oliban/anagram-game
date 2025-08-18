@@ -17,7 +17,7 @@ const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const ScoringSystem = require('./services/scoringSystem');
 const ConfigService = require('./services/config-service');
-const RouteAnalytics = require('../services/shared/services/routeAnalytics');
+const RouteAnalytics = require('./services/shared/services/routeAnalytics');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
