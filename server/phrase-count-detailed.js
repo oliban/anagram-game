@@ -72,14 +72,17 @@ if (environment === 'staging') {
   try {
     console.log(`📊 Analyzing phrases in ${environment.toUpperCase()} database...\n`);
     
-    // Create a cross-tabulation of themes vs languages
+    // Create a cross-tabulation of themes vs languages with difficulty stats
     const result = await dbConfig.query(`
       SELECT 
         COALESCE(theme, 'null') as theme,
         SUM(CASE WHEN COALESCE(language, 'unknown') = 'en' THEN 1 ELSE 0 END) as english,
         SUM(CASE WHEN COALESCE(language, 'unknown') = 'sv' THEN 1 ELSE 0 END) as swedish,
         SUM(CASE WHEN COALESCE(language, 'unknown') NOT IN ('en', 'sv') THEN 1 ELSE 0 END) as other,
-        COUNT(*) as total
+        COUNT(*) as total,
+        ROUND(AVG(difficulty_level), 1) as avg_difficulty,
+        MIN(difficulty_level) as min_difficulty,
+        MAX(difficulty_level) as max_difficulty
       FROM phrases 
       GROUP BY theme 
       ORDER BY COUNT(*) DESC
@@ -116,6 +119,51 @@ if (environment === 'staging') {
     
     const total = await dbConfig.query('SELECT COUNT(*) as total FROM phrases');
     console.log('\n📈 Total phrases:', total.rows[0].total);
+    
+    // Difficulty distribution
+    const difficultyDist = await dbConfig.query(`
+      SELECT 
+        CASE 
+          WHEN difficulty_level < 20 THEN '0-19 (Very Easy)'
+          WHEN difficulty_level < 40 THEN '20-39 (Easy)'
+          WHEN difficulty_level < 60 THEN '40-59 (Medium)'
+          WHEN difficulty_level < 80 THEN '60-79 (Hard)'
+          WHEN difficulty_level < 100 THEN '80-99 (Very Hard)'
+          ELSE '100+ (Extreme)'
+        END as difficulty_range,
+        COUNT(*) as count,
+        ROUND(AVG(difficulty_level), 1) as avg_score
+      FROM phrases
+      WHERE difficulty_level IS NOT NULL
+      GROUP BY 
+        CASE 
+          WHEN difficulty_level < 20 THEN '0-19 (Very Easy)'
+          WHEN difficulty_level < 40 THEN '20-39 (Easy)'
+          WHEN difficulty_level < 60 THEN '40-59 (Medium)'
+          WHEN difficulty_level < 80 THEN '60-79 (Hard)'
+          WHEN difficulty_level < 100 THEN '80-99 (Very Hard)'
+          ELSE '100+ (Extreme)'
+        END
+      ORDER BY MIN(difficulty_level)
+    `);
+    
+    console.log('\n📊 Difficulty Distribution:');
+    console.table(difficultyDist.rows);
+    
+    // Overall difficulty stats
+    const diffStats = await dbConfig.query(`
+      SELECT 
+        ROUND(AVG(difficulty_level), 1) as avg_difficulty,
+        MIN(difficulty_level) as min_difficulty,
+        MAX(difficulty_level) as max_difficulty,
+        ROUND(STDDEV(difficulty_level), 1) as std_deviation,
+        COUNT(*) as scored_phrases,
+        COUNT(CASE WHEN difficulty_level IS NULL THEN 1 END) as unscored_phrases
+      FROM phrases
+    `);
+    
+    console.log('\n📈 Overall Difficulty Statistics:');
+    console.table(diffStats.rows);
     
     // Close staging connection if used
     if (environment === 'staging' && dbConfig.pool) {
