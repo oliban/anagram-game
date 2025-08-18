@@ -372,8 +372,8 @@ module.exports = (dependencies) => {
         });
       }
 
-      // Create contribution link
-      const link = await linkGenerator.createContributionLink(playerId);
+      // Create contribution link - pass request for dynamic URL detection
+      const link = await linkGenerator.createContributionLink(playerId, {}, req);
       
       console.log(`🔗 CONTRIB: Created link for player ${player.name}: ${link.shareableUrl}`);
       

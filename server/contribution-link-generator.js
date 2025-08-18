@@ -12,15 +12,24 @@ class ContributionLinkGenerator {
     }
 
     // Get dynamic base URL for shareable links - now uses game-server URL
-    getShareableBaseUrl() {
+    getShareableBaseUrl(req = null) {
         try {
-            // Check for dynamic tunnel URL from environment (set at container start)
+            // FIRST PRIORITY: Use request host if available (most reliable)
+            if (req && req.headers.host) {
+                const protocol = req.headers['x-forwarded-proto'] || 
+                               (req.connection && req.connection.encrypted ? 'https' : 'http');
+                const dynamicUrl = `${protocol}://${req.headers.host}`;
+                console.log(`🔗 Using dynamic URL from request: ${dynamicUrl}`);
+                return dynamicUrl;
+            }
+
+            // SECOND PRIORITY: Check for dynamic tunnel URL from environment (set at container start)
             if (process.env.DYNAMIC_TUNNEL_URL) {
                 console.log(`🔗 Using dynamic tunnel URL from env: ${process.env.DYNAMIC_TUNNEL_URL}`);
                 return process.env.DYNAMIC_TUNNEL_URL;
             }
 
-            // For staging environment, try to read the dynamic Cloudflare tunnel URL from file
+            // THIRD PRIORITY: For staging environment, try to read the dynamic Cloudflare tunnel URL from file
             if (process.env.NODE_ENV === 'staging' || process.env.NODE_ENV === 'production') {
                 try {
                     const fs = require('fs');
@@ -35,18 +44,18 @@ class ContributionLinkGenerator {
                 }
             }
 
-            // Fallback to environment variable or default - now uses game-server URL
+            // LAST RESORT: Fallback to environment variable or default
             const fallbackUrl = process.env.SERVER_URL || 'http://192.168.1.133:3000';
             console.log(`🔗 Using fallback URL: ${fallbackUrl}`);
             return fallbackUrl;
             
         } catch (error) {
             console.error('Error getting shareable base URL:', error);
-            return 'http://192.168.1.133:3000'; // Hard fallback to game-server
+            return 'http://192.168.1.133:3000'; // Hard fallback
         }
     }
 
-    async createContributionLink(requestingPlayerId, options = {}) {
+    async createContributionLink(requestingPlayerId, options = {}, req = null) {
         const {
             expirationHours = this.defaultExpirationHours,
             maxUses = this.maxUsesPerLink,
@@ -73,8 +82,8 @@ class ContributionLinkGenerator {
 
             const link = result.rows[0];
             
-            // Get dynamic base URL for shareable links
-            const shareableBaseUrl = this.getShareableBaseUrl();
+            // Get dynamic base URL for shareable links - pass request for host detection
+            const shareableBaseUrl = this.getShareableBaseUrl(req);
             
             return {
                 id: link.id,
