@@ -31,7 +31,11 @@
 # ONLY AFTER USER APPROVAL:
 # node server/scripts/phrase-importer.js --input server/data/phrases-sv-*.json --import
 
-# Step 5: Ask separately about staging import 
+# Step 5: MANDATORY - Run phrase count analysis after import
+# 🚨 MANDATORY: Always run after successful import
+# node server/phrase-count-detailed.js
+
+# Step 6: Ask separately about staging import 
 # 🚨 MANDATORY: Ask "Do you want to import these to staging?"
 # 🚨 WAIT FOR EXPLICIT USER APPROVAL
 # ONLY AFTER USER SAYS YES:
@@ -101,8 +105,17 @@ ssh pi@192.168.1.222 "docker exec -e DB_HOST=postgres -e DOCKER_ENV=true anagram
 ### 5. Validation Rules
 - **Word length**: ≤7 characters per word
 - **Word count**: 2-4 words per phrase
-- **Theme relevance**: Must match requested theme
-- **Language rules**: Swedish grammar validation
+- **Theme relevance**: Must match requested theme with SPECIFIC CONTENT
+  - ❌ **NOT generic terms**: "roman", "dikt", "författare" (too generic)
+  - ✅ **SPECIFIC CONTENT**: "Selma Lagerlöf", "Röda rummet", "Gösta Berling" (actual works/authors)
+  - ✅ **REAL REFERENCES**: Authors, book titles, character names, historical works
+- **🚨 CRITICAL: Perfect grammar validation - BOTH phrases AND clues**
+  - **Swedish phrases**: Correct possessive forms, compound words, no särskrivning
+  - **Swedish clues**: Proper word order, grammatical completeness, correct articles
+  - **English phrases**: Standard grammar rules, proper syntax
+  - **English clues**: Complete sentences or grammatically correct phrases
+  - **❌ UNACCEPTABLE**: "Nobel författ", "Amerika resa", "svensk teater"
+  - **✅ REQUIRED**: "Nobel-vinnare", "resa till Amerika", "svenska teatern"
 
 ### 6. Output Format
 - Structured JSON with metadata
@@ -163,9 +176,11 @@ bash scripts/import-phrases-staging.sh server/data/imported/filename.json
 **🚨 CRITICAL WORKFLOW STEPS:**
 1. Generate phrases → Present table → Get approval for phrases
 2. Create JSON file (if missing)
-3. **ASK SEPARATELY**: "Do you want to import these to staging?"
-4. **WAIT FOR EXPLICIT APPROVAL** before any staging import
-5. Only import after user explicitly says yes
+3. Import to local database (if approved)
+4. **🚨 MANDATORY: Run phrase count analysis** - `node server/phrase-count-detailed.js`
+5. **ASK SEPARATELY**: "Do you want to import these to staging?"
+6. **WAIT FOR EXPLICIT APPROVAL** before any staging import
+7. Only import after user explicitly says yes
 
 ## 🎯 DIFFICULTY DISTRIBUTION REQUIREMENTS
 
@@ -217,6 +232,24 @@ When selecting final phrases from 40 candidates, use intelligent distribution:
 
 **🔴 CRITICAL**: When the phrase generation script calls AI functions, CLAUDE must respond with actual generated phrases in the correct JSON format
 
+**🚨 CRITICAL THEME CONTENT REQUIREMENTS:**
+- **NEVER use generic terms** - "roman", "dikt", "magi", "trolldom" are INVALID
+- **ALWAYS use specific references** - actual author names, book titles, characters, spells
+- **Literature**: "Astrid Lindgren", "Harry Potter", "Röda rummet", "Hamlet"  
+- **Fantasy**: "Gandalf", "Hogwarts", "Sauron", "Excalibur", "unicorn"
+- **All themes**: Must be recognizable, specific content from that domain
+
+**🚨 CRITICAL GRAMMAR REQUIREMENTS:**
+- **🔴 MANDATORY**: Perfect grammar in BOTH phrases AND clues
+- **Swedish grammar rules**: Possessive forms, compound words, proper articles, correct word order
+- **English grammar rules**: Proper syntax, complete phrases, correct tense usage
+- **❌ REJECT immediately**: Any phrase or clue with grammar errors
+- **🔴 NEVER SKIP**: Grammar validation must be applied to every single phrase/clue pair
+- **Examples of MANDATORY corrections**:
+  - "Strindberg drama" → "Strindbergs drama" (possessive)  
+  - "Nobel författ" → "Nobel-vinnare" (compound + article)
+  - "Amerika resa" → "resa till Amerika" (proper word order)
+
 ### 🚨 CRITICAL SWEDISH GRAMMAR RULES (MANDATORY APPLICATION)
 
 #### Compound Words (Särskrivning Prevention)
@@ -252,13 +285,16 @@ Examples: "ris skål" → "risskål", "grädde sås" → "gräddsås", "kock kni
 **🔴 NEVER**: Present phrases with >7 character words to user
 **🔴 ALWAYS**: Pre-validate and fix/replace before user review
 
-#### Validation Checklist for EVERY Swedish Phrase:
+#### Validation Checklist for EVERY Swedish Phrase AND Clue:
 - [ ] **🔴 FIRST**: Each word ≤7 characters (AUTO-REJECT if not)
-- [ ] No spaces in compound words (särskrivning check)
-- [ ] Natural Swedish compound formation
-- [ ] Correct en/ett gender agreement
-- [ ] Proper adjective declension
-- [ ] Would a native speaker approve this phrase?
+- [ ] **🔴 PHRASE GRAMMAR**: No spaces in compound words (särskrivning check)
+- [ ] **🔴 PHRASE GRAMMAR**: Correct possessive forms ("Lindgrens" not "Lindgren")
+- [ ] **🔴 PHRASE GRAMMAR**: Natural Swedish compound formation
+- [ ] **🔴 CLUE GRAMMAR**: Proper word order (subject-verb-object where applicable)
+- [ ] **🔴 CLUE GRAMMAR**: Correct articles (en/ett/den/det)
+- [ ] **🔴 CLUE GRAMMAR**: Proper compound formation in clues
+- [ ] **🔴 CLUE GRAMMAR**: Complete grammatical phrases, not fragments
+- [ ] **🔴 BOTH**: Would a native Swedish speaker approve both phrase AND clue?
 
 #### Word Length Pre-Validation Function
 ```javascript
@@ -326,6 +362,21 @@ The `import-phrases.js` script automatically detects the environment:
 - **Better performance** with direct database access
 - **Reduced attack surface** - no HTTP endpoints to exploit
 - **Cleaner architecture** - fewer services to secure
+- **🚨 CRITICAL: Difficulty scores calculated server-side** - Import script NEVER accepts pre-calculated difficulty scores
+- **Algorithm integrity** - Uses shared difficulty-algorithm.js to ensure consistent scoring
+
+### 🚨 CRITICAL FIX: Import Script Security Update (August 2025)
+**FIXED VULNERABILITY**: Import script was accepting external difficulty scores with dangerous fallback to difficulty=1
+
+**Root Cause**: Line 50 had `const phraseDifficulty = phraseData.difficulty || 1;` which caused 158 phrases to get incorrect difficulty=1 scores.
+
+**Security Fix**: 
+- **✅ FIXED**: Import script now ALWAYS calculates difficulty server-side using `shared/difficulty-algorithm.js`
+- **✅ REMOVED**: Dangerous external difficulty score acceptance  
+- **✅ ELIMINATED**: Fallback to difficulty=1 that caused scoring failures
+- **✅ ENFORCED**: Server-side calculation for ALL imports, ensuring security and consistency
+
+**Impact**: All future imports now use proper difficulty calculation. No more scoring failures or security risks from external JSON files.
 
 ## Phrase Generation Scripts
 
@@ -350,6 +401,9 @@ cd server && node scripts/phrase-generator.js --range 1-100 --count 30 --languag
 # 3. 🚨 MANDATORY: Wait for explicit user approval 
 # 4. ONLY AFTER APPROVAL: Import phrases
 cd server && node scripts/phrase-importer.js --input data/phrases-sv-*.json --import
+
+# 5. 🚨 MANDATORY: Run phrase count analysis after successful import
+node server/phrase-count-detailed.js
 ```
 
 ### Import Script
@@ -367,16 +421,27 @@ node scripts/phrase-importer.js --input data/phrases-*.json --dry-run
 ## Quality Assurance
 
 ### Grammar Validation
+- **🚨 CRITICAL**: Perfect grammar validation for BOTH phrases AND clues
 - **🚨 CRITICAL**: Word length validation FIRST (≤7 characters per word)
 - **🚨 CRITICAL**: Swedish compound words must be single words (no särskrivning!)
-- **MANDATORY**: Pre-validate word length before user review
-- Swedish grammar rules applied (see mandatory rules section above)
-- 3-step AI correction process with automatic rejection of >7 character words
-- Language-specific patterns
-- **MANDATORY**: Apply särskrivning prevention rules to ALL Swedish phrases
+- **🚨 CRITICAL**: Swedish possessive forms must be correct ("Lindgrens" not "Lindgren")
+- **🚨 CRITICAL**: Swedish word order must be proper ("resa till Amerika" not "Amerika resa")
+- **🚨 CRITICAL**: Swedish articles and compounds ("Nobel-vinnare" not "Nobel författ")
+- **MANDATORY**: Pre-validate BOTH phrase and clue grammar before user review
+- **MANDATORY**: Apply särskrivning prevention rules to ALL Swedish content
+- **MANDATORY**: Reject any phrase/clue pair with grammar errors
+- Language-specific patterns applied to both phrases and clues
+- 3-step validation: word length → grammar → theme relevance
 
 ### Theme Relevance
-- Phrases must match requested theme
+- **🚨 CRITICAL: Use SPECIFIC theme content, NOT generic terms**
+- **Literature theme**: Author names, book titles, character names, literary movements
+  - ✅ CORRECT: "Astrid Lindgren", "Pippi Långstrump", "Selma Lagerlöf"  
+  - ❌ WRONG: "roman", "bok", "författare" (too generic)
+- **Fantasy theme**: Specific creatures, spells, magical items, fantasy authors/works
+  - ✅ CORRECT: "Gandalf", "Sauron", "Middle Earth", "Tolkien"
+  - ❌ WRONG: "magi", "trolldom", "fantasy" (too generic)
+- **All themes**: Must reference actual, recognizable content from that domain
 - Thematic consistency checked
 - Contextual appropriateness verified
 
@@ -424,6 +489,34 @@ ls -la server/data/phrases-*.json  # Verify files exist
 ssh pi@192.168.1.222 "echo 'Connection OK'"
 ```
 
+#### Staging Import "Failed to copy to container"
+```bash
+# Error: Failed to copy to container
+# Cause: Missing /app/data directory in Docker container
+# Solution: Create the directory and fix permissions
+ssh pi@192.168.1.222 "docker exec anagram-game-server mkdir -p /app/data"
+ssh pi@192.168.1.222 "docker exec -u root anagram-game-server chown nodejs:nodejs /app/data"
+
+# Then retry import:
+bash Scripts/import-phrases-staging.sh server/data/imported/*.json
+```
+
+#### Multiple File Import Strategy
+```bash
+# Strategy 1: Import all files at once (recommended)
+bash Scripts/import-phrases-staging.sh server/data/imported/*.json
+
+# Strategy 2: Import files one by one (if bulk fails)
+bash Scripts/import-phrases-staging.sh server/data/imported/file1.json
+bash Scripts/import-phrases-staging.sh server/data/imported/file2.json
+
+# The script automatically:
+# - Creates Docker /app/data directory if missing
+# - Handles duplicates (skips existing phrases)
+# - Moves imported files to imported-on-stage/
+# - Provides detailed import statistics
+```
+
 ## Best Practices
 
 ### Before Generation
@@ -449,6 +542,7 @@ ssh pi@192.168.1.222 "echo 'Connection OK'"
 2. ✅ Test phrase retrieval
 3. ✅ Confirm difficulty scoring
 4. ✅ Validate in-game functionality
+5. ✅ **🚨 MANDATORY: Run phrase count analysis** - `node server/phrase-count-detailed.js`
 
 ## Database Analysis Tools
 
@@ -540,12 +634,13 @@ node server/phrase-count-detailed.js staging 192.168.1.100
 
 #### Environment Comparison (August 2025)
 
-**Local Development Database:**
-- **Total Phrases**: 564
-- **Languages**: English (295), Swedish (269) - well balanced
-- **Themes**: 6 themes with most content unthemed (79.3%)
-- **Difficulty**: Average 56.5, range 15-250, mostly medium difficulty (363 phrases in 40-59 range)
-- **Top Themes**: Unthemed (447), Cooking (60), Golf (30), Computing (20)
+**Local Development Database (Updated August 2025):**
+- **Total Phrases**: 140 (after cleanup and optimization)
+- **Languages**: English (70), Swedish (70) - perfect balance
+- **Themes**: 3 active themes - all content properly categorized
+- **Difficulty**: Average 72.5, range 15-148, well-distributed across difficulty bands
+- **Theme Distribution**: Golf (60), Cooking (60), Computing (20)
+- **Language Balance**: Golf theme now has both English and Swedish versions
 
 **Pi Staging Database:**
 - **Total Phrases**: 15 (minimal test set)
@@ -556,10 +651,11 @@ node server/phrase-count-detailed.js staging 192.168.1.100
 
 **Key Insights:**
 - Staging environment needs content deployment from local development
-- Local has good language balance, staging is English-only
-- Golf phrases are exclusively Swedish (interesting language-specific content)
-- Most phrases lack theme categorization (opportunity for content organization)
-- Difficulty distribution in local is well-spread with medium difficulty being most common
+- Local database has been optimized with perfect language balance (70 English, 70 Swedish)
+- All themes now have proper categorization (no unthemed content)
+- Golf theme has been balanced with both English and Swedish versions
+- Database cleanup removed 454 unthemed/test phrases, improving overall quality
+- Difficulty distribution is well-balanced across all ranges (15-148)
 
 ## Integration with Game System
 
