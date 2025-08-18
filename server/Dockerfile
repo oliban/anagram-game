@@ -20,8 +20,9 @@ COPY server/ ./
 # Copy shared directories needed by the server
 COPY shared/ ./shared/
 COPY services/web-dashboard/ ./web-dashboard/
+COPY services/ ./services/
 
-# Copy models from services to the expected location
+# Copy models from services to the expected location  
 COPY services/shared/database/models/ ./models/
 
 # Create necessary directories
