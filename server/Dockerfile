@@ -15,7 +15,7 @@ COPY server/package*.json ./server/
 WORKDIR /project/server
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy all project structure
+# Copy all project structure - force rebuild for correct models
 WORKDIR /project
 COPY server/ ./server/
 COPY services/ ./services/
