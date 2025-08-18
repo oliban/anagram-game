@@ -30,7 +30,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=staging
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=anagram_game
