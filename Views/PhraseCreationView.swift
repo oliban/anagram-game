@@ -37,7 +37,8 @@ struct PhraseCreationView: View {
         let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let validClueLength = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 32
-        return words >= 2 && words <= 4 && hasPhrase && hasClue && validClueLength && isValidWordLengths
+        let noWordOverlap = !hasClueWordOverlap
+        return words >= 2 && words <= 4 && hasPhrase && hasClue && validClueLength && isValidWordLengths && noWordOverlap
     }
     
     private var isValidPhraseForDifficulty: Bool {
@@ -50,6 +51,38 @@ struct PhraseCreationView: View {
         let trimmedPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines)
         let words = trimmedPhrase.split(separator: " ")
         return words.allSatisfy { $0.count <= 7 }
+    }
+    
+    private var hasClueWordOverlap: Bool {
+        let trimmedPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmedClue = clueText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        guard !trimmedPhrase.isEmpty && !trimmedClue.isEmpty else { return false }
+        
+        // Get phrase words (split by whitespace and filter empty)
+        let phraseWords = trimmedPhrase.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        
+        // Check if any phrase word appears in the clue
+        for phraseWord in phraseWords {
+            if trimmedClue.contains(phraseWord) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    private var overlappingWords: [String] {
+        let trimmedPhrase = phraseText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmedClue = clueText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        guard !trimmedPhrase.isEmpty && !trimmedClue.isEmpty else { return [] }
+        
+        let phraseWords = trimmedPhrase.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        
+        return phraseWords.filter { phraseWord in
+            trimmedClue.contains(phraseWord)
+        }
     }
     
     private var validationMessage: String {
@@ -85,7 +118,14 @@ struct PhraseCreationView: View {
             return "Clue is too long (\(clueLength)/32 characters)"
         }
         
-        // Remove the clue requirement from validation message - let difficulty show without clue
+        if hasClue && hasClueWordOverlap {
+            let overlapping = overlappingWords
+            if overlapping.count == 1 {
+                return "Clue cannot contain the word '\(overlapping.first!)' from the phrase"
+            } else {
+                return "Clue cannot contain words from the phrase: \(overlapping.joined(separator: ", "))"
+            }
+        }
         
         return ""
     }
@@ -323,17 +363,24 @@ struct PhraseCreationView: View {
                                 isClueFieldFocused = false
                             }
                         
-                        HStack {
-                            Text("Players can reveal this clue if they get stuck (Hint 3)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("Players can reveal this clue if they get stuck (Hint 3)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                Text("\(clueText.count)/32 characters")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(clueText.count > 32 ? .red : (clueText.count > 25 ? .orange : .secondary))
+                            }
                             
-                            Spacer()
-                            
-                            Text("\(clueText.count)/32 characters")
+                            Text("⚠️ Clue cannot contain any words that appear in your phrase")
                                 .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(clueText.count > 32 ? .red : (clueText.count > 25 ? .orange : .secondary))
+                                .foregroundColor(.orange)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }

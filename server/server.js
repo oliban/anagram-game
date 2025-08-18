@@ -17,7 +17,7 @@ const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const ScoringSystem = require('./services/scoringSystem');
 const ConfigService = require('./services/config-service');
-const RouteAnalytics = require('./shared/services/routeAnalytics');
+const RouteAnalytics = require('../services/shared/services/routeAnalytics');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -345,7 +345,7 @@ app.use(express.static('public'));
 // Apply rate limiting to API routes - TEMPORARILY DISABLED FOR TESTING
 // app.use('/api', apiLimiter);
 
-// Route analytics middleware (only for API routes) - TEMPORARILY DISABLED
+// Route analytics middleware (only for API routes)
 app.use('/api', routeAnalytics.createMiddleware());
 
 // Swagger API documentation
