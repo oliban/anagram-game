@@ -16,11 +16,23 @@ class ContributionLinkGenerator {
         try {
             // FIRST PRIORITY: Use request host if available (most reliable)
             if (req && req.headers.host) {
+                console.log(`🔍 Request headers:`, {
+                    host: req.headers.host,
+                    'x-forwarded-proto': req.headers['x-forwarded-proto'],
+                    'x-forwarded-host': req.headers['x-forwarded-host'],
+                    'cf-connecting-ip': req.headers['cf-connecting-ip']
+                });
                 const protocol = req.headers['x-forwarded-proto'] || 
                                (req.connection && req.connection.encrypted ? 'https' : 'http');
                 const dynamicUrl = `${protocol}://${req.headers.host}`;
                 console.log(`🔗 Using dynamic URL from request: ${dynamicUrl}`);
                 return dynamicUrl;
+            } else {
+                console.log(`⚠️ No request object or host header available:`, {
+                    hasReq: !!req,
+                    hasHeaders: req ? !!req.headers : false,
+                    hasHost: req && req.headers ? !!req.headers.host : false
+                });
             }
 
             // SECOND PRIORITY: Check for dynamic tunnel URL from environment (set at container start)
