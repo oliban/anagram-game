@@ -15,6 +15,15 @@ class MessageTile: InformationTile {
         return messageLabels.first?.text ?? ""
     }
     
+    /// Override maxAge for level-up message tiles
+    override var maxAge: Int {
+        let text = messageText.lowercased()
+        if text.contains("🎉") && (text.contains("novice") || text.contains("beginner") || text.contains("intermediate") || text.contains("advanced") || text.contains("expert") || text.contains("master") || text.contains("grandmaster") || text.contains("legendary") || text.contains("formidable") || text.contains("elite")) {
+            return 3  // Level-up tiles persist for 3 games
+        }
+        return 1  // Other message tiles cleanup after 1 game
+    }
+    
     init(message: String, sceneSize: CGSize) {
         // Calculate optimal tile size with text wrapping
         let fontSize = InformationTile.primaryFontSize

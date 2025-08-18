@@ -13,6 +13,23 @@ class EmojiIconTile: IconTile {
     let rarity: EmojiRarity?
     private var hasTriggeredEffects = false
     
+    // Age tracking with rarity-based lifecycle
+    private var gamesAge: Int = 0
+    
+    /// Returns the maximum age for this emoji tile based on its rarity
+    override var maxAge: Int {
+        guard let rarity = rarity else { return 3 } // Default for unknown rarity
+        
+        switch rarity {
+        case .common: return 3        // 3 games
+        case .uncommon: return 5      // 5 games  
+        case .rare: return 8          // 8 games
+        case .epic: return 15         // 15 games
+        case .mythic: return 30       // 30 games
+        case .legendary: return -1    // Forever (never cleanup)
+        }
+    }
+    
     // Override tileColorScheme to use rarity-based colors
     override var tileColorScheme: TileColorScheme {
         if let rarity = rarity {
@@ -26,6 +43,7 @@ class EmojiIconTile: IconTile {
         self.rarity = rarity
         super.init(size: size)
         setupEmojiDisplay(emoji)
+        // Don't add glow automatically - will be added only to newly dropped tiles
         
         // Enable user interaction specifically for emoji tiles (needed for dragging)
         isUserInteractionEnabled = true
@@ -35,6 +53,40 @@ class EmojiIconTile: IconTile {
     func resetEffectsFlag() {
         hasTriggeredEffects = false
         DebugLogger.shared.ui("🔄 RESET: Effects flag reset for \(emoji)")
+    }
+    
+    // MARK: - Age Management
+    
+    /// Increments the age of this emoji tile by one game
+    override func incrementAge() {
+        gamesAge += 1
+        let rarityName = rarity?.displayName ?? "unknown"
+        let maxAgeDisplay = maxAge == -1 ? "Forever" : "\(maxAge)"
+        DebugLogger.shared.ui("⏰ AGE: \(emoji) (\(rarityName)) is now \(gamesAge) games old (max: \(maxAgeDisplay))")
+    }
+    
+    /// Returns true if this emoji tile should be cleaned up
+    override func shouldCleanup() -> Bool {
+        let rarityName = rarity?.displayName ?? "unknown"
+        
+        // Legendary tiles never get cleaned up
+        if maxAge == -1 {
+            DebugLogger.shared.ui("👑 CLEANUP CHECK: \(emoji) (\(rarityName)) is LEGENDARY - NEVER CLEANUP (age: \(gamesAge))")
+            return false
+        }
+        
+        let shouldClean = gamesAge >= maxAge
+        if shouldClean {
+            DebugLogger.shared.ui("🧹 CLEANUP CHECK: \(emoji) (\(rarityName)) is \(gamesAge) games old - SHOULD BE CLEANED (max: \(maxAge))")
+        } else {
+            DebugLogger.shared.ui("⏳ CLEANUP CHECK: \(emoji) (\(rarityName)) is \(gamesAge) games old - keeping (needs \(maxAge - gamesAge) more games)")
+        }
+        return shouldClean
+    }
+    
+    /// Returns the current age of this emoji tile
+    override func getCurrentAge() -> Int {
+        return gamesAge
     }
     
     // Call this method when the tile is added to the scene to trigger effects
@@ -157,6 +209,65 @@ class EmojiIconTile: IconTile {
         
         addCenteredContent(emojiLabel)
     }
+    
+    /// Adds temporary glow effect to newly dropped emoji tiles that fades away after a while
+    func addNewlyDroppedGlowEffect() {
+        // Get rarity-specific glow configuration
+        let glowConfig: (glowRadius: CGFloat, glowColor: UIColor, duration: TimeInterval)
+        
+        switch rarity {
+        case .legendary:
+            glowConfig = (glowRadius: 25.0, glowColor: UIColor.systemYellow, duration: 8.0)
+        case .mythic:
+            glowConfig = (glowRadius: 20.0, glowColor: UIColor.systemPurple, duration: 7.0)
+        case .epic:
+            glowConfig = (glowRadius: 15.0, glowColor: UIColor.systemBlue, duration: 6.0)
+        case .rare:
+            glowConfig = (glowRadius: 12.0, glowColor: UIColor.systemRed, duration: 5.0)
+        case .uncommon:
+            glowConfig = (glowRadius: 10.0, glowColor: UIColor.systemOrange, duration: 4.0)
+        case .common, .none:
+            glowConfig = (glowRadius: 8.0, glowColor: UIColor.white, duration: 3.0)
+        }
+        
+        // Create glow effect
+        let glowNode = SKShapeNode(circleOfRadius: glowConfig.glowRadius * 2.0)
+        glowNode.fillColor = glowConfig.glowColor
+        glowNode.strokeColor = glowConfig.glowColor
+        glowNode.lineWidth = glowConfig.glowRadius
+        glowNode.glowWidth = glowConfig.glowRadius * 2.0
+        glowNode.alpha = 0.8
+        glowNode.blendMode = .add
+        glowNode.zPosition = 9999 // High to shine through darkness
+        glowNode.name = "persistent_glow"
+        
+        // Add outer glow for depth
+        let outerGlow = SKShapeNode(circleOfRadius: glowConfig.glowRadius * 3.0)
+        outerGlow.fillColor = glowConfig.glowColor
+        outerGlow.strokeColor = glowConfig.glowColor
+        outerGlow.lineWidth = glowConfig.glowRadius * 0.5
+        outerGlow.glowWidth = glowConfig.glowRadius * 3.0
+        outerGlow.alpha = 0.6
+        outerGlow.blendMode = .add
+        outerGlow.zPosition = 9998
+        outerGlow.name = "persistent_outer_glow"
+        
+        // Add glow nodes
+        addChild(outerGlow)
+        addChild(glowNode)
+        
+        // Simple fade out after duration
+        let wait = SKAction.wait(forDuration: glowConfig.duration)
+        let fadeOut = SKAction.fadeOut(withDuration: 1.0)
+        let remove = SKAction.removeFromParent()
+        let sequence = SKAction.sequence([wait, fadeOut, remove])
+        
+        glowNode.run(sequence)
+        outerGlow.run(sequence)
+        
+        DebugLogger.shared.ui("✨ NEWLY DROPPED GLOW: Added \(glowConfig.duration)s glow to \(emoji) (\(rarity?.displayName ?? "common"))")
+    }
+    
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         // Disable physics temporarily to prevent conflicts and flickering
