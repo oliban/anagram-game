@@ -1,0 +1,93 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-11T23:33:47.578Z",
+    "target_range": "50-150",
+    "requested_count": 50,
+    "actual_count": 10,
+    "language": "sv",
+    "theme": "winter",
+    "generator_version": "1.0.0"
+  },
+  "phrases": [
+    {
+      "phrase": "ny kod",
+      "clue": "Skapad programtext",
+      "difficulty": 31,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "hård disk",
+      "clue": "Fast lagring",
+      "difficulty": 42,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "kall start",
+      "clue": "Systemboot",
+      "difficulty": 54,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "blå skärm",
+      "clue": "Windows krasch",
+      "difficulty": 38,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "stark cpu",
+      "clue": "Snabb chip",
+      "difficulty": 41,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "stor ram",
+      "clue": "Mycket minne",
+      "difficulty": 45,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "ny app",
+      "clue": "Färsk program",
+      "difficulty": 35,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "hex kod",
+      "clue": "Sexton bas",
+      "difficulty": 33,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "git pull",
+      "clue": "Hämta kod",
+      "difficulty": 39,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    },
+    {
+      "phrase": "sql fråga",
+      "clue": "Databas sökning",
+      "difficulty": 39,
+      "language": "sv",
+      "source": "ai_generated",
+      "generated_at": "2025-08-11T23:33:47.577Z"
+    }
+  ]
+}
