@@ -23,8 +23,7 @@ COPY services/ ./services/
 # Copy shared directories needed by the server
 COPY shared/ ./shared/
 
-# Copy models from services to the expected location  
-COPY services/shared/database/models/ ./server/models/
+# Note: Don't overwrite server/models/ - it contains the correct updated models
 
 # Set final working directory to server
 WORKDIR /project/server
