@@ -41,6 +41,13 @@ class ContributionLinkGenerator {
                 return process.env.DYNAMIC_TUNNEL_URL;
             }
 
+            // STAGING ENVIRONMENT: Use known Cloudflare tunnel URL
+            if (process.env.NODE_ENV === 'staging' || process.env.SERVER_URL === 'staging') {
+                const stagingUrl = 'https://bras-voluntary-survivor-presidential.trycloudflare.com';
+                console.log(`🔗 Using hardcoded staging URL: ${stagingUrl}`);
+                return stagingUrl;
+            }
+
             // THIRD PRIORITY: For staging environment, try to read the dynamic Cloudflare tunnel URL from file
             if (process.env.NODE_ENV === 'staging' || process.env.NODE_ENV === 'production') {
                 try {
