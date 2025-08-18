@@ -78,8 +78,6 @@ if (environment === 'staging') {
         COALESCE(theme, 'null') as theme,
         SUM(CASE WHEN COALESCE(language, 'unknown') = 'en' THEN 1 ELSE 0 END) as english,
         SUM(CASE WHEN COALESCE(language, 'unknown') = 'sv' THEN 1 ELSE 0 END) as swedish,
-        SUM(CASE WHEN COALESCE(language, 'unknown') NOT IN ('en', 'sv') THEN 1 ELSE 0 END) as other,
-        COUNT(*) as total,
         ROUND(AVG(difficulty_level), 1) as avg_difficulty,
         MIN(difficulty_level) as min_difficulty,
         MAX(difficulty_level) as max_difficulty
