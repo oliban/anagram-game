@@ -14,7 +14,14 @@ class ContributionLinkGenerator {
     // Get dynamic base URL for shareable links - now uses game-server URL
     getShareableBaseUrl(req = null) {
         try {
-            // FIRST PRIORITY: Use request host if available (most reliable)
+            // FIRST PRIORITY: For staging environment, ALWAYS use Cloudflare tunnel URL (override everything else)
+            if (process.env.NODE_ENV === 'staging') {
+                const stagingUrl = 'https://bras-voluntary-survivor-presidential.trycloudflare.com';
+                console.log(`🔗 STAGING MODE: Using hardcoded staging URL: ${stagingUrl}`);
+                return stagingUrl;
+            }
+
+            // SECOND PRIORITY: Use request host if available (for non-staging environments)
             if (req && req.headers.host) {
                 console.log(`🔍 Request headers:`, {
                     host: req.headers.host,
@@ -35,17 +42,10 @@ class ContributionLinkGenerator {
                 });
             }
 
-            // SECOND PRIORITY: Check for dynamic tunnel URL from environment (set at container start)
+            // THIRD PRIORITY: Check for dynamic tunnel URL from environment (set at container start)
             if (process.env.DYNAMIC_TUNNEL_URL) {
                 console.log(`🔗 Using dynamic tunnel URL from env: ${process.env.DYNAMIC_TUNNEL_URL}`);
                 return process.env.DYNAMIC_TUNNEL_URL;
-            }
-
-            // THIRD PRIORITY: For staging environment, use known Cloudflare tunnel URL as fallback
-            if (process.env.NODE_ENV === 'staging') {
-                const stagingUrl = 'https://bras-voluntary-survivor-presidential.trycloudflare.com';
-                console.log(`🔗 Using hardcoded staging URL: ${stagingUrl}`);
-                return stagingUrl;
             }
 
             // FOURTH PRIORITY: Try to read dynamic tunnel URL from file (legacy)
