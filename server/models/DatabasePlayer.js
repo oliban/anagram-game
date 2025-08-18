@@ -553,7 +553,8 @@ class DatabasePlayer {
   }
 
   /**
-   * Clean up stale socket connections (players who haven't been seen in 10+ minutes)
+   * Clean up stale socket connections (players who haven't been seen in 30+ minutes)
+   * Increased timeout to account for iOS app backgrounding and network issues
    */
   static async cleanupStaleConnections() {
     try {
@@ -561,7 +562,7 @@ class DatabasePlayer {
         UPDATE players 
         SET socket_id = NULL, is_active = false
         WHERE socket_id IS NOT NULL 
-          AND last_seen < CURRENT_TIMESTAMP - INTERVAL '10 minutes'
+          AND last_seen < CURRENT_TIMESTAMP - INTERVAL '30 minutes'
       `);
 
       const updatedCount = result.rowCount || 0;

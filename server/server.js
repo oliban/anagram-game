@@ -17,7 +17,7 @@ const DatabasePlayer = require('./models/DatabasePlayer');
 const DatabasePhrase = require('./models/DatabasePhrase');
 const ScoringSystem = require('./services/scoringSystem');
 const ConfigService = require('./services/config-service');
-// const RouteAnalytics = require('./shared/services/routeAnalytics'); // DISABLED - causing log errors
+const RouteAnalytics = require('./shared/services/routeAnalytics');
 
 // Swagger documentation setup
 const swaggerUi = require('swagger-ui-express');
@@ -30,7 +30,7 @@ const server = createServer(app);
 
 // Initialize configuration service
 const configService = new ConfigService(pool);
-// const routeAnalytics = new RouteAnalytics('game-server'); // DISABLED - causing log errors
+const routeAnalytics = new RouteAnalytics('game-server');
 
 // CORS configuration - secure but development-friendly
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -130,12 +130,15 @@ console.log('🔌 WebSocket Security Configuration:', {
 
 const io = new Server(server, {
   cors: corsOptions,
-  pingTimeout: 60000,    // 60 seconds (default is 20 seconds)
-  pingInterval: 25000,   // 25 seconds (default is 10 seconds)
+  pingTimeout: 120000,   // 2 minutes (increased for mobile apps)
+  pingInterval: 30000,   // 30 seconds (longer intervals for battery)
   upgradeTimeout: 30000, // 30 seconds for WebSocket upgrade
   allowUpgrades: true,   // Allow transport upgrades
   transports: ['websocket', 'polling'], // Support both transports
-  allowEIO3: true        // Allow Engine.IO v3 clients
+  allowEIO3: true,       // Allow Engine.IO v3 clients
+  maxHttpBufferSize: 1e6, // 1MB buffer for large messages
+  httpCompression: true,  // Enable compression
+  perMessageDeflate: true // Enable per-message compression
 });
 const PORT = process.env.PORT || 3000;
 
@@ -343,7 +346,7 @@ app.use(express.static('public'));
 // app.use('/api', apiLimiter);
 
 // Route analytics middleware (only for API routes) - TEMPORARILY DISABLED
-// app.use('/api', routeAnalytics.createMiddleware());
+app.use('/api', routeAnalytics.createMiddleware());
 
 // Swagger API documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
@@ -446,6 +449,37 @@ io.on('connection', (socket) => {
   
   socket.on('pong', () => {
     console.log(`🏓 SERVER: Pong received from ${socket.id}`);
+  });
+  
+  // Handle iOS app lifecycle events
+  socket.on('app-backgrounded', async () => {
+    console.log(`📱 SERVER: App backgrounded for ${socket.id}`);
+    // Update last_seen but keep connection active for longer
+    if (isDatabaseConnected) {
+      try {
+        await DatabasePlayer.updateLastSeen(socket.id);
+        console.log(`📱 SERVER: Updated last_seen for backgrounded app ${socket.id}`);
+      } catch (error) {
+        console.log(`❌ Error updating last_seen for backgrounded app: ${error.message}`);
+      }
+    }
+  });
+  
+  socket.on('app-foregrounded', async () => {
+    console.log(`📱 SERVER: App foregrounded for ${socket.id}`);
+    // Refresh player status and reconnect
+    if (isDatabaseConnected) {
+      try {
+        await DatabasePlayer.setPlayerActive(socket.id);
+        const onlinePlayers = (await DatabasePlayer.getOnlinePlayers()).map(p => p.getPublicInfo());
+        socket.emit('player-list-updated', {
+          players: onlinePlayers,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.log(`❌ Error handling app foreground: ${error.message}`);
+      }
+    }
   });
   
   // Monitor raw Socket.IO messages
