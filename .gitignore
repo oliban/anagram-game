@@ -158,8 +158,18 @@ server/data/generation-*.json
 server/data/generation-*.log
 server/data/import-*.json
 
-# Phrase import staging area (files moved after import)
-server/data/imported/*.json
+# All server data directory contents (generated/temporary files)
+server/data/*.json
+server/data/**/*.json
+server/data/import-report-*.json
+
+# Phrase import staging area (files moved after import) 
+server/data/imported/
+server/data/imported/**/*
+
+# Keep only specific directories with README files
+!server/data/README.md
+!server/data/imported/README.md
 
 # Temporary files
 *.tmp
