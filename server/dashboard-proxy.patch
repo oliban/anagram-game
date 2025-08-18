@@ -1,0 +1,41 @@
+// Add this to the web dashboard server.js after the GET /api/contribution/:token route
+
+const axios = require('axios');
+
+// Proxy POST requests to game server for contribution submissions
+app.post('/api/contribution/:token/submit', contributionLimiter, async (req, res) => {
+    try {
+        const { token } = req.params;
+        const gameServerUrl = process.env.API_URL || 'http://localhost:3000';
+        
+        console.log(`🔄 PROXY: Forwarding submission for token ${token} to ${gameServerUrl}`);
+        
+        // Forward the request to the game server
+        const response = await axios.post(
+            `${gameServerUrl}/api/contribution/${token}/submit`,
+            req.body,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Origin': req.headers.origin || 'http://localhost:3001'
+                }
+            }
+        );
+        
+        // Return the game server's response
+        res.json(response.data);
+    } catch (error) {
+        console.error('❌ PROXY: Error forwarding submission:', error.message);
+        
+        if (error.response) {
+            // Forward error from game server
+            res.status(error.response.status).json(error.response.data);
+        } else {
+            // Network or other error
+            res.status(500).json({ 
+                success: false, 
+                error: 'Failed to submit contribution. Please try again.' 
+            });
+        }
+    }
+});
