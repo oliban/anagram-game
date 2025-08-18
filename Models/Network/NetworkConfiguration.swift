@@ -58,7 +58,7 @@ private func loadSharedConfig() -> SharedAppConfig {
     )
     
     // Environment configurations
-    let developmentConfig = EnvironmentConfig(host: "192.168.1.133", description: "Local Development Server")
+    let developmentConfig = EnvironmentConfig(host: "192.168.1.188", description: "Local Development Server")
     let stagingConfig = EnvironmentConfig(host: "bras-voluntary-survivor-presidential.trycloudflare.com", description: "Pi Staging Server (Cloudflare tunnel)")
     let productionConfig = EnvironmentConfig(host: "anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com", description: "AWS Production Server")
     
