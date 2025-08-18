@@ -42,6 +42,31 @@ def update_network_config(mode, tunnel_url=None):
             'let env = "local" // DEFAULT_ENVIRONMENT',
             content
         )
+        
+        # For local mode, also update the development host IP dynamically
+        import subprocess
+        try:
+            # Get current local IP address
+            result = subprocess.run(['ipconfig', 'getifaddr', 'en0'], capture_output=True, text=True)
+            if result.returncode != 0:
+                # Try en1 as fallback
+                result = subprocess.run(['ipconfig', 'getifaddr', 'en1'], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                current_ip = result.stdout.strip()
+                print(f"🔍 Detected current local IP: {current_ip}")
+                
+                # Update the developmentConfig host
+                content = re.sub(
+                    r'let developmentConfig = EnvironmentConfig\(host: "[^"]*"',
+                    f'let developmentConfig = EnvironmentConfig(host: "{current_ip}"',
+                    content
+                )
+                print(f"✅ Updated local development host to: {current_ip}")
+            else:
+                print("⚠️ Could not detect local IP, using existing configuration")
+        except Exception as e:
+            print(f"⚠️ Error detecting IP: {e}, using existing configuration")
     
     # Write the file back
     with open('Models/Network/NetworkConfiguration.swift', 'w') as f:
