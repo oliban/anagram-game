@@ -157,10 +157,22 @@ ssh $PI_USER@$PI_HOST << 'EOF'
             else
                 echo "   ❌ Service failed to become reachable after $((MAX_RETRIES * 5)) seconds"
                 echo "   📋 Container logs:"
-                docker logs anagram-server --tail 20 || echo "     No logs available"
+                # Handle both possible container names
+                docker logs anagram-server --tail 20 2>/dev/null || docker logs server --tail 20 2>/dev/null || echo "     No logs available"
                 echo "   📊 Container status:"
                 docker ps -a
-                exit 1
+                echo "   🔧 Attempting container restart..."
+                docker-compose restart 2>/dev/null || true
+                sleep 10
+                echo "   🔄 Retrying connectivity test after restart..."
+                if curl -s --connect-timeout 5 http://localhost:3000/api/status > /dev/null 2>&1; then
+                    echo "   ✅ Service recovered after restart!"
+                else
+                    echo "   ❌ Service still not responding after restart"
+                    echo "   📋 Final container logs:"
+                    docker logs anagram-server --tail 30 2>/dev/null || docker logs server --tail 30 2>/dev/null || echo "     No logs available"
+                    exit 1
+                fi
             fi
         fi
     done
@@ -180,6 +192,14 @@ ssh $PI_USER@$PI_HOST << 'EOF'
         echo "   ✅ Players API working"
     else
         echo "   ❌ Players API not responding"
+    fi
+    
+    echo "   🔗 Testing contribution link generation..."
+    TEST_LINK=$(curl -s -X POST http://localhost:3000/api/contribution/request -H "Content-Type: application/json" -d '{"playerId":"test-player","expirationHours":24,"maxUses":3}' | grep -o 'https://[^"]*' || echo "")
+    if [ -n "$TEST_LINK" ]; then
+        echo "   ✅ Contribution links using correct Cloudflare URL: $TEST_LINK"
+    else
+        echo "   ⚠️  Could not test contribution link generation"
     fi
     
     echo "📊 Container status:"
