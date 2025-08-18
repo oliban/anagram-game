@@ -475,22 +475,37 @@ The script provides three analytical views:
 
 **1. Cross-tabulation Table (Primary View)**
 ```
-┌─────────┬─────────────┬─────────┬─────────┬───────┬───────┐
-│ (index) │ theme       │ english │ swedish │ other │ total │
-├─────────┼─────────────┼─────────┼─────────┼───────┼───────┤
-│ 0       │ 'null'      │ '247'   │ '199'   │ '0'   │ '446' │
-│ 1       │ 'cooking'   │ '30'    │ '30'    │ '0'   │ '60'  │
-│ 2       │ 'golf'      │ '0'     │ '30'    │ '0'   │ '30'  │
-└─────────┴─────────────┴─────────┴─────────┴───────┴───────┘
+┌─────────┬─────────────┬─────────┬─────────┬───────┬───────┬────────────────┬────────────────┬────────────────┐
+│ (index) │ theme       │ english │ swedish │ other │ total │ avg_difficulty │ min_difficulty │ max_difficulty │
+├─────────┼─────────────┼─────────┼─────────┼───────┼───────┼────────────────┼────────────────┼────────────────┤
+│ 0       │ 'null'      │ '248'   │ '199'   │ '0'   │ '447' │ '53.6'         │ 31             │ 250            │
+│ 1       │ 'cooking'   │ '30'    │ '30'    │ '0'   │ '60'  │ '59.8'         │ 15             │ 98             │
+│ 2       │ 'golf'      │ '0'     │ '30'    │ '0'   │ '30'  │ '100.0'        │ 52             │ 148            │
+└─────────┴─────────────┴─────────┴─────────┴───────┴───────┴────────────────┴────────────────┴────────────────┘
 ```
 
-**2. Summary by Theme**
+**2. Difficulty Distribution**
+```
+┌─────────┬─────────────────────┬───────┬───────────┐
+│ (index) │ difficulty_range    │ count │ avg_score │
+├─────────┼─────────────────────┼───────┼───────────┤
+│ 0       │ '40-59 (Medium)'    │ '363' │ '48.8'    │
+│ 1       │ '60-79 (Hard)'      │ '82'  │ '66.9'    │
+│ 2       │ '20-39 (Easy)'      │ '67'  │ '35.1'    │
+└─────────┴─────────────────────┴───────┴───────────┘
+```
+
+**3. Summary by Theme**
 - Lists all themes with phrase counts
 - Sorted by popularity (descending)
 
-**3. Summary by Language**  
+**4. Summary by Language**  
 - Language distribution statistics
 - Total phrase count
+
+**5. Overall Difficulty Statistics**
+- Average, min, max difficulty levels
+- Standard deviation and phrase distribution
 
 #### Database Configuration
 - **Local**: Uses existing `./database/connection.js`
@@ -522,6 +537,29 @@ node server/phrase-count-detailed.js staging
 # Connect to custom staging environment
 node server/phrase-count-detailed.js staging 192.168.1.100
 ```
+
+#### Environment Comparison (August 2025)
+
+**Local Development Database:**
+- **Total Phrases**: 564
+- **Languages**: English (295), Swedish (269) - well balanced
+- **Themes**: 6 themes with most content unthemed (79.3%)
+- **Difficulty**: Average 56.5, range 15-250, mostly medium difficulty (363 phrases in 40-59 range)
+- **Top Themes**: Unthemed (447), Cooking (60), Golf (30), Computing (20)
+
+**Pi Staging Database:**
+- **Total Phrases**: 15 (minimal test set)
+- **Languages**: English only (15 phrases)
+- **Themes**: All unthemed
+- **Difficulty**: Average 1.9, range 1-3, all very easy phrases
+- **Status**: Basic test data for deployment verification
+
+**Key Insights:**
+- Staging environment needs content deployment from local development
+- Local has good language balance, staging is English-only
+- Golf phrases are exclusively Swedish (interesting language-specific content)
+- Most phrases lack theme categorization (opportunity for content organization)
+- Difficulty distribution in local is well-spread with medium difficulty being most common
 
 ## Integration with Game System
 
