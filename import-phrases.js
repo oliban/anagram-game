@@ -3,10 +3,14 @@
 /**
  * Import phrases from analyzed JSON files into microservices database
  * Works with Docker Compose PostgreSQL setup
+ * 
+ * 🚨 SECURITY: Always calculates difficulty scores server-side using shared algorithm
+ * NEVER accepts pre-calculated difficulty scores from external sources
  */
 
 const fs = require('fs');
 const { Client } = require('pg');
+const { calculateScore } = require('./shared/difficulty-algorithm.js');
 
 // Detect environment and set database host accordingly
 // In Docker containers, use service name; locally use localhost
@@ -47,9 +51,12 @@ async function importPhrases(filePath, limit = 50) {
       // Handle different field names in JSON
       const phraseContent = phraseData.text || phraseData.original || phraseData.phrase;
       const phraseHint = phraseData.hint || phraseData.clue || phraseContent.split(' ').slice(0, 3).join(' ') + '...';
-      const phraseDifficulty = phraseData.difficulty || 1;
       const phraseLanguage = phraseData.language || data.metadata?.language || 'sv';
       const phraseTheme = (phraseData.theme_tags && phraseData.theme_tags[0]) || phraseData.category || phraseData.theme || data.metadata?.theme || 'general';
+      
+      // 🚨 CRITICAL: Always calculate difficulty server-side using shared algorithm
+      // NEVER accept pre-calculated difficulty scores from external sources
+      const phraseDifficulty = calculateScore({phrase: phraseContent, language: phraseLanguage});
       
       // Check if phrase already exists
       if (existingPhrases.has(phraseContent)) {
@@ -100,7 +107,7 @@ async function importPhrases(filePath, limit = 50) {
       try {
         const result = await client.query(batchInsertQuery, values);
         imported = result.rowCount;
-        console.log(`✅ Batch imported ${imported} phrases in a single query`);
+        console.log(`✅ Batch imported ${imported} phrases with server-calculated difficulty scores`);
       } catch (error) {
         console.error(`⚠️  Batch insert failed, trying individual inserts...`);
         // Fall back to individual inserts if batch fails
@@ -127,7 +134,7 @@ async function importPhrases(filePath, limit = 50) {
             console.log(`  ✗ Skipped: "${phrase.content}" - ${err.message}`);
           }
         }
-        console.log(`✅ Individual imports complete: ${imported}/${phrasesToImport.length} succeeded`);
+        console.log(`✅ Individual imports complete: ${imported}/${phrasesToImport.length} with server-calculated scores`);
       }
     }
 
