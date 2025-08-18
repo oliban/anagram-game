@@ -31,8 +31,8 @@ echo "✅ Connection successful"
 echo "🔍 Checking PostgreSQL version consistency..."
 
 # Extract local PostgreSQL version
-LOCAL_PG_VERSION=$(grep -E "image: postgres:" docker-compose.services.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/')
-PI_PG_VERSION=$(grep -E "image: postgres:" docker-compose.pi.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/')
+LOCAL_PG_VERSION=$(grep -E "image: postgres:" docker-compose.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/')
+PI_PG_VERSION=$(grep -E "image: postgres:" docker-compose.yml | head -1 | sed 's/.*postgres:\([^[:space:]]*\).*/\1/')
 
 echo "📊 PostgreSQL versions:"
 echo "  Local development: postgres:$LOCAL_PG_VERSION"
@@ -88,28 +88,26 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     cp -r services/game-server/public/* server/public/ 2>/dev/null || echo "⚠️  services/game-server/public not found, skipping"
     
     echo "🐳 Stopping current services..."
-    docker-compose -f docker-compose.services.yml down || true
+    docker-compose down || true
     
     echo "💾 Database preservation mode - keeping all existing volumes"
     echo "   To wipe database, use scripts/setup-new-pi-server.sh instead"
     
     echo "🔨 Building services..."
-    docker-compose -f docker-compose.services.yml build
+    docker-compose build --no-cache
     
     echo "🚀 Starting services..."
-    docker-compose -f docker-compose.services.yml up -d
+    docker-compose up -d
     
     echo "⏳ Waiting for services to be healthy..."
     sleep 10
     
     echo "🔍 Checking service status..."
-    for port in 3000 3001 3002 3003; do
-        if curl -s http://localhost:$port/api/status > /dev/null; then
-            echo "✅ Service on port $port is healthy"
-        else
-            echo "❌ Service on port $port is not responding"
-        fi
-    done
+    if curl -s http://localhost:3000/api/status > /dev/null; then
+        echo "✅ Service on port 3000 is healthy"
+    else
+        echo "❌ Service on port 3000 is not responding"
+    fi
     
     echo "📊 Container status:"
     docker ps
@@ -131,6 +129,3 @@ echo "   3. Build and test with Pi server"
 echo ""
 echo "🌐 Access services:"
 echo "   - Game API: http://$PI_HOST:3000"
-echo "   - Dashboard: http://$PI_HOST:3001"
-echo "   - Link Generator: http://$PI_HOST:3002"
-echo "   - Admin: http://$PI_HOST:3003"
