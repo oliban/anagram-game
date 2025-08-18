@@ -105,19 +105,48 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     docker ps
     
     echo "⏳ Waiting for services to be healthy..."
-    echo "   🕐 Waiting 10 seconds for containers to stabilize..."
-    sleep 10
+    echo "   🕐 Waiting for containers to stabilize and be reachable..."
     
-    echo "🔍 Checking service status..."
-    echo "   🌐 Testing API endpoint..."
-    if curl -s http://localhost:3000/api/status > /dev/null; then
-        echo "   ✅ Service on port 3000 is healthy"
-        echo "   📡 Testing database connection..."
-        curl -s http://localhost:3000/api/status | grep -q "database" && echo "   ✅ Database connection OK" || echo "   ⚠️  Database status unclear"
+    # Wait up to 60 seconds for service to be ready
+    RETRY_COUNT=0
+    MAX_RETRIES=12
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        echo "   🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES - Testing connectivity..."
+        
+        if curl -s --connect-timeout 5 http://localhost:3000/api/status > /dev/null 2>&1; then
+            echo "   ✅ Service on port 3000 is reachable!"
+            break
+        else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "   ⏳ Service not ready yet, waiting 5 seconds..."
+                sleep 5
+            else
+                echo "   ❌ Service failed to become reachable after $((MAX_RETRIES * 5)) seconds"
+                echo "   📋 Container logs:"
+                docker logs anagram-server --tail 20 || echo "     No logs available"
+                echo "   📊 Container status:"
+                docker ps -a
+                exit 1
+            fi
+        fi
+    done
+    
+    echo "🔍 Testing service functionality..."
+    echo "   📡 Testing database connection..."
+    STATUS_RESPONSE=$(curl -s http://localhost:3000/api/status || echo "")
+    if echo "$STATUS_RESPONSE" | grep -q "database"; then
+        echo "   ✅ Database connection OK"
     else
-        echo "   ❌ Service on port 3000 is not responding"
-        echo "   📋 Container logs:"
-        docker logs anagram-server --tail 10 || echo "     No logs available"
+        echo "   ⚠️  Database status unclear"
+        echo "   📄 Status response: $STATUS_RESPONSE"
+    fi
+    
+    echo "   🎮 Testing game API endpoints..."
+    if curl -s http://localhost:3000/api/players > /dev/null; then
+        echo "   ✅ Players API working"
+    else
+        echo "   ❌ Players API not responding"
     fi
     
     echo "📊 Container status:"

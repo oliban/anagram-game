@@ -17,10 +17,13 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy server application code
 COPY server/ ./
 
+# Copy services and create symlink for relative imports
+COPY services/ ./services/
+RUN mkdir -p .. && ln -sf /app/services ../services
+
 # Copy shared directories needed by the server
 COPY shared/ ./shared/
 COPY services/web-dashboard/ ./web-dashboard/
-COPY services/ ./services/
 
 # Copy models from services to the expected location  
 COPY services/shared/database/models/ ./models/
