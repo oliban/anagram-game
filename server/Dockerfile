@@ -32,6 +32,9 @@ WORKDIR /project/server
 RUN mkdir -p logs && \
     chown -R nodejs:nodejs /project
 
+# Set environment variable for staging
+ENV NODE_ENV=staging
+
 # Switch to non-root user
 USER nodejs
 
