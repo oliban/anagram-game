@@ -450,6 +450,79 @@ ssh pi@192.168.1.222 "echo 'Connection OK'"
 3. ✅ Confirm difficulty scoring
 4. ✅ Validate in-game functionality
 
+## Database Analysis Tools
+
+### Phrase Count Analysis Script
+The `phrase-count-detailed.js` script provides comprehensive phrase database analysis with support for both local and staging environments.
+
+#### Usage
+```bash
+# Local database analysis
+node server/phrase-count-detailed.js
+
+# Staging database analysis  
+node server/phrase-count-detailed.js staging
+
+# Staging with custom IP
+node server/phrase-count-detailed.js staging 10.0.0.5
+
+# Show help
+node server/phrase-count-detailed.js --help
+```
+
+#### Output Format
+The script provides three analytical views:
+
+**1. Cross-tabulation Table (Primary View)**
+```
+┌─────────┬─────────────┬─────────┬─────────┬───────┬───────┐
+│ (index) │ theme       │ english │ swedish │ other │ total │
+├─────────┼─────────────┼─────────┼─────────┼───────┼───────┤
+│ 0       │ 'null'      │ '247'   │ '199'   │ '0'   │ '446' │
+│ 1       │ 'cooking'   │ '30'    │ '30'    │ '0'   │ '60'  │
+│ 2       │ 'golf'      │ '0'     │ '30'    │ '0'   │ '30'  │
+└─────────┴─────────────┴─────────┴─────────┴───────┴───────┘
+```
+
+**2. Summary by Theme**
+- Lists all themes with phrase counts
+- Sorted by popularity (descending)
+
+**3. Summary by Language**  
+- Language distribution statistics
+- Total phrase count
+
+#### Database Configuration
+- **Local**: Uses existing `./database/connection.js`
+- **Staging**: Creates direct PostgreSQL connection
+  - Default host: `192.168.1.222` (Pi staging)
+  - Database: `anagram_game`
+  - User/Password: `postgres/postgres`
+  - Port: `5432`
+
+#### Use Cases
+- **Content Planning**: Identify theme gaps and language imbalances
+- **Quality Assurance**: Monitor phrase distribution after imports
+- **Deployment Verification**: Compare local vs staging phrase counts
+- **Analytics**: Track content growth over time
+
+#### Connection Management
+- Automatic connection pooling for staging
+- Proper connection cleanup on exit/error
+- Error handling with graceful degradation
+
+#### Examples
+```bash
+# Check local development database
+node server/phrase-count-detailed.js
+
+# Verify staging deployment results  
+node server/phrase-count-detailed.js staging
+
+# Connect to custom staging environment
+node server/phrase-count-detailed.js staging 192.168.1.100
+```
+
 ## Integration with Game System
 
 ### Difficulty Algorithm Integration
