@@ -49,7 +49,7 @@ async function importPhrases(filePath, limit = 50) {
       const phraseHint = phraseData.hint || phraseData.clue || phraseContent.split(' ').slice(0, 3).join(' ') + '...';
       const phraseDifficulty = phraseData.difficulty || 1;
       const phraseLanguage = phraseData.language || data.metadata?.language || 'sv';
-      const phraseTheme = (phraseData.theme_tags && phraseData.theme_tags[0]) || phraseData.category || 'general';
+      const phraseTheme = (phraseData.theme_tags && phraseData.theme_tags[0]) || phraseData.category || phraseData.theme || data.metadata?.theme || 'general';
       
       // Check if phrase already exists
       if (existingPhrases.has(phraseContent)) {
