@@ -15,9 +15,14 @@ class ContributionLinkGenerator {
     getShareableBaseUrl(req = null) {
         try {
             // FIRST PRIORITY: For staging environment, ALWAYS use Cloudflare tunnel URL (override everything else)
-            if (process.env.NODE_ENV === 'staging') {
+            // Check multiple indicators for staging environment
+            const isStaging = process.env.NODE_ENV === 'staging' || 
+                            process.env.SERVER_URL === 'staging' ||
+                            (req && req.headers.host && req.headers.host.includes('trycloudflare.com'));
+            
+            if (isStaging) {
                 const stagingUrl = 'https://bras-voluntary-survivor-presidential.trycloudflare.com';
-                console.log(`🔗 STAGING MODE: Using hardcoded staging URL: ${stagingUrl}`);
+                console.log(`🔗 STAGING MODE: Using hardcoded staging URL: ${stagingUrl} (detected via NODE_ENV=${process.env.NODE_ENV}, host=${req?.headers?.host})`);
                 return stagingUrl;
             }
 
