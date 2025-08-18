@@ -1,36 +1,37 @@
 # Use Node.js 18 Alpine for smaller image size
 FROM node:18-alpine
 
-# Set working directory
-WORKDIR /app
+# Set working directory to root level to match project structure
+WORKDIR /project
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Copy package files first for better Docker layer caching
-COPY server/package*.json ./
+COPY server/package*.json ./server/
 
 # Install production dependencies
+WORKDIR /project/server
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy server application code
-COPY server/ ./
-
-# Copy services and create symlink for relative imports
+# Copy all project structure
+WORKDIR /project
+COPY server/ ./server/
 COPY services/ ./services/
-RUN mkdir -p .. && ln -sf /app/services ../services
 
 # Copy shared directories needed by the server
 COPY shared/ ./shared/
-COPY services/web-dashboard/ ./web-dashboard/
 
 # Copy models from services to the expected location  
-COPY services/shared/database/models/ ./models/
+COPY services/shared/database/models/ ./server/models/
+
+# Set final working directory to server
+WORKDIR /project/server
 
 # Create necessary directories
 RUN mkdir -p logs && \
-    chown -R nodejs:nodejs /app
+    chown -R nodejs:nodejs /project
 
 # Switch to non-root user
 USER nodejs
