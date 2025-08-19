@@ -149,6 +149,13 @@ server/server_log.txt
 # Route analytics logs (generated data, should not be committed)
 services/logs/analytics/
 
+# Database backups (should not be committed)
+backups/
+database_backups/
+*.sql
+*.gz
+*.dump
+
 # Generated phrase data (auto-generated, should not be committed)
 server/data/generated-*.json
 server/data/analyzed-*.json
