@@ -8,17 +8,14 @@
 const swaggerAutogen = require('swagger-autogen')();
 const path = require('path');
 
-const outputFile = './services/shared/swagger-output.json';
+const outputFile = './shared/swagger-output.json';
 
 // All route files to scan
 const endpointsFiles = [
-  './services/game-server/routes/system.js',
-  './services/game-server/routes/players.js', 
-  './services/game-server/routes/phrases.js',
-  './services/game-server/routes/leaderboards.js',
-  './services/game-server/routes/contributions.js',
-  './services/game-server/routes/debug.js',
-  './services/game-server/routes/admin.js'
+  './game-server/routes/players.js', 
+  './game-server/routes/phrases.js',
+  './game-server/routes/leaderboards.js',
+  './game-server/routes/contributions.js'
 ];
 
 // Enhanced Swagger configuration
