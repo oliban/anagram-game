@@ -277,33 +277,35 @@ const isStaging =
 ```
 
 ### ⚡ FAST DEPLOYMENT (< 1 MINUTE)
-**🎯 TARGET: 30 seconds for code changes**
+**🎯 TARGET: 15 seconds for code changes**
 
 ```bash
-# Quick deploy all server changes (30-45 seconds)
-./Scripts/quick-deploy.sh
+# 🚀 UNIFIED DEPLOYMENT COMMAND (use this 90% of the time)
+./scripts/deploy.sh                                    # Quick deploy all changes (10-15s)
+./scripts/deploy.sh server/contribution-link-generator.js  # Deploy single file (10s) 
+./scripts/deploy.sh --full                             # Full rebuild when needed (2-5min)
+./scripts/deploy.sh --check                            # Verify deployment health
 
-# Deploy specific files only (15-30 seconds)
-./Scripts/quick-deploy.sh server/contribution-link-generator.js
-./Scripts/quick-deploy.sh server/routes/contributions.js services/shared/models/Player.js
-
-# Environment variable for IP
-PI_HOST=192.168.1.222 ./Scripts/quick-deploy.sh
+# Environment variable for different Pi
+PI_HOST=192.168.1.222 ./scripts/deploy.sh
 ```
 
-**⚡ How it Works:**
-- No Docker rebuild (uses direct container copy)
-- Selective file sync (only changed files)
-- Container restart instead of rebuild
-- 15-second health check timeout
-- Automatic Cloudflare tunnel verification
+**⚡ Unified Script Benefits:**
+- **One command to remember** - no confusion about which script to use
+- **Auto-detects best method** - quick vs full deploy
+- **Built-in health checks** - automatic verification
+- **Clear help system** - `./scripts/deploy.sh --help`
+- **10-15 second deployments** - optimized for speed
 
-### Standard Deployment Commands:
-- **Quick Deploy (< 1 min)**: `./Scripts/quick-deploy.sh [files...]`
-- **Full Deploy (2-5 min)**: `bash Scripts/deploy-to-pi.sh` (complete rebuild)
-- **Check Deployment**: `bash Scripts/check-deployment.sh`
-- **Build for Staging**: `./build_multi_sim.sh staging`
-- **Import Phrases to Staging**: `bash Scripts/import-phrases-staging.sh <json-file>` (automated Docker import with safety checks)
+### 📋 Complete Command Reference:
+- **🚀 Main Deploy**: `./scripts/deploy.sh [files...]` (10-15s)
+- **🔍 Health Check**: `./scripts/deploy.sh --check` (5s)  
+- **🏗️ Full Rebuild**: `./scripts/deploy.sh --full` (2-5min)
+- **📝 Help**: `./scripts/deploy.sh --help`
+- **📱 Build iOS**: `./build_multi_sim.sh staging`
+- **📊 Import Phrases**: `./scripts/import-phrases.sh data.json`
+
+**📚 Detailed Guide**: See `scripts/README.md` for complete decision tree and examples.
 
 ## 🛡️ DATABASE SAFETY COMMANDS
 - **Health Monitoring**: `bash Scripts/monitor-database-health.sh [ip]` (comprehensive system check)
