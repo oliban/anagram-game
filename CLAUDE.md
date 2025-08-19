@@ -230,6 +230,12 @@ cp /tmp/endpoint.js services/game-server/routes/leaderboards.js
 - **ALWAYS** rebuild container OR copy directly into container
 - **VERIFY** deployment with: `docker exec anagram-server cat /project/server/[file]`
 
+**⚡ SPEED REQUIREMENT: 1-MINUTE DEPLOYMENT TARGET**
+- Code changes MUST deploy in under 1 minute for effective iteration
+- Use `quick-deploy.sh` for all routine deployments
+- Full rebuilds should only be for major changes or dependency updates
+- If deployment takes > 2 minutes, investigate Pi performance or network issues
+
 **✅ CORRECT DEPLOYMENT SEQUENCE:**
 ```bash
 # 1. Copy files to Pi
@@ -270,8 +276,31 @@ const isStaging =
   (req?.headers?.['x-forwarded-host']?.includes('trycloudflare.com'));
 ```
 
+### ⚡ FAST DEPLOYMENT (< 1 MINUTE)
+**🎯 TARGET: 30 seconds for code changes**
+
+```bash
+# Quick deploy all server changes (30-45 seconds)
+./Scripts/quick-deploy.sh
+
+# Deploy specific files only (15-30 seconds)
+./Scripts/quick-deploy.sh server/contribution-link-generator.js
+./Scripts/quick-deploy.sh server/routes/contributions.js services/shared/models/Player.js
+
+# Environment variable for IP
+PI_HOST=192.168.1.222 ./Scripts/quick-deploy.sh
+```
+
+**⚡ How it Works:**
+- No Docker rebuild (uses direct container copy)
+- Selective file sync (only changed files)
+- Container restart instead of rebuild
+- 15-second health check timeout
+- Automatic Cloudflare tunnel verification
+
 ### Standard Deployment Commands:
-- **Deploy to Pi Staging**: `bash Scripts/deploy-to-pi.sh` (needs fixing - see below)
+- **Quick Deploy (< 1 min)**: `./Scripts/quick-deploy.sh [files...]`
+- **Full Deploy (2-5 min)**: `bash Scripts/deploy-to-pi.sh` (complete rebuild)
 - **Check Deployment**: `bash Scripts/check-deployment.sh`
 - **Build for Staging**: `./build_multi_sim.sh staging`
 - **Import Phrases to Staging**: `bash Scripts/import-phrases-staging.sh <json-file>` (automated Docker import with safety checks)

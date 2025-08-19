@@ -51,19 +51,14 @@ vim server/contribution-link-generator.js
 # req.headers['x-forwarded-host'] || req.headers.host
 ```
 
-### Step 2: Deploy the Fix
+### Step 2: Deploy the Fix (⚡ FAST - 30 seconds)
 ```bash
-# Copy to Pi
+# Option 1: Ultra-fast single file deploy
+./Scripts/quick-deploy.sh server/contribution-link-generator.js
+
+# Option 2: Manual steps (if script unavailable)
 scp server/contribution-link-generator.js pi@192.168.1.222:/home/pi/anagram-game/server/
-
-# SSH to Pi
-ssh pi@192.168.1.222
-
-# Copy to running container (CRITICAL STEP!)
-docker cp /home/pi/anagram-game/server/contribution-link-generator.js anagram-server:/project/server/
-
-# Restart container
-docker restart anagram-server
+ssh pi@192.168.1.222 "docker cp /home/pi/anagram-game/server/contribution-link-generator.js anagram-server:/project/server/ && docker restart anagram-server"
 ```
 
 ### Step 3: Verify the Fix
