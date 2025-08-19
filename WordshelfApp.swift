@@ -35,6 +35,10 @@ struct WordshelfApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // Initialize smart server detection early
+                    AppConfig.initializeSmartDetection()
+                }
         }
         .modelContainer(sharedModelContainer)
     }

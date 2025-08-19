@@ -82,16 +82,133 @@ private func loadSharedConfig() -> SharedAppConfig {
 struct AppConfig {
     private static let sharedConfig = loadSharedConfig()
     
-    // Environment detection - can be modified by build script
+    // Cache detected environment for session
+    private static var detectedEnvironment: String?
+    private static var detectionInProgress = false
+    
+    // Environment detection - automatically detects best server
     private static var currentEnvironment: String {
-        let env = "staging" // DEFAULT_ENVIRONMENT
-        print("🔧 CONFIG: Using \(env.uppercased()) environment")
-        return env
+        get async {
+            // Return cached result if available
+            if let cached = detectedEnvironment {
+                return cached
+            }
+            
+            // Prevent multiple concurrent detections
+            if detectionInProgress {
+                // Wait briefly and return cached result or fallback
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                return detectedEnvironment ?? "staging"
+            }
+            
+            detectionInProgress = true
+            defer { detectionInProgress = false }
+            
+            #if DEBUG
+            // In DEBUG builds, auto-detect best server
+            let detected = await detectBestEnvironment()
+            #else
+            // Production builds always use staging
+            let detected = "staging"
+            #endif
+            
+            detectedEnvironment = detected
+            print("🔧 CONFIG: Using \(detected.uppercased()) environment")
+            return detected
+        }
+    }
+    
+    // Smart server detection
+    private static func detectBestEnvironment() async -> String {
+        print("🔍 AUTO-DETECT: Testing server connectivity...")
+        
+        // Test servers in priority order: staging -> local -> fallback
+        let servers = [
+            ("staging", await getCurrentStagingURL()),
+            ("local", "http://192.168.1.188:3000")
+        ]
+        
+        for (env, url) in servers {
+            print("🔍 AUTO-DETECT: Testing \(env) at \(url)")
+            if await isServerReachable(url) {
+                print("✅ AUTO-DETECT: Using \(env) environment - server is healthy")
+                return env
+            }
+        }
+        
+        print("⚠️ AUTO-DETECT: No servers reachable, defaulting to staging")
+        return "staging" // Always fallback to staging
+    }
+    
+    // Test if server is reachable and healthy
+    private static func isServerReachable(_ baseURL: String, timeout: TimeInterval = 3.0) async -> Bool {
+        do {
+            guard let url = URL(string: "\(baseURL)/api/status") else { return false }
+            
+            var request = URLRequest(url: url, timeoutInterval: timeout)
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check for valid HTTP response
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return false
+            }
+            
+            // Verify server responds with expected status
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let status = json["status"] as? String,
+               status == "healthy" {
+                return true
+            }
+            
+        } catch {
+            // Network error, timeout, etc.
+        }
+        return false
+    }
+    
+    // Get current staging server URL (tries multiple methods)
+    private static func getCurrentStagingURL() async -> String {
+        // Method 1: Try to get tunnel URL from Pi directly (if we add this endpoint)
+        if let tunnelURL = await fetchTunnelFromPi() {
+            return "https://\(tunnelURL)"
+        }
+        
+        // Method 2: Use the current hardcoded tunnel URL
+        let currentTunnelURL = "https://\(sharedConfig.staging.host)"
+        
+        // Method 3: If tunnel fails, try Pi local IP as last resort
+        return currentTunnelURL
+    }
+    
+    // Optional: Fetch current tunnel URL from Pi (requires endpoint on Pi)
+    private static func fetchTunnelFromPi() async -> String? {
+        do {
+            // Pi could expose current tunnel URL via simple HTTP endpoint
+            guard let url = URL(string: "http://192.168.1.222:8080/current-tunnel") else { return nil }
+            
+            let request = URLRequest(url: url, timeoutInterval: 2.0)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return nil
+            }
+            
+            let tunnelHost = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return tunnelHost?.isEmpty == false ? tunnelHost : nil
+            
+        } catch {
+            // Pi might not be reachable or endpoint doesn't exist yet
+            return nil
+        }
     }
     
     // Get current environment configuration
-    private static var environmentConfig: EnvironmentConfig {
-        switch currentEnvironment {
+    private static func getEnvironmentConfig(_ environment: String) -> EnvironmentConfig {
+        switch environment {
         case "local":
             return sharedConfig.development
         case "staging":
@@ -99,7 +216,7 @@ struct AppConfig {
         case "aws":
             return sharedConfig.production
         default:
-            print("⚠️ CONFIG: Unknown environment '\(currentEnvironment)', falling back to local")
+            print("⚠️ CONFIG: Unknown environment '\(environment)', falling back to local")
             return sharedConfig.development
         }
     }
@@ -109,8 +226,13 @@ struct AppConfig {
         return String(sharedConfig.services.gameServer.port)
     }
     
-    static var baseURL: String {
-        let config = environmentConfig
+    // Cached URL for synchronous access
+    private static var cachedBaseURL: String?
+    
+    // Async baseURL with smart detection
+    static func getBaseURL() async -> String {
+        let environment = await currentEnvironment
+        let config = getEnvironmentConfig(environment)
         let host = config.host
         
         // Determine URL format based on host type and environment
@@ -131,9 +253,34 @@ struct AppConfig {
             url = "http://\(host):\(port)"
         }
         
-        print("🔧 CONFIG: Using \(currentEnvironment.uppercased()) server: \(url)")
+        print("🔧 CONFIG: Using \(environment.uppercased()) server: \(url)")
         print("🔧 CONFIG: Environment: \(config.description)")
+        
+        // Cache for synchronous access
+        cachedBaseURL = url
         return url
+    }
+    
+    // Synchronous baseURL (uses cached value or staging fallback)
+    static var baseURL: String {
+        // Return cached URL if available
+        if let cached = cachedBaseURL {
+            return cached
+        }
+        
+        // Fallback to staging URL for immediate synchronous access
+        let stagingConfig = sharedConfig.staging
+        let fallbackURL = "https://\(stagingConfig.host)"
+        
+        print("🔧 CONFIG: Using synchronous staging fallback: \(fallbackURL)")
+        cachedBaseURL = fallbackURL
+        
+        // Trigger async detection in background for next time
+        Task {
+            _ = await getBaseURL()
+        }
+        
+        return fallbackURL
     }
     
     // Contribution system URLs - consolidated into game-server
@@ -145,6 +292,31 @@ struct AppConfig {
     static var contributionAPIURL: String {
         // Contribution system is now integrated into game-server
         return "\(baseURL)/api/contribution/request"
+    }
+    
+    // Async versions for when you want smart detection
+    static func getContributionBaseURL() async -> String {
+        return await getBaseURL()
+    }
+    
+    static func getContributionAPIURL() async -> String {
+        return "\(await getBaseURL())/api/contribution/request"
+    }
+    
+    // Initialize smart detection (call this early in app lifecycle)
+    static func initializeSmartDetection() {
+        Task {
+            print("🚀 CONFIG: Initializing smart server detection...")
+            _ = await getBaseURL()
+            print("🚀 CONFIG: Smart detection complete")
+        }
+    }
+    
+    // Force re-detection (useful when network conditions change)
+    static func refreshServerDetection() {
+        detectedEnvironment = nil
+        cachedBaseURL = nil
+        initializeSmartDetection()
     }
     
     // Timing Configuration
