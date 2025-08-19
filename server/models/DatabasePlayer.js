@@ -423,12 +423,12 @@ class DatabasePlayer {
     try {
       const result = await query(`
         SELECT * FROM players 
-        WHERE is_active = true AND last_seen > NOW() - INTERVAL '5 minutes'
+        WHERE is_active = true AND last_seen > NOW() - INTERVAL '30 minutes'
         ORDER BY last_seen DESC
       `);
 
       const players = result.rows.map(row => new DatabasePlayer(row));
-      console.log(`👥 DATABASE: Found ${players.length} online players`);
+      console.log(`👥 DATABASE: Found ${players.length} online players (last 30 minutes)`);
       return players;
     } catch (error) {
       console.error('❌ DATABASE: Error getting online players:', error.message);
