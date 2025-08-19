@@ -84,7 +84,7 @@ struct AppConfig {
     
     // Environment detection - can be modified by build script
     private static var currentEnvironment: String {
-        let env = "local" // DEFAULT_ENVIRONMENT
+        let env = "staging" // DEFAULT_ENVIRONMENT
         print("🔧 CONFIG: Using \(env.uppercased()) environment")
         return env
     }
