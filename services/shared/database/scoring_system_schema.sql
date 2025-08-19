@@ -38,21 +38,31 @@ CREATE TABLE IF NOT EXISTS leaderboards (
 CREATE INDEX IF NOT EXISTS idx_leaderboards_period_rank ON leaderboards(score_period, period_start, rank_position);
 CREATE INDEX IF NOT EXISTS idx_leaderboards_period_score ON leaderboards(score_period, period_start, total_score DESC);
 
--- Function to calculate total score for a player
+-- Function to calculate total score for a player (includes emoji points)
 CREATE OR REPLACE FUNCTION calculate_player_total_score(player_uuid UUID)
 RETURNS INTEGER AS $$
 DECLARE
+    phrase_score INTEGER := 0;
+    emoji_score INTEGER := 0;
     total_score INTEGER := 0;
 BEGIN
-    SELECT COALESCE(SUM(score), 0) INTO total_score
+    -- Get total phrase completion score
+    SELECT COALESCE(SUM(score), 0) INTO phrase_score
     FROM completed_phrases 
     WHERE player_id = player_uuid;
+    
+    -- Get total emoji points
+    SELECT COALESCE(total_emoji_points, 0) INTO emoji_score
+    FROM players 
+    WHERE id = player_uuid;
+    
+    total_score := phrase_score + emoji_score;
     
     RETURN total_score;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to calculate daily score for a player
+-- Function to calculate daily score for a player (phrases only - emoji points are lifetime totals)
 CREATE OR REPLACE FUNCTION calculate_player_daily_score(player_uuid UUID, target_date DATE DEFAULT CURRENT_DATE)
 RETURNS INTEGER AS $$
 DECLARE
@@ -67,7 +77,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to calculate weekly score for a player
+-- Function to calculate weekly score for a player (phrases only - emoji points are lifetime totals)
 CREATE OR REPLACE FUNCTION calculate_player_weekly_score(player_uuid UUID, week_start DATE DEFAULT DATE_TRUNC('week', CURRENT_DATE))
 RETURNS INTEGER AS $$
 DECLARE

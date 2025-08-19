@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { validateSchema, ENDPOINT_SCHEMAS, sanitizeForDatabase } = require('../shared/security/validation');
+const ScoringSystem = require('../shared/services/scoringSystem');
 const router = express.Router();
 
 // Helper function to get weighted random emojis with proper rarity distribution
@@ -582,7 +583,7 @@ module.exports = (dependencies) => {
         });
       }
       
-      // Process celebration emoji collection
+      // Process celebration emoji collection AND update score aggregations in single transaction
       let emojiCollectionResult = {
         collectedEmojis: [],
         newDiscoveries: [],
@@ -591,12 +592,14 @@ module.exports = (dependencies) => {
         globalDropMessage: null
       };
       
-      if (celebrationEmojis && Array.isArray(celebrationEmojis) && celebrationEmojis.length > 0) {
-        console.log(`🎲 EMOJI: Processing ${celebrationEmojis.length} celebration emojis for phrase completion`);
+      // Use single transaction for emoji collection + score aggregation update
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
         
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
+        // Process celebration emojis if any
+        if (celebrationEmojis && Array.isArray(celebrationEmojis) && celebrationEmojis.length > 0) {
+          console.log(`🎲 EMOJI: Processing ${celebrationEmojis.length} celebration emojis for phrase completion`);
           
           // Process each celebration emoji for collection
           for (const emojiData of celebrationEmojis) {
@@ -654,16 +657,27 @@ module.exports = (dependencies) => {
             );
           }
           
-          await client.query('COMMIT');
           console.log(`✨ Emoji collection complete - ${emojiCollectionResult.pointsEarned} points earned, ${emojiCollectionResult.newDiscoveries.length} new discoveries`);
-          
-        } catch (emojiError) {
-          await client.query('ROLLBACK');
-          console.error('❌ Error processing emoji collection:', emojiError);
-          // Don't fail the phrase completion if emoji collection fails
-        } finally {
-          client.release();
         }
+        
+        // 🚨 CRITICAL: Update player score aggregations within same transaction
+        console.log(`📊 SCORING: Updating score aggregations for player ${playerId} within transaction`);
+        await client.query('SELECT update_player_score_aggregations($1)', [playerId]);
+        
+        // Update leaderboard rankings
+        await client.query('SELECT update_leaderboard_rankings($1)', ['daily']);
+        await client.query('SELECT update_leaderboard_rankings($1)', ['weekly']);
+        await client.query('SELECT update_leaderboard_rankings($1)', ['total']);
+        
+        await client.query('COMMIT');
+        console.log(`📊 SCORING: Score aggregations updated for player ${playerId} - transaction committed`);
+        
+      } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ Error processing emoji collection and score update:', error);
+        // Don't fail the phrase completion if emoji/scoring update fails
+      } finally {
+        client.release();
       }
       
       const apiResponse = {

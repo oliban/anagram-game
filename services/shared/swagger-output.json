@@ -1,9 +1,9 @@
 {
-  "openapi": "3.0.0",
+  "swagger": "2.0",
   "info": {
-    "title": "Wordshelf Multiplayer API",
     "version": "2.0.0",
-    "description": "Comprehensive API for Wordshelf multiplayer word game server.\n\n## Features\n- **Player Management**: Registration, authentication, online status\n- **Phrase System**: Create, retrieve, complete custom and global phrases\n- **Real-time Communication**: WebSocket support for multiplayer features\n- **Scoring & Leaderboards**: Advanced scoring system with multiple leaderboard types\n- **Security**: Rate limiting, input validation, CORS protection\n- **Multi-language Support**: English and Swedish phrase support\n\n## Environment Configuration\n- **Development**: http://192.168.1.188:3000 (local development server)\n- **Staging**: https://unfortunately-versions-assumed-threat.trycloudflare.com (Pi staging with Cloudflare)\n- **Production**: http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com (AWS production)\n\n## Authentication\nSome endpoints require API key authentication via X-API-Key header.\n\n## Rate Limits\n- General API: 120 requests/15min (dev), 30 requests/15min (prod)\n- Sensitive endpoints: 100 requests/15min (dev), 10 requests/15min (prod)",
+    "title": "Wordshelf Multiplayer API",
+    "description": "\n      Comprehensive API for Wordshelf multiplayer word game server.\n      \n      ## Features\n      - **Player Management**: Registration, authentication, online status\n      - **Phrase System**: Create, retrieve, complete custom and global phrases  \n      - **Real-time Communication**: WebSocket support for multiplayer features\n      - **Scoring & Leaderboards**: Advanced scoring system with multiple leaderboard types\n      - **Security**: Rate limiting, input validation, CORS protection\n      - **Multi-language Support**: English and Swedish phrase support\n      \n      ## Environment Configuration\n      - **Development**: http://192.168.1.188:3000 (local development server)\n      - **Staging**: https://unfortunately-versions-assumed-threat.trycloudflare.com (Pi staging with Cloudflare)  \n      - **Production**: http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com (AWS production)\n      \n      ## Authentication\n      Some endpoints require API key authentication via X-API-Key header.\n      \n      ## Rate Limits\n      - General API: 120 requests/15min (dev), 30 requests/15min (prod)\n      - Sensitive endpoints: 100 requests/15min (dev), 10 requests/15min (prod)\n      \n      ## WebSocket Events\n      - **Game namespace** (/): Open for all clients\n      - **Monitoring namespace** (/monitoring): Requires API key authentication\n    ",
     "contact": {
       "name": "Wordshelf API Support",
       "email": "support@wordshelf.com"
@@ -13,890 +13,8 @@
       "url": "https://opensource.org/licenses/MIT"
     }
   },
-  "servers": [
-    {
-      "url": "http://192.168.1.188:3000",
-      "description": "Development server"
-    },
-    {
-      "url": "https://unfortunately-versions-assumed-threat.trycloudflare.com",
-      "description": "Staging server (Pi with Cloudflare)"
-    },
-    {
-      "url": "http://anagram-staging-alb-1354034851.eu-west-1.elb.amazonaws.com",
-      "description": "Production server (AWS)"
-    }
-  ],
-  "components": {
-    "securitySchemes": {
-      "ApiKeyAuth": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-API-Key",
-        "description": "API key for admin endpoints"
-      }
-    },
-    "schemas": {
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "description": "Error message"
-          },
-          "details": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "Detailed error information"
-          }
-        },
-        "required": ["error"]
-      },
-      "Player": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Unique player identifier"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50,
-            "pattern": "^[a-zA-Z0-9\\s\\-_åäöÅÄÖ]{1,50}$",
-            "description": "Player display name"
-          },
-          "isOnline": {
-            "type": "boolean",
-            "description": "Current online status"
-          },
-          "language": {
-            "type": "string",
-            "enum": ["en", "sv"],
-            "description": "Player preferred language"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Account creation timestamp"
-          },
-          "totalScore": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Total accumulated score"
-          }
-        },
-        "required": ["id", "name", "isOnline"]
-      },
-      "Phrase": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Unique phrase identifier"
-          },
-          "content": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500,
-            "pattern": "^[a-zA-Z0-9\\s\\-_.,!?'\"()åäöÅÄÖ]*$",
-            "description": "The phrase text to unscramble"
-          },
-          "hint": {
-            "type": "string",
-            "maxLength": 1000,
-            "description": "Optional hint for the phrase"
-          },
-          "language": {
-            "type": "string",
-            "enum": ["en", "sv"],
-            "description": "Phrase language"
-          },
-          "difficultyLevel": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-            "description": "Calculated difficulty level"
-          },
-          "senderName": {
-            "type": "string",
-            "description": "Name of player who sent this phrase"
-          },
-          "isGlobal": {
-            "type": "boolean",
-            "description": "Whether phrase is available globally"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Creation timestamp"
-          }
-        },
-        "required": ["id", "content", "language", "difficultyLevel"]
-      },
-      "LeaderboardEntry": {
-        "type": "object",
-        "properties": {
-          "playerId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "playerName": {
-            "type": "string"
-          },
-          "score": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "rank": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "required": ["playerId", "playerName", "score", "rank"]
-      }
-    }
-  },
-  "paths": {
-    "/api/status": {
-      "get": {
-        "tags": ["System"],
-        "summary": "Server Health Check",
-        "description": "Get server health status and database connection information",
-        "responses": {
-          "200": {
-            "description": "Server is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "healthy"
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "database": {
-                      "type": "object",
-                      "properties": {
-                        "connected": {
-                          "type": "boolean"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/config/levels": {
-      "get": {
-        "tags": ["System"],
-        "summary": "Get Level Configuration",
-        "description": "Retrieve skill level configuration for difficulty system",
-        "responses": {
-          "200": {
-            "description": "Level configuration retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "config": {
-                      "type": "object",
-                      "properties": {
-                        "skillLevels": {
-                          "type": "array",
-                          "items": {
-                            "type": "object"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/players/register": {
-      "post": {
-        "tags": ["Players"],
-        "summary": "Register New Player",
-        "description": "Register a new player account",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 50,
-                    "pattern": "^[a-zA-Z0-9\\s\\-_åäöÅÄÖ]{1,50}$",
-                    "description": "Player display name"
-                  },
-                  "language": {
-                    "type": "string",
-                    "enum": ["en", "sv"],
-                    "description": "Player preferred language",
-                    "default": "en"
-                  }
-                },
-                "required": ["name"],
-                "example": {
-                  "name": "PlayerName",
-                  "language": "en"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Player registered successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "player": {
-                      "$ref": "#/components/schemas/Player"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/players/online": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "Get Online Players",
-        "description": "Retrieve list of currently online players",
-        "responses": {
-          "200": {
-            "description": "List of online players",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "players": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Player"
-                      }
-                    },
-                    "count": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/scores/player/{playerId}": {
-      "get": {
-        "tags": ["Players"],
-        "summary": "Get Player Scores",
-        "description": "Retrieve detailed scoring information for a specific player",
-        "parameters": [
-          {
-            "name": "playerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Player UUID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Player scores retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "playerId": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "playerName": {
-                      "type": "string"
-                    },
-                    "totalScore": {
-                      "type": "integer"
-                    },
-                    "rarestEmojis": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Player not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/phrases/create": {
-      "post": {
-        "tags": ["Phrases"],
-        "summary": "Create Custom Phrase",
-        "description": "Create a new custom phrase to send to specific players or make global",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "content": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 500,
-                    "pattern": "^[a-zA-Z0-9\\s\\-_.,!?'\"()åäöÅÄÖ]*$",
-                    "description": "The phrase text (all words must be ≤7 characters)"
-                  },
-                  "hint": {
-                    "type": "string",
-                    "maxLength": 1000,
-                    "description": "Optional hint for the phrase"
-                  },
-                  "language": {
-                    "type": "string",
-                    "enum": ["en", "sv"],
-                    "description": "Phrase language"
-                  },
-                  "senderId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of player sending the phrase"
-                  },
-                  "targetId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of specific target player (optional)"
-                  },
-                  "isGlobal": {
-                    "type": "boolean",
-                    "description": "Whether phrase should be available globally",
-                    "default": false
-                  }
-                },
-                "required": ["content", "language"],
-                "example": {
-                  "content": "hello world",
-                  "hint": "greeting",
-                  "language": "en",
-                  "senderId": "uuid-here",
-                  "targetId": "uuid-here"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Phrase created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "phrase": {
-                      "$ref": "#/components/schemas/Phrase"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/phrases/for/{playerId}": {
-      "get": {
-        "tags": ["Phrases"],
-        "summary": "Get Player Phrases",
-        "description": "Retrieve all phrases available for a specific player",
-        "parameters": [
-          {
-            "name": "playerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Player UUID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Player phrases retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "phrases": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Phrase"
-                      }
-                    },
-                    "count": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Player not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/phrases/{phraseId}/complete": {
-      "post": {
-        "tags": ["Phrases"],
-        "summary": "Complete Phrase",
-        "description": "Mark a phrase as completed by a player",
-        "parameters": [
-          {
-            "name": "phraseId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Phrase ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "playerId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of player completing the phrase"
-                  },
-                  "hintsUsed": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "description": "Number of hints used"
-                  },
-                  "completionTime": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "description": "Time taken to complete in milliseconds"
-                  },
-                  "celebrationEmojis": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "Emojis used in celebration"
-                  }
-                },
-                "required": ["playerId", "hintsUsed", "completionTime"],
-                "example": {
-                  "playerId": "uuid-here",
-                  "hintsUsed": 0,
-                  "completionTime": 5000,
-                  "celebrationEmojis": ["🎉", "✨"]
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Phrase completed successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "completion": {
-                      "type": "object",
-                      "properties": {
-                        "scoreAwarded": {
-                          "type": "integer"
-                        },
-                        "emojiCollection": {
-                          "type": "array",
-                          "items": {
-                            "type": "object"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Phrase not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/phrases/{phraseId}/skip": {
-      "post": {
-        "tags": ["Phrases"],
-        "summary": "Skip Phrase",
-        "description": "Skip a phrase without completing it",
-        "parameters": [
-          {
-            "name": "phraseId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "Phrase ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "playerId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of player skipping the phrase"
-                  }
-                },
-                "required": ["playerId"],
-                "example": {
-                  "playerId": "uuid-here"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Phrase skipped successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Phrase not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/leaderboard/{period}": {
-      "get": {
-        "tags": ["Leaderboards"],
-        "summary": "Get Leaderboard",
-        "description": "Retrieve leaderboard for specified time period",
-        "parameters": [
-          {
-            "name": "period",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["daily", "weekly", "monthly", "legends"]
-            },
-            "description": "Leaderboard time period"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 10
-            },
-            "description": "Number of entries to return"
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0
-            },
-            "description": "Number of entries to skip"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Leaderboard retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "leaderboard": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/LeaderboardEntry"
-                      }
-                    },
-                    "period": {
-                      "type": "string"
-                    },
-                    "totalEntries": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/debug/log": {
-      "post": {
-        "tags": ["Debug"],
-        "summary": "Submit Debug Log",
-        "description": "Submit debug information from iOS app",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "level": {
-                    "type": "string",
-                    "enum": ["info", "warning", "error"],
-                    "description": "Log level"
-                  },
-                  "message": {
-                    "type": "string",
-                    "description": "Log message"
-                  },
-                  "playerId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "Player ID (optional)"
-                  }
-                },
-                "required": ["level", "message"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Log submitted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/phrases/batch-import": {
-      "post": {
-        "tags": ["Admin"],
-        "summary": "Batch Import Phrases",
-        "description": "Import multiple phrases at once (requires API key)",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phrases": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "content": {
-                          "type": "string"
-                        },
-                        "hint": {
-                          "type": "string"
-                        },
-                        "language": {
-                          "type": "string",
-                          "enum": ["en", "sv"]
-                        }
-                      },
-                      "required": ["content"]
-                    }
-                  }
-                },
-                "required": ["phrases"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Phrases imported successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "imported": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - API key required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
+  "host": "192.168.1.188:3000",
+  "basePath": "/",
   "tags": [
     {
       "name": "System",
@@ -915,6 +33,10 @@
       "description": "Player rankings and scoring statistics"
     },
     {
+      "name": "Contributions",
+      "description": "Community phrase contribution system"
+    },
+    {
       "name": "Debug",
       "description": "Development and debugging utilities"
     },
@@ -922,5 +44,1046 @@
       "name": "Admin",
       "description": "Administrative operations (requires API key)"
     }
-  ]
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "securityDefinitions": {
+    "ApiKeyAuth": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "description": "API key for admin endpoints"
+    }
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/players/register": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "example": "any"
+                },
+                "deviceId": {
+                  "example": "any"
+                },
+                "socketId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/players/online": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/players/legends": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/scores/player/{playerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/create": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "contributorName": {
+                  "example": "any"
+                },
+                "content": {
+                  "example": "any"
+                },
+                "hint": {
+                  "example": "any"
+                },
+                "senderId": {
+                  "example": "any"
+                },
+                "targetId": {
+                  "example": "any"
+                },
+                "targetIds": {
+                  "example": "any"
+                },
+                "isGlobal": {
+                  "example": "any"
+                },
+                "difficultyLevel": {
+                  "example": "any"
+                },
+                "phraseType": {
+                  "example": "any"
+                },
+                "language": {
+                  "example": "any"
+                },
+                "theme": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/for/{playerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/complete": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "example": "any"
+                },
+                "hintsUsed": {
+                  "example": "any"
+                },
+                "completionTime": {
+                  "example": "any"
+                },
+                "celebrationEmojis": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/consume": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/phrases/{phraseId}/skip": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "phraseId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/phrases/analyze-difficulty": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "phrase": {
+                  "example": "any"
+                },
+                "language": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/leaderboard/{period}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/leaderboard/{type}/player/{playerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/contribution/status": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/contribute/{token}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/contribution/{token}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/contribution/{token}/submit": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "phrase": {
+                  "example": "any"
+                },
+                "theme": {
+                  "example": "any"
+                },
+                "clue": {
+                  "example": "any"
+                },
+                "language": {
+                  "example": "any"
+                },
+                "contributorName": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/contribution/request": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Error": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Error message"
+                }
+              }
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "array"
+                },
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "example": "object"
+                    }
+                  }
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Detailed error information"
+                }
+              }
+            }
+          }
+        },
+        "required": {
+          "type": "array",
+          "example": [
+            "error"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Player": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "uuid"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Unique player identifier"
+                }
+              }
+            },
+            "name": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "minLength": {
+                  "type": "number",
+                  "example": 1
+                },
+                "maxLength": {
+                  "type": "number",
+                  "example": 50
+                },
+                "pattern": {
+                  "type": "string",
+                  "example": "^[a-zA-Z0-9\\s\\-_åäöÅÄÖ]{1,50}$"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Player display name"
+                }
+              }
+            },
+            "isOnline": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Current online status"
+                }
+              }
+            },
+            "language": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "enum": {
+                  "type": "array",
+                  "example": [
+                    "en",
+                    "sv"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Player preferred language"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "date-time"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Account creation timestamp"
+                }
+              }
+            },
+            "totalScore": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                },
+                "minimum": {
+                  "type": "number",
+                  "example": 0
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Total accumulated score"
+                }
+              }
+            }
+          }
+        },
+        "required": {
+          "type": "array",
+          "example": [
+            "id",
+            "name",
+            "isOnline"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Phrase": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Unique phrase identifier"
+                }
+              }
+            },
+            "content": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "minLength": {
+                  "type": "number",
+                  "example": 1
+                },
+                "maxLength": {
+                  "type": "number",
+                  "example": 500
+                },
+                "pattern": {
+                  "type": "string",
+                  "example": "^[a-zA-Z0-9\\s\\-_.,!?'\"()åäöÅÄÖ]*$"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "The phrase text to unscramble"
+                }
+              }
+            },
+            "hint": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "maxLength": {
+                  "type": "number",
+                  "example": 1000
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Optional hint for the phrase"
+                }
+              }
+            },
+            "language": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "enum": {
+                  "type": "array",
+                  "example": [
+                    "en",
+                    "sv"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Phrase language"
+                }
+              }
+            },
+            "difficultyLevel": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                },
+                "minimum": {
+                  "type": "number",
+                  "example": 1
+                },
+                "maximum": {
+                  "type": "number",
+                  "example": 100
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Calculated difficulty level"
+                }
+              }
+            },
+            "senderName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Name of player who sent this phrase"
+                }
+              }
+            },
+            "isGlobal": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "boolean"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Whether phrase is available globally"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "date-time"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Creation timestamp"
+                }
+              }
+            }
+          }
+        },
+        "required": {
+          "type": "array",
+          "example": [
+            "id",
+            "content",
+            "language",
+            "difficultyLevel"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "LeaderboardEntry": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "example": "object"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "playerId": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "example": "uuid"
+                }
+              }
+            },
+            "playerName": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                }
+              }
+            },
+            "score": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                },
+                "minimum": {
+                  "type": "number",
+                  "example": 0
+                }
+              }
+            },
+            "rank": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "integer"
+                },
+                "minimum": {
+                  "type": "number",
+                  "example": 1
+                }
+              }
+            }
+          }
+        },
+        "required": {
+          "type": "array",
+          "example": [
+            "playerId",
+            "playerName",
+            "score",
+            "rank"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
 }
