@@ -18,6 +18,7 @@ class ContributionLinkGenerator {
             // Check multiple indicators for staging environment
             const isStaging = process.env.NODE_ENV === 'staging' || 
                             process.env.SERVER_URL === 'staging' ||
+                            (req && req.headers['x-forwarded-host'] && req.headers['x-forwarded-host'].includes('trycloudflare.com')) ||
                             (req && req.headers.host && req.headers.host.includes('trycloudflare.com'));
             
             if (isStaging) {
@@ -27,7 +28,7 @@ class ContributionLinkGenerator {
             }
 
             // SECOND PRIORITY: Use request host if available (for non-staging environments)
-            if (req && req.headers.host) {
+            if (req && (req.headers.host || req.headers['x-forwarded-host'])) {
                 console.log(`🔍 Request headers:`, {
                     host: req.headers.host,
                     'x-forwarded-proto': req.headers['x-forwarded-proto'],
@@ -36,7 +37,9 @@ class ContributionLinkGenerator {
                 });
                 const protocol = req.headers['x-forwarded-proto'] || 
                                (req.connection && req.connection.encrypted ? 'https' : 'http');
-                const dynamicUrl = `${protocol}://${req.headers.host}`;
+                // Use x-forwarded-host if available (for tunneled traffic), otherwise use host
+                const host = req.headers['x-forwarded-host'] || req.headers.host;
+                const dynamicUrl = `${protocol}://${host}`;
                 console.log(`🔗 Using dynamic URL from request: ${dynamicUrl}`);
                 return dynamicUrl;
             } else {
