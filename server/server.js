@@ -369,7 +369,7 @@ const getRouteDependencies = () => ({
 // Import route modules (but don't initialize them yet)
 const systemRoutesFactory = require('./routes/system');
 const playerRoutesFactory = require('./routes/players');
-// const phraseRoutesFactory = require('./routes/phrases'); // REMOVED: Duplicate phrases routes - using game-server version
+const phraseRoutesFactory = require('./routes/phrases');
 const contributionRoutesFactory = require('./routes/contributions');
 const leaderboardRoutesFactory = require('./routes/leaderboards');
 const debugRoutesFactory = require('./routes/debug');
@@ -387,7 +387,7 @@ const initializeRoutes = () => {
   const deps = getRouteDependencies();
   app.use(systemRoutesFactory(deps));
   app.use(playerRoutesFactory(deps));
-  // app.use(phraseRoutesFactory(deps)); // REMOVED: Using game-server phrases routes instead
+  app.use(phraseRoutesFactory(deps));
   app.use(contributionRoutesFactory(deps));
   app.use(leaderboardRoutesFactory(deps));
   app.use(debugRoutesFactory(deps));
