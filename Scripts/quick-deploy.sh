@@ -20,7 +20,7 @@ echo -e "${YELLOW}⚡ QUICK DEPLOY - Target: 30 seconds${NC}"
 START_TIME=$(date +%s)
 
 # Quick connectivity check (2 seconds max)
-if ! timeout 2 ping -c 1 $PI_HOST > /dev/null 2>&1; then
+if ! ping -c 1 -W 2000 $PI_HOST > /dev/null 2>&1; then
     echo -e "${RED}❌ Cannot reach Pi at $PI_HOST${NC}"
     exit 1
 fi
@@ -33,7 +33,7 @@ if [ $# -gt 0 ]; then
     for file in "$@"; do
         if [ -f "$file" ]; then
             echo "   • $file"
-            scp -q "$file" $PI_USER@$PI_HOST:/home/pi/anagram-game/"$file"
+            scp -o ConnectTimeout=5 -o ServerAliveInterval=2 -q "$file" $PI_USER@$PI_HOST:/home/pi/anagram-game/"$file"
         else
             echo -e "${RED}   ⚠️  File not found: $file${NC}"
         fi
@@ -54,7 +54,7 @@ fi
 echo -e "${YELLOW}🐳 Hot-patching container...${NC}"
 
 # Direct copy to container and restart (no rebuild)
-ssh -q $PI_USER@$PI_HOST << 'EOF'
+ssh -o ConnectTimeout=5 -o ServerAliveInterval=2 -q $PI_USER@$PI_HOST << 'EOF'
     cd ~/anagram-game
     
     # Copy directly into running container
@@ -71,12 +71,12 @@ ssh -q $PI_USER@$PI_HOST << 'EOF'
     docker restart anagram-server > /dev/null
 EOF
 
-echo -e "${YELLOW}⏳ Waiting for service (15 seconds max)...${NC}"
+echo -e "${YELLOW}⏳ Waiting for service (10 seconds max)...${NC}"
 
 # Quick health check
 READY=false
-for i in {1..15}; do
-    if curl -s --connect-timeout 1 http://$PI_HOST:3000/api/status > /dev/null 2>&1; then
+for i in {1..10}; do
+    if curl -s --connect-timeout 1 --max-time 2 http://$PI_HOST:3000/api/status > /dev/null 2>&1; then
         READY=true
         break
     fi
@@ -87,7 +87,7 @@ if [ "$READY" = true ]; then
     echo -e "${GREEN}✅ Service is ready!${NC}"
     
     # Quick verification for common issues
-    if ssh -q $PI_USER@$PI_HOST "docker exec anagram-server grep -q 'x-forwarded-host' /project/server/contribution-link-generator.js 2>/dev/null"; then
+    if ssh -o ConnectTimeout=3 -q $PI_USER@$PI_HOST "docker exec anagram-server grep -q 'x-forwarded-host' /project/server/contribution-link-generator.js 2>/dev/null"; then
         echo -e "${GREEN}✅ Cloudflare tunnel fix verified${NC}"
     fi
 else
