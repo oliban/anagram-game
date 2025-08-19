@@ -220,9 +220,58 @@ cp /tmp/endpoint.js services/game-server/routes/leaderboards.js
 - 🏗️ **Architecture**: `docs/ARCHITECTURE_OVERVIEW.md`
 - 🗄️ **Database Recovery**: `docs/DATABASE_RECOVERY_PROCEDURES.md`
 - 📊 **Incident Report**: `docs/DATABASE_INCIDENT_REPORT.md`
+- 🌐 **CLOUDFLARE TUNNEL FIX**: `docs/CLOUDFLARE_TUNNEL_TROUBLESHOOTING.md` ⚠️ RECURRING ISSUE
 
 ## 🚀 DEPLOYMENT COMMANDS
-- **Deploy to Pi Staging**: `bash Scripts/deploy-to-pi.sh` (NOT scripts/deploy-staging.sh)
+
+### 🔴 CRITICAL: DOCKER CONTAINER DEPLOYMENT RULES
+**❌ NEVER ASSUME FILES COPIED TO PI ARE IN THE CONTAINER**
+- Copying files to `/home/pi/anagram-game/` does NOT update the running Docker container
+- **ALWAYS** rebuild container OR copy directly into container
+- **VERIFY** deployment with: `docker exec anagram-server cat /project/server/[file]`
+
+**✅ CORRECT DEPLOYMENT SEQUENCE:**
+```bash
+# 1. Copy files to Pi
+scp server/file.js pi@192.168.1.222:/home/pi/anagram-game/server/
+
+# 2. EITHER rebuild container (slow but complete):
+ssh pi@192.168.1.222 "cd /home/pi/anagram-game && docker-compose build server && docker-compose up -d"
+
+# 3. OR copy directly to running container (fast for hotfixes):
+ssh pi@192.168.1.222 "docker cp /home/pi/anagram-game/server/file.js anagram-server:/project/server/ && docker restart anagram-server"
+
+# 4. ALWAYS verify the fix is deployed:
+ssh pi@192.168.1.222 "docker exec anagram-server grep 'your-fix' /project/server/file.js"
+```
+
+### 🌐 CLOUDFLARE TUNNEL URL FIX (RECURRING ISSUE)
+**🚨 THIS ISSUE KEEPS COMING BACK - READ CAREFULLY:**
+
+**Problem**: Contribution links show `127.0.0.1:3000` or `localhost` instead of Cloudflare URL
+
+**Root Cause**: Cloudflare tunnel forwards requests with these headers:
+- `host: '127.0.0.1:3000'` (what Docker sees locally)
+- `x-forwarded-host: 'bras-voluntary-survivor-presidential.trycloudflare.com'` (the REAL URL)
+
+**✅ PERMANENT FIX - Always use this pattern:**
+```javascript
+// CORRECT: Check x-forwarded-host FIRST
+const host = req.headers['x-forwarded-host'] || req.headers.host;
+
+// WRONG: Using host directly
+const host = req.headers.host; // This will be 127.0.0.1 on staging!
+```
+
+**Staging Detection Pattern:**
+```javascript
+const isStaging = 
+  process.env.NODE_ENV === 'staging' ||
+  (req?.headers?.['x-forwarded-host']?.includes('trycloudflare.com'));
+```
+
+### Standard Deployment Commands:
+- **Deploy to Pi Staging**: `bash Scripts/deploy-to-pi.sh` (needs fixing - see below)
 - **Check Deployment**: `bash Scripts/check-deployment.sh`
 - **Build for Staging**: `./build_multi_sim.sh staging`
 - **Import Phrases to Staging**: `bash Scripts/import-phrases-staging.sh <json-file>` (automated Docker import with safety checks)

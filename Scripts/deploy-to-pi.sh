@@ -99,36 +99,45 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     echo "   To wipe database, use scripts/setup-new-pi-server.sh instead"
     
     echo "🔨 Building services..."
-    echo "   ⏱️  Using Docker cache for faster builds (30-60 seconds)..."
-    echo "   🚨 If you need clean build, run: docker system prune -f first"
+    echo "   ⏱️  Building Docker containers with updated code..."
     
-    # Build with timeout monitoring
-    echo "   🏗️  Starting Docker build..."
-    START_TIME=$(date +%s)
-    docker-compose build --progress=plain &
-    BUILD_PID=$!
+    # Check if hotfix mode is requested (for single file updates)
+    if [ "$HOTFIX_MODE" = "true" ]; then
+        echo "   🔥 HOTFIX MODE: Copying files directly to running container..."
+        # Copy server files directly to container
+        docker cp server/ anagram-server:/project/ 2>/dev/null || echo "   ⚠️  Container not running, will rebuild"
+        docker cp services/ anagram-server:/project/ 2>/dev/null || true
+        docker restart anagram-server 2>/dev/null || echo "   ⚠️  Will start container normally"
+        echo "   ✅ Hotfix applied, container restarted"
+    else
+        # Normal build process
+        echo "   🏗️  Starting Docker build..."
+        START_TIME=$(date +%s)
+        docker-compose build --progress=plain &
+        BUILD_PID=$!
     
-    # Monitor build progress
-    while kill -0 $BUILD_PID 2>/dev/null; do
-        ELAPSED=$(($(date +%s) - START_TIME))
-        echo "   ⏳ Build running for ${ELAPSED}s..."
-        if [ $ELAPSED -gt 180 ]; then
-            echo "   ⚠️  Build taking longer than expected (3+ minutes)"
-            echo "   💡 Consider running 'docker system prune -f' on Pi to clear cache"
+        # Monitor build progress
+        while kill -0 $BUILD_PID 2>/dev/null; do
+            ELAPSED=$(($(date +%s) - START_TIME))
+            echo "   ⏳ Build running for ${ELAPSED}s..."
+            if [ $ELAPSED -gt 180 ]; then
+                echo "   ⚠️  Build taking longer than expected (3+ minutes)"
+                echo "   💡 Consider running 'docker system prune -f' on Pi to clear cache"
+            fi
+            sleep 10
+        done
+        
+        # Check if build succeeded
+        wait $BUILD_PID
+        BUILD_EXIT_CODE=$?
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            echo "   ❌ Build failed with exit code $BUILD_EXIT_CODE"
+            exit 1
         fi
-        sleep 10
-    done
-    
-    # Check if build succeeded
-    wait $BUILD_PID
-    BUILD_EXIT_CODE=$?
-    if [ $BUILD_EXIT_CODE -ne 0 ]; then
-        echo "   ❌ Build failed with exit code $BUILD_EXIT_CODE"
-        exit 1
+        
+        TOTAL_TIME=$(($(date +%s) - START_TIME))
+        echo "   ✅ Build completed in ${TOTAL_TIME}s"
     fi
-    
-    TOTAL_TIME=$(($(date +%s) - START_TIME))
-    echo "   ✅ Build completed in ${TOTAL_TIME}s"
     
     echo "🚀 Starting services..."
     echo "   📊 Current container status before start:"
@@ -178,6 +187,20 @@ ssh $PI_USER@$PI_HOST << 'EOF'
     done
     
     echo "🔍 Testing service functionality..."
+    
+    # CRITICAL: Verify that the deployed code is actually in the container
+    echo "   🔬 Verifying deployed code is in container..."
+    if docker exec anagram-server grep -q "x-forwarded-host" /project/server/contribution-link-generator.js 2>/dev/null; then
+        echo "   ✅ Container has updated code (x-forwarded-host fix present)"
+    else
+        echo "   ❌ WARNING: Container may be using old code!"
+        echo "   🔧 Attempting hotfix..."
+        docker cp server/contribution-link-generator.js anagram-server:/project/server/
+        docker restart anagram-server
+        sleep 10
+        echo "   ✅ Hotfix applied"
+    fi
+    
     echo "   📡 Testing database connection..."
     STATUS_RESPONSE=$(curl -s http://localhost:3000/api/status || echo "")
     if echo "$STATUS_RESPONSE" | grep -q "database"; then
