@@ -3340,26 +3340,36 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
             if let tile = node as? LetterTile {
                 tile.isBeingDragged = true
                 tile.physicsBody?.isDynamic = false
+                // Trigger the spinning animation to correct orientation
+                tile.touchesBegan(touches, with: event)
                 print("Started dragging tile: \(tile.letter)")
                 break
             } else if let scoreTile = node as? ScoreTile {
                 scoreTile.isBeingDragged = true
                 scoreTile.physicsBody?.isDynamic = false
+                // Trigger the spinning animation to correct orientation
+                scoreTile.touchesBegan(touches, with: event)
                 print("Started dragging score tile")
                 break
             } else if let languageTile = node as? LanguageTile {
                 languageTile.isBeingDragged = true
                 languageTile.physicsBody?.isDynamic = false
+                // Trigger the spinning animation to correct orientation
+                languageTile.touchesBegan(touches, with: event)
                 print("Started dragging language tile")
                 break
             } else if let messageTile = node as? MessageTile {
                 messageTile.isBeingDragged = true
                 messageTile.physicsBody?.isDynamic = false
+                // Trigger the spinning animation to correct orientation
+                messageTile.touchesBegan(touches, with: event)
                 print("Started dragging message tile: \(messageTile.messageText)")
                 break
             } else if let tile = tiles.first(where: { $0.contains(node) }) {
                 tile.isBeingDragged = true
                 tile.physicsBody?.isDynamic = false
+                // Trigger the spinning animation to correct orientation
+                tile.touchesBegan(touches, with: event)
                 print("Started dragging tile (contains): \(tile.letter)")
                 break
             }
