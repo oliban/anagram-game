@@ -62,32 +62,57 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to calculate daily score for a player (phrases only - emoji points are lifetime totals)
+-- Function to calculate daily score for a player (includes emoji points earned that day)
 CREATE OR REPLACE FUNCTION calculate_player_daily_score(player_uuid UUID, target_date DATE DEFAULT CURRENT_DATE)
 RETURNS INTEGER AS $$
 DECLARE
+    phrase_score INTEGER := 0;
+    emoji_score INTEGER := 0;
     daily_score INTEGER := 0;
 BEGIN
-    SELECT COALESCE(SUM(score), 0) INTO daily_score
+    -- Get phrase completion score for the day
+    SELECT COALESCE(SUM(score), 0) INTO phrase_score
     FROM completed_phrases 
     WHERE player_id = player_uuid 
     AND DATE(completed_at) = target_date;
+    
+    -- Get emoji points earned on that day
+    SELECT COALESCE(SUM(ec.points_reward), 0) INTO emoji_score
+    FROM player_emoji_collections pec
+    JOIN emoji_catalog ec ON pec.emoji_id = ec.id
+    WHERE pec.player_id = player_uuid 
+    AND DATE(pec.discovered_at) = target_date;
+    
+    daily_score := phrase_score + emoji_score;
     
     RETURN daily_score;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to calculate weekly score for a player (phrases only - emoji points are lifetime totals)
+-- Function to calculate weekly score for a player (includes emoji points earned that week)
 CREATE OR REPLACE FUNCTION calculate_player_weekly_score(player_uuid UUID, week_start DATE DEFAULT DATE_TRUNC('week', CURRENT_DATE))
 RETURNS INTEGER AS $$
 DECLARE
+    phrase_score INTEGER := 0;
+    emoji_score INTEGER := 0;
     weekly_score INTEGER := 0;
 BEGIN
-    SELECT COALESCE(SUM(score), 0) INTO weekly_score
+    -- Get phrase completion score for the week
+    SELECT COALESCE(SUM(score), 0) INTO phrase_score
     FROM completed_phrases 
     WHERE player_id = player_uuid 
     AND DATE(completed_at) >= week_start 
     AND DATE(completed_at) < week_start + INTERVAL '7 days';
+    
+    -- Get emoji points earned during the week
+    SELECT COALESCE(SUM(ec.points_reward), 0) INTO emoji_score
+    FROM player_emoji_collections pec
+    JOIN emoji_catalog ec ON pec.emoji_id = ec.id
+    WHERE pec.player_id = player_uuid 
+    AND DATE(pec.discovered_at) >= week_start 
+    AND DATE(pec.discovered_at) < week_start + INTERVAL '7 days';
+    
+    weekly_score := phrase_score + emoji_score;
     
     RETURN weekly_score;
 END;
