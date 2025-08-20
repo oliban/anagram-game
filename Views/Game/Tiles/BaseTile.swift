@@ -163,6 +163,9 @@ class BaseTile: SKSpriteNode, RespawnableTile {
         isBeingDragged = true
         physicsBody?.velocity = CGVector.zero
         physicsBody?.angularVelocity = 0
+        
+        // Spin tile to correct orientation when picked up
+        spinToCorrectOrientation()
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -179,6 +182,15 @@ class BaseTile: SKSpriteNode, RespawnableTile {
         isBeingDragged = false
     }
     
+    // MARK: - Orientation Animation
+    private func spinToCorrectOrientation() {
+        // Create spinning animation to correct orientation (0 radians)
+        let rotateAction = SKAction.rotate(toAngle: 0, duration: 0.3)
+        rotateAction.timingMode = .easeOut
+        
+        // Run the rotation animation
+        run(rotateAction, withKey: "correctOrientation")
+    }
     
     // Access to front face for subclasses (e.g., hint system)
     func getFrontFace() -> SKShapeNode? {

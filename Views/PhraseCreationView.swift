@@ -85,11 +85,9 @@ struct PhraseCreationView: View {
         }
     }
     
-    private var validationMessage: String {
+    private var phraseValidationMessage: String {
         let words = wordCount
         let hasPhrase = !phraseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let clueLength = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count
         
         if !hasPhrase {
             return ""
@@ -113,6 +111,13 @@ struct PhraseCreationView: View {
                 return "Some words are too long (max 7 letters per word)"
             }
         }
+        
+        return ""
+    }
+    
+    private var clueValidationMessage: String {
+        let hasClue = !clueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let clueLength = clueText.trimmingCharacters(in: .whitespacesAndNewlines).count
         
         if hasClue && clueLength > 32 {
             return "Clue is too long (\(clueLength)/32 characters)"
@@ -241,7 +246,7 @@ struct PhraseCreationView: View {
                 
                 // Phrase input section
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Phrase (2-4 words, max 7 letters per word)")
+                    Text("Phrase")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
@@ -267,9 +272,16 @@ struct PhraseCreationView: View {
                             }
                         
                         HStack {
-                            Text("\(wordCount) words")
-                                .font(.caption)
-                                .foregroundColor(isValidPhrase ? .green : .primary)
+                            // Show validation error or word count
+                            if !phraseValidationMessage.isEmpty {
+                                Text(phraseValidationMessage)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            } else {
+                                Text("\(wordCount) words")
+                                    .font(.caption)
+                                    .foregroundColor(isValidPhrase ? .green : .primary)
+                            }
                             
                             Spacer()
                             
@@ -295,13 +307,9 @@ struct PhraseCreationView: View {
                         HStack {
                             Spacer()
                             
-                            // Difficulty display and validation messages (shared space)
+                            // Difficulty display
                             HStack {
-                                if !validationMessage.isEmpty {
-                                    Text(validationMessage)
-                                        .font(.caption)
-                                        .foregroundColor(.red)
-                                } else if isValidPhraseForDifficulty {
+                                if isValidPhraseForDifficulty {
                                     if isAnalyzingDifficulty {
                                         ProgressView()
                                             .scaleEffect(0.8)
@@ -339,7 +347,7 @@ struct PhraseCreationView: View {
                 
                 // Clue input section
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Clue (max 32 characters)")
+                    Text("Clue")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
@@ -365,9 +373,12 @@ struct PhraseCreationView: View {
                         
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text("Players can reveal this clue if they get stuck (Hint 3)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                // Show clue validation error
+                                if !clueValidationMessage.isEmpty {
+                                    Text(clueValidationMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
                                 
                                 Spacer()
                                 
@@ -376,11 +387,6 @@ struct PhraseCreationView: View {
                                     .fontWeight(.medium)
                                     .foregroundColor(clueText.count > 32 ? .red : (clueText.count > 25 ? .orange : .secondary))
                             }
-                            
-                            Text("⚠️ Clue cannot contain any words that appear in your phrase")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -401,12 +407,6 @@ struct PhraseCreationView: View {
                             .cornerRadius(8)
                     } else {
                         VStack(alignment: .leading, spacing: 6) {
-                            // Hint text
-                            Text("Search and challenge friends • They'll be notified to start playing")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                                .fixedSize(horizontal: false, vertical: true)
-                            
                             // Search field
                             HStack {
                                 Image(systemName: "magnifyingglass")
