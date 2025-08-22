@@ -84,6 +84,7 @@
 		9EAA08A52E192E3A00DB73E7 /* GameModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A62E192E3A00DB73E7 /* GameModel.swift */; };
 		9EAA08A72E192E3B00DB73E7 /* GameModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */; };
 		9EAA08A92E192E3B00DB73E7 /* anagrams.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */; };
+		9ED629982E583A2500D0FDB1 /* TutorialTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED629972E583A2500D0FDB1 /* TutorialTile.swift */; };
 		9EE850522E1AA6970012700E /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 9EE850512E1AA6970012700E /* SocketIO */; };
 		9EF6F1892E4BC0BF001B4F48 /* EmojiEffectsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF6F1882E4BC0BF001B4F48 /* EmojiEffectsManager.swift */; };
 		A42EA53B2BA240D7897DA717 /* LinkGeneratorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512301A4E65B4A2CBCD30026 /* LinkGeneratorService.swift */; };
@@ -163,6 +164,7 @@
 		9EAA08A62E192E3A00DB73E7 /* GameModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModel.swift; sourceTree = "<group>"; };
 		9EAA08A82E192E3B00DB73E7 /* GameModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModelTests.swift; sourceTree = "<group>"; };
 		9EAA08AA2E192E3B00DB73E7 /* anagrams.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = anagrams.txt; sourceTree = "<group>"; };
+		9ED629972E583A2500D0FDB1 /* TutorialTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTile.swift; sourceTree = "<group>"; };
 		9EF6F1882E4BC0BF001B4F48 /* EmojiEffectsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiEffectsManager.swift; sourceTree = "<group>"; };
 		D503C31276F14194BECDBDBD /* ScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScoreCalculator.swift; path = Utils/ScoreCalculator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -321,6 +323,7 @@
 			isa = PBXGroup;
 			children = (
 				9EF6F1882E4BC0BF001B4F48 /* EmojiEffectsManager.swift */,
+				9ED629972E583A2500D0FDB1 /* TutorialTile.swift */,
 			);
 			path = Effects;
 			sourceTree = "<group>";
@@ -469,6 +472,7 @@
 				9EA4F6EC2E39145300E6B7D3 /* SpriteKitView.swift in Sources */,
 				9EAA08522E192E3A00DB73E7 /* ContentView.swift in Sources */,
 				9EA4F72E2E3CFC4600E6B7D3 /* ThemeInformationTile.swift in Sources */,
+				9ED629982E583A2500D0FDB1 /* TutorialTile.swift in Sources */,
 				9EF6F1892E4BC0BF001B4F48 /* EmojiEffectsManager.swift in Sources */,
 				9EA4F6F12E39146300E6B7D3 /* PhysicsCategories.swift in Sources */,
 				9EA4F7072E39210A00E6B7D3 /* ConnectionService.swift in Sources */,
