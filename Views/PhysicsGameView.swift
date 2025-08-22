@@ -7,7 +7,6 @@
 
 import SwiftUI
 import SpriteKit
-import CoreMotion
 
 
 
@@ -18,7 +17,6 @@ import CoreMotion
 struct PhysicsGameView: View {
     @ObservedObject var gameModel: GameModel
     @Binding var showingGame: Bool
-    @State private var motionManager = CMMotionManager()
     @State private var gameScene: PhysicsGameScene?
     @State private var celebrationMessage = ""
     @State private var isSkipping = false
@@ -194,16 +192,6 @@ struct PhysicsGameView: View {
                                         .foregroundColor(.white)
                                 }
                                 
-                                // Quake State
-                                VStack(spacing: 2) {
-                                    Text("QUAKE")
-                                        .font(.caption2)
-                                        .foregroundColor(.gray)
-                                    Text(getQuakeStateText())
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(getQuakeStateColor())
-                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
@@ -367,7 +355,6 @@ struct PhysicsGameView: View {
             }
         }
         .onDisappear {
-            motionManager.stopDeviceMotionUpdates()
             metricsTimer?.invalidate()
             
             // Remove notification observer to prevent memory leaks
@@ -377,23 +364,6 @@ struct PhysicsGameView: View {
     
     // MARK: - Metrics Helper Functions
     
-    private func getQuakeStateText() -> String {
-        guard let scene = gameScene ?? PhysicsGameView.sharedScene else { return "—" }
-        switch scene.quakeState {
-        case .none: return "NONE"
-        case .normal: return "NORM"
-        case .superQuake: return "SUPER"
-        }
-    }
-    
-    private func getQuakeStateColor() -> Color {
-        guard let scene = gameScene ?? PhysicsGameView.sharedScene else { return .gray }
-        switch scene.quakeState {
-        case .none: return .gray
-        case .normal: return .orange
-        case .superQuake: return .red
-        }
-    }
     
     private func startMetricsTimer() {
         guard isPerformanceMonitoringEnabled else { 
@@ -422,12 +392,12 @@ struct PhysicsGameView: View {
                 self.tilesCount = scene.tiles.count
                 
                 // Log metrics to console
-                print("📊 REAL-TIME METRICS: FPS: \(String(format: "%.1f", self.currentFPS)), Memory: \(String(format: "%.1f", self.currentMemoryMB))MB, Tiles: \(self.tilesCount), Quake: \(scene.quakeState)")
+                print("📊 REAL-TIME METRICS: FPS: \(String(format: "%.1f", self.currentFPS)), Memory: \(String(format: "%.1f", self.currentMemoryMB))MB, Tiles: \(self.tilesCount)")
                 
                 // Send metrics to server every 10 updates (every 5 seconds)
                 if Int.random(in: 1...10) == 1 {
                     Task {
-                        await self.sendMetricsToServer(fps: self.currentFPS, memory: self.currentMemoryMB, tiles: self.tilesCount, quakeState: scene.quakeState)
+                        await self.sendMetricsToServer(fps: self.currentFPS, memory: self.currentMemoryMB, tiles: self.tilesCount)
                     }
                 }
             } else {
@@ -453,7 +423,7 @@ struct PhysicsGameView: View {
         return Double(info.resident_size) / 1024.0 / 1024.0 // Convert to MB
     }
     
-    private func sendMetricsToServer(fps: Double, memory: Double, tiles: Int, quakeState: PhysicsGameScene.QuakeState) async {
+    private func sendMetricsToServer(fps: Double, memory: Double, tiles: Int) async {
         guard isPerformanceMonitoringEnabled else { return }
         guard let url = URL(string: "\(AppConfig.baseURL)/api/debug/performance") else { return }
         
@@ -461,18 +431,11 @@ struct PhysicsGameView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let quakeString = switch quakeState {
-        case .none: "none"
-        case .normal: "normal" 
-        case .superQuake: "super"
-        }
-        
         let logData: [String: Any] = [
             "event": "real_time_metrics",
             "fps": fps,
             "memory_mb": memory,
             "tiles_count": tiles,
-            "quake_state": quakeString,
             "timestamp": ISO8601DateFormatter().string(from: Date()),
             "playerId": gameModel.playerId ?? "unknown",
             "component": "PhysicsGameView_RealTime"
@@ -535,36 +498,10 @@ struct PhysicsGameView: View {
                 }
             }
             
-            sharedScene.motionManager = motionManager
             sharedScene.resetGame()
         } else {
             print("❌ No shared scene available")
         }
-        
-        setupMotionManager()
-    }
-    
-    private func setupMotionManager() {
-        print("🎯 setupMotionManager() called")
-        print("🎯 Motion manager available: \(motionManager.isDeviceMotionAvailable)")
-        
-        guard motionManager.isDeviceMotionAvailable else { 
-            print("❌ Device motion not available")
-            return 
-        }
-        
-        print("✅ Starting device motion updates")
-        motionManager.deviceMotionUpdateInterval = 1.0 / 10.0  // Faster updates for debugging
-        motionManager.startDeviceMotionUpdates(to: .main) { motion, error in
-            guard let motion = motion, error == nil else { 
-                print("❌ Motion error: \(error?.localizedDescription ?? "Unknown")")
-                return 
-            }
-            
-            // NO SwiftUI state updates here - everything handled in scene
-            PhysicsGameView.sharedScene?.updateGravity(from: motion.gravity)
-        }
-        print("✅ Motion updates started")
         
         // Start metrics timer for real-time display
         startMetricsTimer()
@@ -684,7 +621,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     ]
     
     private let gameModel: GameModel
-    var motionManager: CMMotionManager?
     var onCelebration: ((String) -> Void)?
     var onJolt: (() -> Void)?
     
@@ -722,9 +658,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     private var shelves: [SKNode] = []  // Track individual shelves for hint system
     var celebrationText: String = ""
 
-    enum QuakeState { case none, normal, superQuake }
-    var quakeState: QuakeState = .none
-    private var quakeEndAction: SKAction?
     
     // FPS tracking
     private var lastUpdateTime: TimeInterval = 0
@@ -1435,111 +1368,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         print("Theme tile spawned with theme: \(theme) (Total: \(themeTiles.count))")
     }
     
-    func updateGravity(from gravity: CMAcceleration) {
-        // Determine the desired quake state based on device tilt
-        let desiredState: QuakeState
-        if gravity.z > 0.29 {
-            desiredState = .superQuake
-        } else if gravity.z > 0.10 {
-            desiredState = .normal
-        } else {
-            desiredState = .none
-        }
-    
-        // Transition to the new state if it's different
-        if desiredState != self.quakeState {
-            switch desiredState {
-            case .none:
-                stopShelfShaking()
-            case .normal:
-                stopShelfShaking() // Stop any previous shaking before starting new one
-                startShelfShaking()
-            case .superQuake:
-                stopShelfShaking() // Stop any previous shaking
-                startSuperShelfShaking()
-            }
-            self.quakeState = desiredState
-        }
-
-        // Always maintain normal gravity
-        physicsWorld.gravity = CGVector(dx: 0, dy: -30.0) // Much stronger gravity for heavy feel
-
-        // ALWAYS show tile positions for debugging (not just when falling)
-    }
-    
-    // Debug function to manually trigger quake states
-    func debugTriggerQuake(state: QuakeState) {
-        print("🧪 DEBUG: Manually triggering quake state: \(state)")
-        switch state {
-        case .none:
-            stopShelfShaking()
-        case .normal:
-            stopShelfShaking()
-            startShelfShaking()
-        case .superQuake:
-            stopShelfShaking()
-            startSuperShelfShaking()
-        }
-        self.quakeState = state
-        let floorY = size.height * 0.25
-        
-        // Remove any existing status markers from tiles
-        for tile in tiles {
-            tile.childNode(withName: "status_marker")?.removeFromParent()
-        }
-        
-        if self.quakeState != .none {
-            // Apply forces to tiles on shelves only
-            
-            for (index, tile) in tiles.enumerated() {
-                let tileY = tile.position.y
-                let isOnShelf = tileY > (floorY + 100)
-                let shelfStatus = isOnShelf ? "📚 ON SHELF" : "🏠 ON FLOOR"
-                
-                print("💥 Tile \(index): \(tile.letter) at Y=\(String(format: "%.1f", tileY)) - \(shelfStatus)")
-                
-                guard let physicsBody = tile.physicsBody else {
-                    print("❌ Tile \(index) has NO physics body!")
-                    continue
-                }
-                
-                // Only apply falling forces to tiles that are actually on shelves
-                if isOnShelf {
-                    // Temporarily reduce damping for falling
-                    physicsBody.linearDamping = 0.1
-                    physicsBody.angularDamping = 0.1
-                    
-                    if self.quakeState == .superQuake {
-                        // Apply VIOLENT forces
-                        physicsBody.applyForce(CGVector(dx: 0, dy: -4000))
-                        physicsBody.applyImpulse(CGVector(dx: CGFloat.random(in: -200...200), dy: -400))
-                    } else {
-                        // Apply moderate forces so tiles don't vanish off screen
-                        physicsBody.applyForce(CGVector(dx: 0, dy: -2000))
-                        physicsBody.applyImpulse(CGVector(dx: CGFloat.random(in: -100...100), dy: -200))
-                    }
-                }
-            }
-            
-            // Make all surfaces completely frictionless
-            enumerateChildNodes(withName: "//*") { node, _ in
-                if let physicsBody = node.physicsBody, !physicsBody.isDynamic {
-                    physicsBody.friction = 0.0
-                }
-            }
-        } else {
-            // Restore normal friction when not falling
-            enumerateChildNodes(withName: "//*") { node, _ in
-                if let physicsBody = node.physicsBody, !physicsBody.isDynamic {
-                    physicsBody.friction = 0.05
-                }
-            }
-        }
-    }
-    
-    func triggerQuake() {
-        triggerQuakeWithDuration(3.0)
-    }
     
     func triggerHint() {
         let targetWords = gameModel.getExpectedWords()
@@ -1865,156 +1693,6 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         tile.highlightFrontFace()
     }
     
-    private func triggerQuakeWithDuration(_ duration: TimeInterval) {
-        // Manually trigger quake effect for debugging
-        
-        // Cancel any existing quake end action
-        if quakeEndAction != nil {
-            removeAction(forKey: "quakeEnd")
-            removeAction(forKey: "shelfShaking")
-            removeAction(forKey: "shelfWiggling")
-        }
-        
-        if quakeState == .none {
-            // Start new quake
-            self.quakeState = .normal
-            startShelfShaking()
-        } else {
-            // Extend existing quake
-        }
-        
-        // Reset to normal after specified duration
-        let resetAction = SKAction.run {
-            self.stopShelfShaking()
-            self.quakeState = .none
-            self.quakeEndAction = nil
-        }
-        let waitAction = SKAction.wait(forDuration: duration)
-        let sequence = SKAction.sequence([waitAction, resetAction])
-        quakeEndAction = sequence
-        run(sequence, withKey: "quakeEnd")
-    }
-    
-    
-    private func startShelfShaking() {
-        print("📳 Starting violent shelf shaking and wiggling animation")
-        
-        // Create violent shaking motion for the bookshelf
-        let shakeIntensity: CGFloat = 12.0  // Even stronger shaking
-        let shakeDuration: TimeInterval = 0.04  // Very fast shaking
-        
-        let shakeLeft = SKAction.moveBy(x: -shakeIntensity, y: 0, duration: shakeDuration)
-        let shakeRight = SKAction.moveBy(x: shakeIntensity * 2, y: 0, duration: shakeDuration)
-        let shakeUp = SKAction.moveBy(x: 0, y: shakeIntensity, duration: shakeDuration)
-        let shakeDown = SKAction.moveBy(x: 0, y: -shakeIntensity * 2, duration: shakeDuration)
-        let shakeDiagonal1 = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
-        let shakeDiagonal2 = SKAction.moveBy(x: -shakeIntensity * 2, y: -shakeIntensity * 2, duration: shakeDuration)
-        let returnToCenter = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
-        
-        let shakeSequence = SKAction.sequence([shakeLeft, shakeRight, shakeUp, shakeDown, shakeDiagonal1, shakeDiagonal2, returnToCenter])
-        let repeatShaking = SKAction.repeatForever(shakeSequence)
-        
-        // Create wiggling rotation motion
-        let wiggleIntensity: CGFloat = 0.15  // Rotation in radians (about 8.6 degrees)
-        let wiggleDuration: TimeInterval = 0.06
-        
-        let wiggleLeft = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
-        let wiggleRight = SKAction.rotate(byAngle: wiggleIntensity * 2, duration: wiggleDuration)
-        let wiggleCenter = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
-        
-        let wiggleSequence = SKAction.sequence([wiggleLeft, wiggleRight, wiggleCenter])
-        let repeatWiggling = SKAction.repeatForever(wiggleSequence)
-        
-        // Apply shaking to bookshelf for visual effect
-        bookshelf.run(repeatShaking, withKey: "shelfShaking")
-        bookshelf.run(repeatWiggling, withKey: "shelfWiggling")
-        
-        // Apply random forces to tiles to simulate earthquake effect
-        let applyQuakeForces = SKAction.run {
-            for tile in self.tiles {
-                guard let physicsBody = tile.physicsBody else { continue }
-                
-                // Apply random forces in all directions (50% reduced violence)
-                let forceX = CGFloat.random(in: -25...25)
-                let forceY = CGFloat.random(in: -15...40) // Bias upward for dramatic effect
-                let force = CGVector(dx: forceX, dy: forceY)
-                
-                // Apply random impulse to make tiles shake moderately
-                let impulseX = CGFloat.random(in: -1...1)
-                let impulseY = CGFloat.random(in: -0.5...1.5)
-                let impulse = CGVector(dx: impulseX, dy: impulseY)
-                
-                physicsBody.applyForce(force)
-                physicsBody.applyImpulse(impulse)
-                
-                // Add some random angular velocity for spinning (50% reduced)
-                let angularImpulse = CGFloat.random(in: -0.25...0.25)
-                physicsBody.applyAngularImpulse(angularImpulse)
-            }
-        }
-        
-        // Repeat force application every 0.1 seconds during quake
-        let forceInterval = SKAction.wait(forDuration: 0.1)
-        let forceSequence = SKAction.sequence([applyQuakeForces, forceInterval])
-        let repeatForces = SKAction.repeatForever(forceSequence)
-        
-        run(repeatForces, withKey: "quakeForces")
-    }
-    
-    private func stopShelfShaking() {
-        print("📳 Stopping shelf shaking and wiggling animation")
-        
-        bookshelf.removeAction(forKey: "shelfShaking")
-        bookshelf.removeAction(forKey: "shelfWiggling")
-        
-        // Stop applying forces to tiles
-        removeAction(forKey: "quakeForces")
-        
-        // Smoothly return bookshelf to original position and rotation
-        let returnToOriginalPosition = SKAction.move(to: bookshelfOriginalPosition, duration: 0.3)
-        let returnToOriginalRotation = SKAction.rotate(toAngle: 0, duration: 0.3)
-        
-        returnToOriginalPosition.timingMode = .easeOut
-        returnToOriginalRotation.timingMode = .easeOut
-        
-        // Run both animations simultaneously
-        let returnGroup = SKAction.group([returnToOriginalPosition, returnToOriginalRotation])
-        bookshelf.run(returnGroup)
-    }
-    
-    private func startSuperShelfShaking() {
-        print("📳 Starting SUPER VIOLENT shelf shaking and wiggling animation")
-        
-        // Create violent shaking motion for the bookshelf
-        let shakeIntensity: CGFloat = 24.0  // Double intensity
-        let shakeDuration: TimeInterval = 0.03  // Even faster
-        
-        let shakeLeft = SKAction.moveBy(x: -shakeIntensity, y: 0, duration: shakeDuration)
-        let shakeRight = SKAction.moveBy(x: shakeIntensity * 2, y: 0, duration: shakeDuration)
-        let shakeUp = SKAction.moveBy(x: 0, y: shakeIntensity, duration: shakeDuration)
-        let shakeDown = SKAction.moveBy(x: 0, y: -shakeIntensity * 2, duration: shakeDuration)
-        let shakeDiagonal1 = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
-        let shakeDiagonal2 = SKAction.moveBy(x: -shakeIntensity * 2, y: -shakeIntensity * 2, duration: shakeDuration)
-        let returnToCenter = SKAction.moveBy(x: shakeIntensity, y: shakeIntensity, duration: shakeDuration)
-        
-        let shakeSequence = SKAction.sequence([shakeLeft, shakeRight, shakeUp, shakeDown, shakeDiagonal1, shakeDiagonal2, returnToCenter])
-        let repeatShaking = SKAction.repeatForever(shakeSequence)
-        
-        // Create wiggling rotation motion
-        let wiggleIntensity: CGFloat = 0.30  // Double intensity
-        let wiggleDuration: TimeInterval = 0.05
-        
-        let wiggleLeft = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
-        let wiggleRight = SKAction.rotate(byAngle: wiggleIntensity * 2, duration: wiggleDuration)
-        let wiggleCenter = SKAction.rotate(byAngle: -wiggleIntensity, duration: wiggleDuration)
-        
-        let wiggleSequence = SKAction.sequence([wiggleLeft, wiggleRight, wiggleCenter])
-        let repeatWiggling = SKAction.repeatForever(wiggleSequence)
-        
-        // Apply shaking to bookshelf for visual effect
-        bookshelf.run(repeatShaking, withKey: "shelfShaking")
-        bookshelf.run(repeatWiggling, withKey: "shelfWiggling")
-    }
     
     override func update(_ currentTime: TimeInterval) {
         // Track FPS
@@ -2159,11 +1837,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         
         // Scene cleanup debug logging removed to reduce API calls
         
-        // Stop any ongoing physics effects
-        removeAction(forKey: "quakeForces")
-        quakeState = .none
-        
-        // Reset bookshelf position and rotation in case quake was active
+        // Reset bookshelf position and rotation
         // BUT don't interfere if bookshelf drop animation is in progress
         if !bookshelf.hasActions() || bookshelf.physicsBody == nil {
             bookshelf.removeAllActions()
