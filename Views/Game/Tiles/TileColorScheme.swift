@@ -40,6 +40,14 @@ extension TileColorScheme {
         strokeColor: .black
     )
     
+    // Purple scheme for tutorial tiles
+    static let purple = TileColorScheme(
+        topFace: UIColor(red: 0.8, green: 0.6, blue: 1.0, alpha: 1.0),     // Light purple
+        frontFace: UIColor(red: 0.6, green: 0.4, blue: 0.9, alpha: 1.0),   // Medium purple
+        rightFace: UIColor(red: 0.3, green: 0.2, blue: 0.6, alpha: 1.0),   // Dark purple shadow
+        strokeColor: .black
+    )
+    
     // MARK: - Emoji Rarity Color Schemes
     
     // Legendary - Gold (#FFD700)

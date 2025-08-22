@@ -705,6 +705,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     private var debugMessages: [String] = []
     private let maxDebugMessages = 8
     private var messageTiles: [MessageTile] = []
+    private var tutorialTiles: [TutorialTile] = []
     private var themeTiles: [ThemeInformationTile] = []
     
     // Unified collection for respawn tracking
@@ -712,6 +713,7 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         var allTiles: [RespawnableTile] = []
         allTiles.append(contentsOf: tiles)
         allTiles.append(contentsOf: messageTiles)
+        allTiles.append(contentsOf: tutorialTiles)
         allTiles.append(contentsOf: themeTiles)
         if let scoreTile = scoreTile { allTiles.append(scoreTile) }
         if let languageTile = languageTile { allTiles.append(languageTile) }
@@ -1057,6 +1059,11 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
     }
     
     private func createTiles() {
+        // Increment and track game count for tutorial system
+        let gamesPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed") + 1
+        UserDefaults.standard.set(gamesPlayed, forKey: "gamesPlayed")
+        print("🎮 TUTORIAL: Starting game #\(gamesPlayed)")
+        
         // Clear existing tiles
         tiles.forEach { $0.removeFromParent() }
         tiles.removeAll()
@@ -1092,6 +1099,9 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         } else {
             DebugLogger.shared.ui("🎭 CELEBRATION: Preserving newly dropped tiles list during celebration (\(newlyDroppedEmojiTiles.count) tiles)")
         }
+        
+        // Spawn tutorial tiles for specific game milestones
+        spawnTutorialTileIfNeeded(gameNumber: gamesPlayed)
         
         // Don't create tiles if we're in noPhrasesAvailable state or have no letters
         if gameModel.gameState == .noPhrasesAvailable || gameModel.scrambledLetters.isEmpty {
@@ -1364,6 +1374,54 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         messageTiles.append(newMessageTile)
         
         print("Message tile spawned with text: \(message) (Total: \(messageTiles.count))")
+    }
+    
+    func spawnTutorialTile(message: String) {
+        // Create new tutorial tile - width calculated based on text length
+        let newTutorialTile = TutorialTile(message: message, sceneSize: size)
+        
+        // Position tutorial tile to fall from the center-right side
+        // Add some randomness to X position to avoid stacking
+        let baseSpawnX = size.width * 0.6  // Center-right position
+        let randomOffsetX = Float.random(in: -30...30)  // Random offset
+        let tutorialSpawnX = baseSpawnX + CGFloat(randomOffsetX)
+        let tutorialSpawnY = size.height * 0.95  // Near top
+        newTutorialTile.position = CGPoint(x: tutorialSpawnX, y: tutorialSpawnY)
+        
+        // Add small random rotation for natural look
+        let randomRotation = Float.random(in: -0.2...0.2)
+        newTutorialTile.zRotation = CGFloat(randomRotation)
+        
+        // Add to scene and track in array
+        addChild(newTutorialTile)
+        tutorialTiles.append(newTutorialTile)
+        
+        print("Tutorial tile spawned with text: \(message) (Total: \(tutorialTiles.count))")
+    }
+    
+    func spawnTutorialTileIfNeeded(gameNumber: Int) {
+        var tutorialMessage: String? = nil
+        
+        switch gameNumber {
+        case 1:
+            // Game 1: Give away the solution for the first phrase
+            if !gameModel.currentSentence.isEmpty && gameModel.currentSentence != "No more phrases available" {
+                tutorialMessage = "Your first phrase is \"\(gameModel.currentSentence)\""
+            }
+        case 2:
+            tutorialMessage = "Tap the Hint button for helpful clues. Each clue gives you new information but also deducts points you can score."
+        case 3:
+            tutorialMessage = "The emoji tiles that drop give you bonus points and are automatically added to your collection."
+        case 5:
+            tutorialMessage = "You can send and receive phrases from friends!"
+        default:
+            break // No tutorial for other games
+        }
+        
+        if let message = tutorialMessage {
+            print("🎮 TUTORIAL: Spawning tutorial tile for game \(gameNumber): \(message)")
+            spawnTutorialTile(message: message)
+        }
     }
     
     func spawnThemeTile(theme: String) {
@@ -3277,9 +3335,10 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
         }
     }
     
-    /// Ages all information tiles by one game
+    /// Ages all information tiles and tutorial tiles by one game
     private func incrementInformationTileAges() {
         var infoTilesFound = 0
+        var tutorialTilesFound = 0
         var tilesAged = 0
         
         for child in children {
@@ -3287,31 +3346,63 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 infoTilesFound += 1
                 infoTile.incrementAge()
                 tilesAged += 1
+            } else if let tutorialTile = child as? TutorialTile {
+                tutorialTilesFound += 1
+                tutorialTile.incrementAge()
+                tilesAged += 1
             }
         }
         
-        DebugLogger.shared.ui("⏰ INFO AGE INCREMENT: Found \(infoTilesFound) information tiles, aged \(tilesAged) tiles by one game")
+        DebugLogger.shared.ui("⏰ INFO AGE INCREMENT: Found \(infoTilesFound) information tiles and \(tutorialTilesFound) tutorial tiles, aged \(tilesAged) tiles by one game")
     }
     
     /// Removes information tiles that have reached their maximum age
     private func cleanupOldInformationTiles() {
-        var tilesToRemove: [InformationTile] = []
+        var infoTilesToRemove: [InformationTile] = []
+        var tutorialTilesToRemove: [TutorialTile] = []
         var totalInfoTiles = 0
+        var totalTutorialTiles = 0
         
         for child in children {
             if let infoTile = child as? InformationTile {
                 totalInfoTiles += 1
                 if infoTile.shouldCleanup() {
-                    tilesToRemove.append(infoTile)
+                    infoTilesToRemove.append(infoTile)
+                }
+            } else if let tutorialTile = child as? TutorialTile {
+                totalTutorialTiles += 1
+                if tutorialTile.shouldCleanup() {
+                    tutorialTilesToRemove.append(tutorialTile)
                 }
             }
         }
         
-        DebugLogger.shared.ui("🧹 OLD INFO CLEANUP: Found \(totalInfoTiles) information tiles, removing \(tilesToRemove.count) old tiles")
+        DebugLogger.shared.ui("🧹 OLD INFO CLEANUP: Found \(totalInfoTiles) information tiles and \(totalTutorialTiles) tutorial tiles, removing \(infoTilesToRemove.count + tutorialTilesToRemove.count) old tiles")
         
-        // Remove old tiles with fade animation
-        for tile in tilesToRemove {
+        // Remove old information tiles with fade animation
+        for tile in infoTilesToRemove {
             DebugLogger.shared.ui("🗑️ REMOVING OLD INFO: \(type(of: tile)) (age: \(tile.getCurrentAge()) games)")
+            
+            // Remove from specific arrays if needed
+            if let messageTile = tile as? MessageTile {
+                messageTiles.removeAll { $0 === messageTile }
+            } else if let themeTile = tile as? ThemeInformationTile {
+                themeTiles.removeAll { $0 === themeTile }
+            }
+            
+            let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+            let remove = SKAction.removeFromParent()
+            let cleanup = SKAction.sequence([fadeOut, remove])
+            tile.run(cleanup)
+        }
+        
+        // Remove old tutorial tiles with fade animation
+        for tile in tutorialTilesToRemove {
+            DebugLogger.shared.ui("🗑️ REMOVING OLD TUTORIAL: \(type(of: tile)) (age: \(tile.getCurrentAge()) games)")
+            
+            // Remove from tutorial tiles array
+            tutorialTiles.removeAll { $0 === tile }
+            
             let fadeOut = SKAction.fadeOut(withDuration: 0.5)
             let remove = SKAction.removeFromParent()
             let cleanup = SKAction.sequence([fadeOut, remove])
@@ -3358,12 +3449,21 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 languageTile.touchesBegan(touches, with: event)
                 print("Started dragging language tile")
                 break
+            } else if let tutorialTile = node as? TutorialTile {
+                print("🟣 TUTORIAL TILE DETECTED: \(type(of: tutorialTile))")
+                tutorialTile.isBeingDragged = true
+                tutorialTile.physicsBody?.isDynamic = false
+                // Trigger the spinning animation to correct orientation
+                tutorialTile.touchesBegan(touches, with: event)
+                print("🟣 Started dragging tutorial tile: \(tutorialTile.tutorialText)")
+                break
             } else if let messageTile = node as? MessageTile {
+                print("📝 MESSAGE TILE DETECTED: \(type(of: messageTile))")
                 messageTile.isBeingDragged = true
                 messageTile.physicsBody?.isDynamic = false
                 // Trigger the spinning animation to correct orientation
                 messageTile.touchesBegan(touches, with: event)
-                print("Started dragging message tile: \(messageTile.messageText)")
+                print("📝 Started dragging message tile: \(messageTile.messageText)")
                 break
             } else if let tile = tiles.first(where: { $0.contains(node) }) {
                 tile.isBeingDragged = true
@@ -3444,6 +3544,14 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 break
             }
         }
+        
+        // Move dragged tutorial tiles
+        for tutorialTile in tutorialTiles {
+            if tutorialTile.isBeingDragged {
+                tutorialTile.position = location
+                break
+            }
+        }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -3501,6 +3609,21 @@ class PhysicsGameScene: SKScene, MessageTileSpawner, SKPhysicsContactDelegate {
                 messageTile.physicsBody?.angularVelocity = 0
                 
                 print("Released message tile - stopped immediately: \(messageTile.messageText)")
+                break
+            }
+        }
+        
+        // Release dragged tutorial tiles
+        for tutorialTile in tutorialTiles {
+            if tutorialTile.isBeingDragged {
+                tutorialTile.isBeingDragged = false
+                tutorialTile.physicsBody?.isDynamic = true
+                
+                // Stop all movement immediately - no sliding
+                tutorialTile.physicsBody?.velocity = CGVector.zero
+                tutorialTile.physicsBody?.angularVelocity = 0
+                
+                print("🟣 Released tutorial tile - stopped immediately: \(tutorialTile.tutorialText)")
                 break
             }
         }
