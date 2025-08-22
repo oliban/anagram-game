@@ -315,12 +315,8 @@ class DatabasePhrase {
       if (phrases.length === 0) {
         // For global phrases, $1 appears 3 times, so difficulty parameter is $2
         // Include NULL check to exclude phrases without difficulty scores
-        // Special rule: Players below score 50 can access phrases up to difficulty 75
+        // Respect player's actual skill level - no artificial boosts that could overwhelm beginners
         let effectiveMaxDifficulty = maxDifficulty;
-        if (maxDifficulty && maxDifficulty < 50) {
-          effectiveMaxDifficulty = 75;
-          console.log(`🎯 BEGINNER BOOST: Player below score 50, allowing phrases up to difficulty 75 (was ${maxDifficulty})`);
-        }
         
         const globalDifficultyFilter = effectiveMaxDifficulty ? `AND p.difficulty_level IS NOT NULL AND p.difficulty_level <= $2` : '';
         const globalParams = effectiveMaxDifficulty ? [playerId, effectiveMaxDifficulty] : [playerId];
