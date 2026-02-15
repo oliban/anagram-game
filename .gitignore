@@ -196,3 +196,13 @@ Resources/build-environment.json
 environment-override.plist
 .staging-tunnel-url
 .postgres_version
+
+# Installers
+*.pkg
+*.dmg
+
+# Screenshots
+Screenshot*.png
+
+# Database backups (additional)
+database-backups/
